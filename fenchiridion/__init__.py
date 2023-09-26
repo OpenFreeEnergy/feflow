@@ -3,5 +3,4 @@
 # Add imports here
 from .fenchiridion import *
 
-
-from ._version import __version__
+from importlib.metadata import version

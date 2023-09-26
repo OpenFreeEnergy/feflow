@@ -1,13 +1,19 @@
-name: test
+name: fenchiridion-test
 channels:
   - conda-forge
   - defaults
+  - openeye  # TODO: Remove once we don't depend on openeye
 dependencies:
     # Base depends
-  - openfe
-  - perses  # Remove once it only depends on openmmtools/openfe
+  - openfe  # TODO: Remove once we don't depend on openfe
   - python
   - pip
+
+  # Perses depends (TODO: Remove once we don't depend on perses)
+  - openmoltools
+  - cloudpathlib
+  - dask
+  - openeye-toolkits
 
     # Testing
   - pytest
@@ -15,6 +21,7 @@ dependencies:
   - codecov
 
     # Pip-only installs
-  #- pip:
+  - pip:
+      - git+https://github.com/choderalab/perses.git@protocol-neqcyc  # TODO: Remove once it only depends on openmmtools/openfe
   #  - codecov
 
