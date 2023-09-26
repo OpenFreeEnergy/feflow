@@ -1,11 +1,11 @@
 name: test
 channels:
-
   - conda-forge
-
   - defaults
 dependencies:
     # Base depends
+  - openfe
+  - perses  # Remove once it only depends on openmmtools/openfe
   - python
   - pip
 
