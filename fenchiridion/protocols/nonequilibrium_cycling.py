@@ -514,8 +514,8 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
 
         Returns
         -------
-        free_energy: float
-            Free energy estimate in units of kT.
+        free_energy: unit.Quantity
+            Free energy estimate in units of kcal/mol.
 
         """
         import numpy as np
@@ -542,8 +542,8 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
 
         Returns
         -------
-        free_energy_uncertainty: float
-            Uncertainty on the free energy estimate in units of kT.
+        free_energy_uncertainty: unit.Quantity
+            Uncertainty on the free energy estimate in units of kcal/mol.
 
         """
         import numpy as np
