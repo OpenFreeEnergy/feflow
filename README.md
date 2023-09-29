@@ -1,4 +1,4 @@
-fenchiridion
+FEfLow
 ==============================
 [//]: # (Badges)
 [![GitHub Actions Build Status](https://github.com/REPLACE_WITH_OWNER_ACCOUNT/fenchiridion/workflows/CI/badge.svg)](https://github.com/REPLACE_WITH_OWNER_ACCOUNT/fenchiridion/actions?query=workflow%3ACI)
@@ -9,7 +9,7 @@ Recipes and protocols for molecular free energy calculations using the openmmtoo
 
 ### Copyright
 
-Copyright (c) 2023, Iván Pulido
+Copyright (c) 2023, ChoderaLab
 
 
 #### Acknowledgements
