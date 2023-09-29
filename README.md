@@ -1,4 +1,4 @@
-FEfLow
+FEflow
 ==============================
 [//]: # (Badges)
 [![GitHub Actions Build Status](https://github.com/REPLACE_WITH_OWNER_ACCOUNT/fenchiridion/workflows/CI/badge.svg)](https://github.com/REPLACE_WITH_OWNER_ACCOUNT/fenchiridion/actions?query=workflow%3ACI)
