@@ -1,5 +1,5 @@
 """
-Unit and regression test for the fenchiridion package.
+Unit and regression test for the feflow package.
 """
 
 # Import package, test suite, and other packages as needed
@@ -7,13 +7,13 @@ import sys
 
 import pytest
 
-import fenchiridion
+import feflow
 
 
-def test_fenchiridion_imported():
+def test_feflow_imported():
     """Sample test, will always pass so long as import statement worked."""
-    print("importing ", fenchiridion.__name__)
-    assert "fenchiridion" in sys.modules
+    print("importing ", feflow.__name__)
+    assert "feflow" in sys.modules
 
 
 # Assert that a certain exception is raised
