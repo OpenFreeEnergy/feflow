@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 # Self-descriptive entries which should always be present
 # https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
 [project]
-name = "fenchiridion"
+name = "feflow"
 description = "Recipes and protocols for molecular free energy calculations using the openmmtools/perses and Open Free Energy toolkits"
 dynamic = ["version"]
 readme = "README.md"
@@ -26,8 +26,8 @@ requires-python = ">=3.8"
 
 # Update the urls once the hosting is set up.
 #[project.urls]
-#"Source" = "https://github.com/<username>/fenchiridion/"
-#"Documentation" = "https://fenchiridion.readthedocs.io/"
+#"Source" = "https://github.com/<username>/feflow/"
+#"Documentation" = "https://feflow.readthedocs.io/"
 
 [project.optional-dependencies]
 test = [
@@ -62,7 +62,7 @@ where = ["."]
 
 # Ref https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
 [tool.setuptools.package-data]
-fenchiridion = [
+feflow = [
     "py.typed"
 ]
 
@@ -82,7 +82,7 @@ match = ["*"]
 default-tag = "1.0.0"
 
 [tool.versioningit.write]
-file = "fenchiridion/_version.py"
+file = "feflow/_version.py"
 
 
 [tool.coverage.run]
@@ -91,7 +91,7 @@ omit = [
     # Omit the tests
     "*/tests/*",
     # Omit generated versioneer
-    "fenchiridion/_version.py"
+    "feflow/_version.py"
 ]
 
 [tool.flake8]

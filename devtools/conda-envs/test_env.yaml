@@ -1,4 +1,4 @@
-name: fenchiridion-test
+name: feflow-test
 channels:
   - conda-forge
   - defaults

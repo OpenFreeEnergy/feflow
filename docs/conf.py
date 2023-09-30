@@ -17,12 +17,12 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
 
-import fenchiridion
+import feflow
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'fenchiridion'
+project = 'feflow'
 copyright = ("2023, Iván Pulido. Project structure based on the "
              "Computational Molecular Science Python Cookiecutter version 1.1")
 author = 'Iván Pulido'
@@ -117,7 +117,7 @@ html_static_path = ['_static']
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'fenchiridiondoc'
+htmlhelp_basename = 'feflowdoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -144,8 +144,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'fenchiridion.tex', 'fenchiridion Documentation',
-     'fenchiridion', 'manual'),
+    (master_doc, 'feflow.tex', 'feflow Documentation',
+     'feflow', 'manual'),
 ]
 
 
@@ -154,7 +154,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'fenchiridion', 'fenchiridion Documentation',
+    (master_doc, 'feflow', 'feflow Documentation',
      [author], 1)
 ]
 
@@ -165,8 +165,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'fenchiridion', 'fenchiridion Documentation',
-     author, 'fenchiridion', 'Recipes and protocols for molecular free energy calculations using the openmmtools/perses and Open Free Energy toolkits',
+    (master_doc, 'feflow', 'feflow Documentation',
+     author, 'feflow', 'Recipes and protocols for molecular free energy calculations using the openmmtools/perses and Open Free Energy toolkits',
      'Miscellaneous'),
 ]
 
