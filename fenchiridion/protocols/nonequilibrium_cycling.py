@@ -27,6 +27,154 @@ from openff.units.openmm import to_openmm
 # logger = logging.getLogger(__name__)
 
 
+class SetupUnit(ProtocolUnit):
+
+    def _execute(self, ctx, *, state_a, state_b, mapping, settings, **inputs):
+        """
+        Execute the simulation part of the Nonequilibrium switching protocol using GUFE objects.
+
+        Parameters
+        ----------
+        ctx: gufe.protocols.protocolunit.Context
+            The gufe context for the unit.
+
+        state_a : gufe.ChemicalSystem
+            The initial chemical system.
+
+
+        state_b : gufe.ChemicalSystem
+            The objective chemical system.
+
+        mapping : dict[str, gufe.mapping.ComponentMapping]
+            A dict featuring mappings between the two chemical systems.
+
+        settings : gufe.settings.model.Settings
+            The full settings for the protocol.
+
+        Returns
+        -------
+        dict : dict[str, str]
+            Dictionary with paths to work arrays, both forward and reverse, and trajectory coordinates for systems
+            A and B.
+        """
+        # needed imports
+        import numpy as np
+        import openmm
+        import openmm.unit as openmm_unit
+        from openmmtools.integrators import PeriodicNonequilibriumIntegrator
+        from perses.utils.openeye import generate_unique_atom_names
+
+        # Check compatibility between states (same receptor and solvent)
+        self._check_states_compatibility(state_a, state_b)
+
+        # Get components from systems if found (None otherwise) -- NOTE: Uses hardcoded keys!
+        receptor_a = state_a.components.get("protein")
+        # receptor_b = state_b.components.get("protein")  # Should not be needed
+        ligand_a = mapping.get("ligand").componentA
+        ligand_b = mapping.get("ligand").componentB
+        solvent_a = state_a.components.get("solvent")
+        # solvent_b = state_b.components.get("solvent")  # Should not be needed
+
+        # Check first state for receptor if not get receptor from second one
+        if receptor_a:
+            receptor_top = receptor_a.to_openmm_topology()
+            receptor_pos = receptor_a.to_openmm_positions()
+        else:
+            receptor_top, receptor_pos = None, None
+
+        # Get ligands cheminformatics molecules
+        ligand_a = ligand_a.to_openff().to_openeye()
+        ligand_b = ligand_b.to_openff().to_openeye()
+        # Generating unique atom names for ligands -- openmmforcefields needs them
+        ligand_a = generate_unique_atom_names(ligand_a)
+        ligand_b = generate_unique_atom_names(ligand_b)
+
+        # Get solvent parameters from component
+        if solvent_a:
+            ion_concentration = solvent_a.ion_concentration.to_openmm()
+            positive_ion = solvent_a.positive_ion
+            negative_ion = solvent_a.negative_ion
+        else:
+            ion_concentration, positive_ion, negative_ion = None, None, None
+
+        # Get settings
+        thermodynamic_settings = settings.thermo_settings
+        phase = self._detect_phase(state_a, state_b)
+        traj_save_frequency = settings.traj_save_frequency
+        work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
+        selection_expression = settings.atom_selection_expression
+
+        # Get the ligand mapping from ComponentMapping object
+        # NOTE: perses to date has a different "directionality" sense in terms of the mapping,
+        #   see perses.rjmc.topology_proposal.propose docstring for detailed information.
+        ligand_mapping = mapping['ligand'].componentB_to_componentA
+
+        # Setup relative FE calculation
+        fe_setup = RelativeFEPSetup(
+            old_ligand=ligand_a,
+            new_ligand=ligand_b,
+            receptor=receptor_top,
+            receptor_positions=receptor_pos,
+            forcefield_files=settings.forcefield_settings.forcefields,
+            small_molecule_forcefield=settings.forcefield_settings.small_molecule_forcefield,
+            phases=[phase],
+            transformation_atom_map=ligand_mapping,  # Handle atom mapping between systems
+            ionic_strength=ion_concentration,
+            positive_ion=positive_ion,
+            negative_ion=negative_ion,
+        )
+
+        topology_proposals = fe_setup.topology_proposals
+        old_positions = fe_setup.old_positions
+        new_positions = fe_setup.new_positions
+
+        # Generate Hybrid Topology Factory - Generic HTF
+        htf = HybridTopologyFactory(
+            topology_proposal=topology_proposals[phase],
+            current_positions=old_positions[phase],
+            new_positions=new_positions[phase],
+            softcore_LJ_v2=settings.softcore_LJ_v2,
+            interpolate_old_and_new_14s=settings.interpolate_old_and_new_14s,
+        )
+
+        system = htf.hybrid_system
+        positions = htf.hybrid_positions
+
+        # Set up integrator
+        temperature = to_openmm(thermodynamic_settings.temperature)
+        neq_steps = settings.eq_steps
+        eq_steps = settings.neq_steps
+        timestep = to_openmm(settings.timestep)
+        splitting = settings.neq_splitting
+        integrator = PeriodicNonequilibriumIntegrator(alchemical_functions=settings.lambda_functions,
+                                                      nsteps_neq=neq_steps,
+                                                      nsteps_eq=eq_steps,
+                                                      splitting=splitting,
+                                                      timestep=timestep,
+                                                      temperature=temperature, )
+
+        # Set up context
+        platform = get_openmm_platform(settings.platform)
+        context = openmm.Context(system, integrator, platform)
+        context.setPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
+        context.setPositions(positions)
+
+        try:
+            # Minimize
+            openmm.LocalEnergyMinimizer.minimize(context)
+
+            # Equilibrate
+            context.setVelocitiesToTemperature(temperature)
+
+            # SERIALIZE SYSTEM, STATE, INTEGRATOR
+
+        finally:
+            # Explicit cleanup for GPU resources
+            del context, integrator
+
+        return {}
+
+
 class SimulationUnit(ProtocolUnit):
     """
     Monolithic unit for simulation. It runs NEQ switching simulation from chemical systems and stores the
@@ -148,24 +296,16 @@ class SimulationUnit(ProtocolUnit):
 
         return initial_selected_positions, final_selected_positions
 
-    def _execute(self, ctx, *, state_a, state_b, mapping, settings, **inputs):
+    def _execute(self, ctx, *, setup, settings, **inputs):
         """
         Execute the simulation part of the Nonequilibrium switching protocol using GUFE objects.
 
         Parameters
         ----------
-        ctx: gufe.protocols.protocolunit.Context
+        ctx : gufe.protocols.protocolunit.Context
             The gufe context for the unit.
 
-        state_a : gufe.ChemicalSystem
-            The initial chemical system.
-
-        state_b : gufe.ChemicalSystem
-            The objective chemical system.
-
-        mapping : dict[str, gufe.mapping.ComponentMapping]
-            A dict featuring mappings between the two chemical systems.
-
+        setup : 
         settings : gufe.settings.model.Settings
             The full settings for the protocol.
 
@@ -191,95 +331,7 @@ class SimulationUnit(ProtocolUnit):
         file_handler.setFormatter(log_formatter)
         file_logger.addHandler(file_handler)
 
-        # Check compatibility between states (same receptor and solvent)
-        self._check_states_compatibility(state_a, state_b)
-
-        # Get components from systems if found (None otherwise) -- NOTE: Uses hardcoded keys!
-        receptor_a = state_a.components.get("protein")
-        # receptor_b = state_b.components.get("protein")  # Should not be needed
-        ligand_a = mapping.get("ligand").componentA
-        ligand_b = mapping.get("ligand").componentB
-        solvent_a = state_a.components.get("solvent")
-        # solvent_b = state_b.components.get("solvent")  # Should not be needed
-
-
-        # Check first state for receptor if not get receptor from second one
-        if receptor_a:
-            receptor_top = receptor_a.to_openmm_topology()
-            receptor_pos = receptor_a.to_openmm_positions()
-        else:
-            receptor_top, receptor_pos = None, None
-
-        # Get ligands cheminformatics molecules
-        ligand_a = ligand_a.to_openff().to_openeye()
-        ligand_b = ligand_b.to_openff().to_openeye()
-        # Generating unique atom names for ligands -- openmmforcefields needs them
-        ligand_a = generate_unique_atom_names(ligand_a)
-        ligand_b = generate_unique_atom_names(ligand_b)
-
-        # Get solvent parameters from component
-        if solvent_a:
-            ion_concentration = solvent_a.ion_concentration.to_openmm()
-            positive_ion = solvent_a.positive_ion
-            negative_ion = solvent_a.negative_ion
-        else:
-            ion_concentration, positive_ion, negative_ion = None, None, None
-
-        # Get settings
-        thermodynamic_settings = settings.thermo_settings
-        phase = self._detect_phase(state_a, state_b)
-        traj_save_frequency = settings.traj_save_frequency
-        work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
-        selection_expression = settings.atom_selection_expression
-
-        # Get the ligand mapping from ComponentMapping object
-        # NOTE: perses to date has a different "directionality" sense in terms of the mapping,
-        #   see perses.rjmc.topology_proposal.propose docstring for detailed information.
-        ligand_mapping = mapping['ligand'].componentB_to_componentA
-
-        # Setup relative FE calculation
-        fe_setup = RelativeFEPSetup(
-            old_ligand=ligand_a,
-            new_ligand=ligand_b,
-            receptor=receptor_top,
-            receptor_positions=receptor_pos,
-            forcefield_files=settings.forcefield_settings.forcefields,
-            small_molecule_forcefield=settings.forcefield_settings.small_molecule_forcefield,
-            phases=[phase],
-            transformation_atom_map=ligand_mapping,  # Handle atom mapping between systems
-            ionic_strength=ion_concentration,
-            positive_ion=positive_ion,
-            negative_ion=negative_ion,
-        )
-
-        topology_proposals = fe_setup.topology_proposals
-        old_positions = fe_setup.old_positions
-        new_positions = fe_setup.new_positions
-
-        # Generate Hybrid Topology Factory - Generic HTF
-        htf = HybridTopologyFactory(
-            topology_proposal=topology_proposals[phase],
-            current_positions=old_positions[phase],
-            new_positions=new_positions[phase],
-            softcore_LJ_v2=settings.softcore_LJ_v2,
-            interpolate_old_and_new_14s=settings.interpolate_old_and_new_14s,
-        )
-
-        system = htf.hybrid_system
-        positions = htf.hybrid_positions
-
-        # Set up integrator
-        temperature = to_openmm(thermodynamic_settings.temperature)
-        neq_steps = settings.eq_steps
-        eq_steps = settings.neq_steps
-        timestep = to_openmm(settings.timestep)
-        splitting = settings.neq_splitting
-        integrator = PeriodicNonequilibriumIntegrator(alchemical_functions=settings.lambda_functions,
-                                                      nsteps_neq=neq_steps,
-                                                      nsteps_eq=eq_steps,
-                                                      splitting=splitting,
-                                                      timestep=timestep,
-                                                      temperature=temperature, )
+        # GET STATE, SYSTEM, AND INTEGRATOR FROM SETUP UNIT
 
         # Set up context
         platform = get_openmm_platform(settings.platform)
@@ -288,11 +340,6 @@ class SimulationUnit(ProtocolUnit):
         context.setPositions(positions)
 
         try:
-            # Minimize
-            openmm.LocalEnergyMinimizer.minimize(context)
-
-            # Equilibrate
-            context.setVelocitiesToTemperature(temperature)
 
             # Prepare objects to store data -- empty lists so far
             forward_eq_old, forward_eq_new, forward_neq_old, forward_neq_new = list(), list(), list(), list()
