@@ -16,6 +16,7 @@ from gufe.protocols import (
     ProtocolDAGResult,
 )
 
+from openfe.protocols.openmm_utils import system_creation
 from perses.app.relative_setup import RelativeFEPSetup
 from perses.app.setup_relative_calculation import get_openmm_platform
 from perses.annihilation.relative import HybridTopologyFactory
@@ -180,7 +181,6 @@ class SimulationUnit(ProtocolUnit):
         import openmm
         import openmm.unit as openmm_unit
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
-        from perses.utils.openeye import generate_unique_atom_names
 
         # Setting up logging to file in shared filesystem
         file_logger = logging.getLogger("neq-cycling")
@@ -210,13 +210,6 @@ class SimulationUnit(ProtocolUnit):
         else:
             receptor_top, receptor_pos = None, None
 
-        # Get ligands cheminformatics molecules
-        ligand_a = ligand_a.to_openff().to_openeye()
-        ligand_b = ligand_b.to_openff().to_openeye()
-        # Generating unique atom names for ligands -- openmmforcefields needs them
-        ligand_a = generate_unique_atom_names(ligand_a)
-        ligand_b = generate_unique_atom_names(ligand_b)
-
         # Get solvent parameters from component
         if solvent_a:
             ion_concentration = solvent_a.ion_concentration.to_openmm()
@@ -225,8 +218,33 @@ class SimulationUnit(ProtocolUnit):
         else:
             ion_concentration, positive_ion, negative_ion = None, None, None
 
-        # Get settings
+        ## Up to this point we have protein top/pos, ligand components and solvent attributes in OpenMM units
+
+
+        # Get settings for system generator
+        forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
+        system_settings = settings.system_settings
+
+        # handle cache for system generator
+        if settings.forcefield_cache is not None:
+            ffcache = ctx.shared / settings.forcefield_cache
+        else:
+            ffcache = None
+
+        system_generator = system_creation.get_system_generator(
+            forcefield_settings=forcefield_settings,
+            thermo_settings=thermodynamic_settings,
+            system_settings=system_settings,
+            cache=ffcache,
+            has_solvent=solvent_a is not None,
+        )
+
+
+
+
+        # Get settings
+
         phase = self._detect_phase(state_a, state_b)
         traj_save_frequency = settings.traj_save_frequency
         work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
