@@ -28,6 +28,69 @@ from openff.units.openmm import to_openmm
 
 
 class SetupUnit(ProtocolUnit):
+    @staticmethod
+    def _check_states_compatibility(state_a, state_b):
+        """
+        Checks that both states have the same solvent parameters and receptor.
+
+        Parameters
+        ----------
+        state_a : gufe.state.State
+            Origin state for the alchemical transformation.
+        state_b :
+            Destination state for the alchemical transformation.
+        """
+        # If any of them has a solvent, check the parameters are the same
+        if any(["solvent" in state.components for state in (state_a, state_b)]):
+            assert state_a.get("solvent") == state_b.get("solvent"), "Solvent parameters differ between solvent components."
+        # check protein component is the same in both states if protein component is found
+        if any(["protein" in state.components for state in (state_a, state_b)]):
+            assert state_a.get("protein") == state_b.get("protein"), "Receptors in states are not compatible."
+
+    @staticmethod
+    def _detect_phase(state_a, state_b):
+        """
+        Detect phase according to the components in the input chemical state.
+
+        Complex state is assumed if both states have ligands and protein components.
+
+        Solvent state is assumed
+
+        Vacuum state is assumed if only either a ligand or a protein is present
+        in each of the states.
+
+        Parameters
+        ----------
+        state_a : gufe.state.State
+            Source state for the alchemical transformation.
+        state_b : gufe.state.State
+            Destination state for the alchemical transformation.
+
+        Returns
+        -------
+        phase : str
+            Phase name. "vacuum", "solvent" or "complex".
+        component_keys : list[str]
+            List of component keys to extract from states.
+        """
+        states = (state_a, state_b)
+        # where to store the data to be returned
+
+        # Order of phases is important! We have to check complex first and solvent second.
+        key_options = {
+            "complex": ["ligand", "protein", "solvent"],
+            "solvent": ["ligand", "solvent"],
+            "vacuum": ["ligand"]
+        }
+        for phase, keys in key_options.items():
+            if all([key in state for state in states for key in keys]):
+                detected_phase = phase
+                break
+        else:
+            raise ValueError(
+                "Could not detect phase from system states. Make sure the component in both systems match.")
+
+        return detected_phase
 
     def _execute(self, ctx, *, state_a, state_b, mapping, settings, **inputs):
         """
@@ -168,6 +231,13 @@ class SetupUnit(ProtocolUnit):
 
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
 
+            import pdb
+            pdb.set_trace()
+
+            system_ = context.getSystem()
+            state_ = context.getState()
+            integrator_ = context.getIntegrator()
+
         finally:
             # Explicit cleanup for GPU resources
             del context, integrator
@@ -180,69 +250,6 @@ class SimulationUnit(ProtocolUnit):
     Monolithic unit for simulation. It runs NEQ switching simulation from chemical systems and stores the
     work computed in numpy-formatted files, to be analyzed by another unit.
     """
-    @staticmethod
-    def _check_states_compatibility(state_a, state_b):
-        """
-        Checks that both states have the same solvent parameters and receptor.
-
-        Parameters
-        ----------
-        state_a : gufe.state.State
-            Origin state for the alchemical transformation.
-        state_b :
-            Destination state for the alchemical transformation.
-        """
-        # If any of them has a solvent, check the parameters are the same
-        if any(["solvent" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("solvent") == state_b.get("solvent"), "Solvent parameters differ between solvent components."
-        # check protein component is the same in both states if protein component is found
-        if any(["protein" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("protein") == state_b.get("protein"), "Receptors in states are not compatible."
-
-    @staticmethod
-    def _detect_phase(state_a, state_b):
-        """
-        Detect phase according to the components in the input chemical state.
-
-        Complex state is assumed if both states have ligands and protein components.
-
-        Solvent state is assumed
-
-        Vacuum state is assumed if only either a ligand or a protein is present
-        in each of the states.
-
-        Parameters
-        ----------
-        state_a : gufe.state.State
-            Source state for the alchemical transformation.
-        state_b : gufe.state.State
-            Destination state for the alchemical transformation.
-
-        Returns
-        -------
-        phase : str
-            Phase name. "vacuum", "solvent" or "complex".
-        component_keys : list[str]
-            List of component keys to extract from states.
-        """
-        states = (state_a, state_b)
-        # where to store the data to be returned
-
-        # Order of phases is important! We have to check complex first and solvent second.
-        key_options = {
-            "complex": ["ligand", "protein", "solvent"],
-            "solvent": ["ligand", "solvent"],
-            "vacuum": ["ligand"]
-        }
-        for phase, keys in key_options.items():
-            if all([key in state for state in states for key in keys]):
-                detected_phase = phase
-                break
-        else:
-            raise ValueError(
-                "Could not detect phase from system states. Make sure the component in both systems match.")
-
-        return detected_phase
 
     @staticmethod
     def extract_positions(context, hybrid_topology_factory, atom_selection_exp="not water"):
@@ -689,8 +696,10 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # or JSON-serializable objects
         num_replicates = self.settings.num_replicates
 
+        setup = SetupUnit(state_a=stateA, state_b=stateB, mapping=mapping, settings=self.settings, name="setup")
+
         simulations = [
-            SimulationUnit(state_a=stateA, state_b=stateB, mapping=mapping, settings=self.settings, name=f"{replicate}")
+            SimulationUnit(setup=setup, settings=self.settings, name=f"{replicate}")
             for replicate in range(num_replicates)]
 
         end = ResultUnit(name="result", simulations=simulations)
