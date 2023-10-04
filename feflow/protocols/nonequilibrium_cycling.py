@@ -22,7 +22,7 @@ from perses.app.setup_relative_calculation import get_openmm_platform
 from perses.annihilation.relative import HybridTopologyFactory
 
 from openff.units import unit
-from openff.units.openmm import to_openmm
+from openff.units.openmm import to_openmm, from_openmm
 
 # Specific instance of logger for this module
 # logger = logging.getLogger(__name__)
@@ -180,7 +180,10 @@ class SimulationUnit(ProtocolUnit):
         import numpy as np
         import openmm
         import openmm.unit as openmm_unit
+        from openff.units.openmm import ensure_quantity
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
+        from gufe.components import SmallMoleculeComponent
+        from openfe.protocols.openmm_rfe import _rfe_utils
 
         # Setting up logging to file in shared filesystem
         file_logger = logging.getLogger("neq-cycling")
@@ -221,6 +224,8 @@ class SimulationUnit(ProtocolUnit):
         ## Up to this point we have protein top/pos, ligand components and solvent attributes in OpenMM units
 
 
+        #### START OF COPY/PASTE OPENFE ####
+
         # Get settings for system generator
         forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
@@ -240,6 +245,85 @@ class SimulationUnit(ProtocolUnit):
             has_solvent=solvent_a is not None,
         )
 
+        # b. force the creation of parameters
+        # This is necessary because we need to have the FF generated ahead of
+        # solvating the system.
+        # Note: by default this is cached to ctx.shared/db.json so shouldn't
+        # incur too large a cost
+        self.logger.info("Parameterizing molecules")
+        small_mols_a = []
+        for comp in state_a.components.values():
+            if isinstance(comp, SmallMoleculeComponent):
+                small_mols_a.append(comp)
+
+        for comp in small_mols_a:
+            offmol = comp.to_openff()
+            system_generator.create_system(offmol.to_topology().to_openmm(),
+                                           molecules=[offmol])
+            if comp == mapping.componentA:
+                molB = mapping.componentB.to_openff()
+                system_generator.create_system(molB.to_topology().to_openmm(),
+                                               molecules=[molB])
+
+        # c. get OpenMM Modeller + a dictionary of resids for each component
+        solvation_settings = settings.solvation_settings
+        stateA_modeller, comp_resids = system_creation.get_omm_modeller(
+            protein_comp=receptor_a,
+            solvent_comp=solvent_a,
+            small_mols=ligand_a,
+            omm_forcefield=system_generator.forcefield,
+            solvent_settings=solvation_settings,
+        )
+
+        # d. get topology & positions
+        # Note: roundtrip positions to remove vec3 issues
+        stateA_topology = stateA_modeller.getTopology()
+        stateA_positions = to_openmm(
+            from_openmm(stateA_modeller.getPositions())
+        )
+
+        # e. create the stateA System
+        stateA_system = system_generator.create_system(
+            stateA_modeller.topology,
+            molecules=[s.to_openff() for s in small_mols_a],
+        )
+
+        # 2. Get stateB system
+        # a. get the topology
+        stateB_topology, stateB_alchem_resids = _rfe_utils.topologyhelpers.combined_topology(
+            stateA_topology,
+            mapping.componentB.to_openff().to_topology().to_openmm(),
+            exclude_resids=comp_resids[mapping.componentA],
+        )
+
+        # b. get a list of small molecules for stateB
+        off_mols_stateB = [mapping.componentB.to_openff(), ]
+        for comp in small_mols_a:
+            if comp != mapping.componentA:
+                off_mols_stateB.append(comp.to_openff())
+
+        stateB_system = system_generator.create_system(
+            stateB_topology,
+            molecules=off_mols_stateB,
+        )
+
+        #  c. Define correspondence mappings between the two systems
+        ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
+            mapping.componentA_to_componentB,
+            stateA_system, stateA_topology, comp_resids[mapping.componentA],
+            stateB_system, stateB_topology, stateB_alchem_resids,
+            # These are non-optional settings for this method
+            fix_constraints=True,
+        )
+
+        #  d. Finally get the positions
+        stateB_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
+            ligand_mappings, stateA_topology, stateB_topology,
+            old_positions=ensure_quantity(stateA_positions, 'openmm'),
+            insert_positions=ensure_quantity(mapping.componentB.to_openff().conformers[0], 'openmm'),
+        )
+
+        ####### TO THIS PART IS COPY/PASTE FROM OPENFE #########
 
 
 
