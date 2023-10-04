@@ -8,7 +8,7 @@ from typing import Optional
 from gufe.settings import Settings
 from openff.units import unit
 from pydantic import root_validator
-from openfe.protocols.openmm_utils.omm_settings import SystemSettings
+from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
 
 # Default settings for the lambda functions
 x = 'lambda'
@@ -49,6 +49,9 @@ class NonEquilibriumCyclingSettings(Settings):
     system_settings: SystemSettings
     forcefield_cache: Optional[str] = "db.json"  # TODO: Remove once it has been integrated with openfe settings
 
+    # Solvation settings
+    solvation_settings: SolvationSettings
+
     # Lambda settings
     lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
 
@@ -68,7 +71,7 @@ class NonEquilibriumCyclingSettings(Settings):
     work_save_frequency: int = 500
     atom_selection_expression: str = "not water"
 
-    # Number of cycles to run
+    # Number of replicates to run (1 cycle/replicate)
     num_replicates: int = 1
 
     @root_validator
