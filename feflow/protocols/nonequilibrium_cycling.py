@@ -6,7 +6,7 @@ import datetime
 import logging
 import time
 
-from gufe.settings import Settings, OpenMMSystemGeneratorFFSettings, ThermoSettings
+from gufe.settings import Settings
 from gufe.chemicalsystem import ChemicalSystem
 from gufe.mapping import ComponentMapping
 from gufe.protocols import (
@@ -17,9 +17,7 @@ from gufe.protocols import (
 )
 
 from openfe.protocols.openmm_utils import system_creation
-from perses.app.relative_setup import RelativeFEPSetup
 from perses.app.setup_relative_calculation import get_openmm_platform
-from perses.annihilation.relative import HybridTopologyFactory
 
 from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
@@ -260,14 +258,14 @@ class SimulationUnit(ProtocolUnit):
             offmol = comp.to_openff()
             system_generator.create_system(offmol.to_topology().to_openmm(),
                                            molecules=[offmol])
-            if comp == mapping.componentA:
-                molB = mapping.componentB.to_openff()
-                system_generator.create_system(molB.to_topology().to_openmm(),
-                                               molecules=[molB])
+            if comp == ligand_a:
+                mol_b = ligand_b.to_openff()
+                system_generator.create_system(mol_b.to_topology().to_openmm(),
+                                               molecules=[mol_b])
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
         solvation_settings = settings.solvation_settings
-        stateA_modeller, comp_resids = system_creation.get_omm_modeller(
+        state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_a,
             solvent_comp=solvent_a,
             small_mols=ligand_a,
@@ -277,98 +275,76 @@ class SimulationUnit(ProtocolUnit):
 
         # d. get topology & positions
         # Note: roundtrip positions to remove vec3 issues
-        stateA_topology = stateA_modeller.getTopology()
-        stateA_positions = to_openmm(
-            from_openmm(stateA_modeller.getPositions())
+        state_a_topology = state_a_modeller.getTopology()
+        state_a_positions = to_openmm(
+            from_openmm(state_a_modeller.getPositions())
         )
 
         # e. create the stateA System
-        stateA_system = system_generator.create_system(
-            stateA_modeller.topology,
+        state_a_system = system_generator.create_system(
+            state_a_modeller.topology,
             molecules=[s.to_openff() for s in small_mols_a],
         )
 
         # 2. Get stateB system
         # a. get the topology
-        stateB_topology, stateB_alchem_resids = _rfe_utils.topologyhelpers.combined_topology(
-            stateA_topology,
-            mapping.componentB.to_openff().to_topology().to_openmm(),
-            exclude_resids=comp_resids[mapping.componentA],
+        state_b_topology, state_b_alchem_resids = _rfe_utils.topologyhelpers.combined_topology(
+            state_a_topology,
+            ligand_b.to_openff().to_topology().to_openmm(),
+            exclude_resids=comp_resids[ligand_a],
         )
 
         # b. get a list of small molecules for stateB
-        off_mols_stateB = [mapping.componentB.to_openff(), ]
+        off_mols_state_b = [ligand_b.to_openff(), ]
         for comp in small_mols_a:
-            if comp != mapping.componentA:
-                off_mols_stateB.append(comp.to_openff())
+            if comp != ligand_a:
+                off_mols_state_b.append(comp.to_openff())
 
-        stateB_system = system_generator.create_system(
-            stateB_topology,
-            molecules=off_mols_stateB,
+        state_b_system = system_generator.create_system(
+            state_b_topology,
+            molecules=off_mols_state_b,
         )
 
         #  c. Define correspondence mappings between the two systems
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
-            mapping.componentA_to_componentB,
-            stateA_system, stateA_topology, comp_resids[mapping.componentA],
-            stateB_system, stateB_topology, stateB_alchem_resids,
+            mapping.get("ligandmapping").componentA_to_componentB,
+            state_a_system, state_a_topology, comp_resids[ligand_a],
+            state_b_system, state_b_topology, state_b_alchem_resids,
             # These are non-optional settings for this method
             fix_constraints=True,
         )
 
         #  d. Finally get the positions
-        stateB_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
-            ligand_mappings, stateA_topology, stateB_topology,
-            old_positions=ensure_quantity(stateA_positions, 'openmm'),
-            insert_positions=ensure_quantity(mapping.componentB.to_openff().conformers[0], 'openmm'),
+        state_b_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
+            ligand_mappings, state_a_topology, state_b_topology,
+            old_positions=ensure_quantity(state_a_positions, 'openmm'),
+            insert_positions=ensure_quantity(ligand_b.to_openff().conformers[0], 'openmm'),
         )
 
-        ####### TO THIS PART IS COPY/PASTE FROM OPENFE #########
+        # Get alchemical settings
+        alchemical_settings = settings.alchemical_settings
 
+        # Now we can create the HTF from the previous objects
+        hybrid_factory = _rfe_utils.relative.HybridTopologyFactory(
+            state_a_system, state_a_positions, state_a_topology,
+            state_b_system, state_b_positions, state_b_topology,
+            old_to_new_atom_map=ligand_mappings['old_to_new_atom_map'],
+            old_to_new_core_atom_map=ligand_mappings['old_to_new_core_atom_map'],
+            use_dispersion_correction=alchemical_settings.use_dispersion_correction,
+            softcore_alpha=alchemical_settings.softcore_alpha,
+            softcore_LJ_v2=alchemical_settings.softcore_LJ_v2,
+            softcore_LJ_v2_alpha=alchemical_settings.softcore_alpha,
+            interpolate_old_and_new_14s=alchemical_settings.interpolate_old_and_new_14s,
+            flatten_torsions=alchemical_settings.flatten_torsions,
+        )
 
-
-        # Get settings
-
-        phase = self._detect_phase(state_a, state_b)
+        ####### UP TO THIS PART IS COPY/PASTE FROM OPENFE #########
         traj_save_frequency = settings.traj_save_frequency
         work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
         selection_expression = settings.atom_selection_expression
 
-        # Get the ligand mapping from ComponentMapping object
-        # NOTE: perses to date has a different "directionality" sense in terms of the mapping,
-        #   see perses.rjmc.topology_proposal.propose docstring for detailed information.
-        ligand_mapping = mapping['ligand'].componentB_to_componentA
-
-        # Setup relative FE calculation
-        fe_setup = RelativeFEPSetup(
-            old_ligand=ligand_a,
-            new_ligand=ligand_b,
-            receptor=receptor_top,
-            receptor_positions=receptor_pos,
-            forcefield_files=settings.forcefield_settings.forcefields,
-            small_molecule_forcefield=settings.forcefield_settings.small_molecule_forcefield,
-            phases=[phase],
-            transformation_atom_map=ligand_mapping,  # Handle atom mapping between systems
-            ionic_strength=ion_concentration,
-            positive_ion=positive_ion,
-            negative_ion=negative_ion,
-        )
-
-        topology_proposals = fe_setup.topology_proposals
-        old_positions = fe_setup.old_positions
-        new_positions = fe_setup.new_positions
-
-        # Generate Hybrid Topology Factory - Generic HTF
-        htf = HybridTopologyFactory(
-            topology_proposal=topology_proposals[phase],
-            current_positions=old_positions[phase],
-            new_positions=new_positions[phase],
-            softcore_LJ_v2=settings.softcore_LJ_v2,
-            interpolate_old_and_new_14s=settings.interpolate_old_and_new_14s,
-        )
-
-        system = htf.hybrid_system
-        positions = htf.hybrid_positions
+        system = hybrid_factory.hybrid_system
+        positions = hybrid_factory.hybrid_positions
 
         # Set up integrator
         temperature = to_openmm(thermodynamic_settings.temperature)
@@ -415,13 +391,14 @@ class SimulationUnit(ProtocolUnit):
                 # Save positions
                 if step % traj_save_frequency == 0:
                     file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
-                    initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+                    initial_positions, final_positions = self.extract_positions(context,
+                                                                                hybrid_topology_factory=hybrid_factory,
                                                                                 atom_selection_exp=selection_expression)
                     forward_eq_old.append(initial_positions)
                     forward_eq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
             file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
                                                                         atom_selection_exp=selection_expression)
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
@@ -438,12 +415,13 @@ class SimulationUnit(ProtocolUnit):
                 integrator.step(work_save_frequency)
                 forward_works.append(integrator.get_protocol_work(dimensionless=True))
                 if fwd_step % traj_save_frequency == 0:
-                    initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+                    initial_positions, final_positions = self.extract_positions(context,
+                                                                                hybrid_topology_factory=hybrid_factory,
                                                                                 atom_selection_exp=selection_expression)
                     forward_neq_old.append(initial_positions)
                     forward_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
                                                                         atom_selection_exp=selection_expression)
             forward_neq_old.append(initial_positions)
             forward_neq_new.append(final_positions)
@@ -456,12 +434,13 @@ class SimulationUnit(ProtocolUnit):
             for step in range(coarse_eq_steps):
                 integrator.step(work_save_frequency)
                 if step % traj_save_frequency == 0:
-                    initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+                    initial_positions, final_positions = self.extract_positions(context,
+                                                                                hybrid_topology_factory=hybrid_factory,
                                                                                 atom_selection_exp=selection_expression)
                     reverse_eq_new.append(initial_positions)  # TODO: Maybe better naming not old/new but initial/final
                     reverse_eq_old.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
                                                                         atom_selection_exp=selection_expression)
             reverse_eq_old.append(initial_positions)
             reverse_eq_new.append(final_positions)
@@ -476,12 +455,13 @@ class SimulationUnit(ProtocolUnit):
                 integrator.step(work_save_frequency)
                 reverse_works.append(integrator.get_protocol_work(dimensionless=True))
                 if rev_step % traj_save_frequency == 0:
-                    initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+                    initial_positions, final_positions = self.extract_positions(context,
+                                                                                hybrid_topology_factory=hybrid_factory,
                                                                                 atom_selection_exp=selection_expression)
                     reverse_neq_old.append(initial_positions)
                     reverse_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=htf,
+            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
                                                                         atom_selection_exp=selection_expression)
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
@@ -501,6 +481,7 @@ class SimulationUnit(ProtocolUnit):
             file_logger.info(f"replicate_{self.name} Estimated performance: {estimated_performance} ns/day")
 
             # Serialize works
+            phase = self._detect_phase(state_a, state_b)  # infer phase from systems and components
             forward_work_path = ctx.shared / f"forward_{phase}_{self.name}.npy"
             reverse_work_path = ctx.shared / f"reverse_{phase}_{self.name}.npy"
             with open(forward_work_path, 'wb') as out_file:
@@ -717,11 +698,17 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
     @classmethod
     def _default_settings(cls):
-        from perses.protocols.settings import NonEquilibriumCyclingSettings
+        from feflow.settings.neq_cycling import NonEquilibriumCyclingSettings
+        from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
+        from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
+        from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
         return NonEquilibriumCyclingSettings(
-                forcefield_settings=OpenMMSystemGeneratorFFSettings(),
-                thermo_settings=ThermoSettings(temperature=300 * unit.kelvin),
-                )
+            forcefield_settings=OpenMMSystemGeneratorFFSettings(),
+            thermo_settings=ThermoSettings(temperature=300 * unit.kelvin),
+            system_settings=SystemSettings(),
+            solvation_settings=SolvationSettings(),
+            alchemical_settings=AlchemicalSettings(),
+        )
 
     # NOTE: create method should be really fast, since it would be running in the work units not the clients!!
     def _create(

@@ -69,7 +69,7 @@ def toluene_solvent_system(toluene, solvent_comp):
 @pytest.fixture
 def short_settings():
     from openff.units import unit
-    from perses.protocols import NonEquilibriumCyclingProtocol
+    from feflow.protocols import NonEquilibriumCyclingProtocol
 
     settings = NonEquilibriumCyclingProtocol.default_settings()
 
