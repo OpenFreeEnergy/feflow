@@ -16,8 +16,9 @@ from gufe.protocols import (
     ProtocolDAGResult,
 )
 
+# TODO: Remove/change when things get migrated to openmmtools or feflow
 from openfe.protocols.openmm_utils import system_creation
-from perses.app.setup_relative_calculation import get_openmm_platform
+from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
 
 from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
@@ -131,8 +132,8 @@ class SimulationUnit(ProtocolUnit):
         positions = context.getState(getPositions=True).getPositions(asNumpy=True)
 
         # Get topology from HTF - indices for initial and final topologies in hybrid topology
-        initial_indices = np.asarray(hybrid_topology_factory.old_atom_indices)
-        final_indices = np.asarray(hybrid_topology_factory.new_atom_indices)
+        initial_indices = np.asarray(hybrid_topology_factory.initial_atom_indices)
+        final_indices = np.asarray(hybrid_topology_factory.final_atom_indices)
         hybrid_topology = hybrid_topology_factory.hybrid_topology
         selection = atom_selection_exp
         md_trajectory = md.Trajectory(xyz=positions, topology=hybrid_topology)
@@ -182,6 +183,7 @@ class SimulationUnit(ProtocolUnit):
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
+        from feflow.utils.hybrid_topology import HybridTopologyFactoryModded as HybridTopologyFactory
 
         # Setting up logging to file in shared filesystem
         file_logger = logging.getLogger("neq-cycling")
@@ -268,7 +270,7 @@ class SimulationUnit(ProtocolUnit):
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_a,
             solvent_comp=solvent_a,
-            small_mols=ligand_a,
+            small_mols=small_mols_a,
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
         )
@@ -307,7 +309,7 @@ class SimulationUnit(ProtocolUnit):
 
         #  c. Define correspondence mappings between the two systems
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
-            mapping.get("ligandmapping").componentA_to_componentB,
+            mapping["ligand"].componentA_to_componentB,
             state_a_system, state_a_topology, comp_resids[ligand_a],
             state_b_system, state_b_topology, state_b_alchem_resids,
             # These are non-optional settings for this method
@@ -325,7 +327,7 @@ class SimulationUnit(ProtocolUnit):
         alchemical_settings = settings.alchemical_settings
 
         # Now we can create the HTF from the previous objects
-        hybrid_factory = _rfe_utils.relative.HybridTopologyFactory(
+        hybrid_factory = HybridTopologyFactory(
             state_a_system, state_a_positions, state_a_topology,
             state_b_system, state_b_positions, state_b_topology,
             old_to_new_atom_map=ligand_mappings['old_to_new_atom_map'],
