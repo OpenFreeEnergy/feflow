@@ -23,6 +23,8 @@ from perses.annihilation.relative import HybridTopologyFactory
 from openff.units import unit
 from openff.units.openmm import to_openmm
 
+from ..utils.data import serialize
+
 # Specific instance of logger for this module
 # logger = logging.getLogger(__name__)
 
@@ -231,18 +233,25 @@ class SetupUnit(ProtocolUnit):
 
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
 
-            import pdb
-            pdb.set_trace()
-
             system_ = context.getSystem()
             state_ = context.getState()
             integrator_ = context.getIntegrator()
+
+            system_outfile = ctx.shared / 'system.xml.bz2'
+            state_outfile = ctx.shared / 'state.xml.bz2'
+            integrator_outfile = ctx.shared / 'integrator.xml.bz2'
+
+            serialize(system_, system_outfile)
+            serialize(state_, state_outfile)
+            serialize(integrator_, integrator_outfile)
 
         finally:
             # Explicit cleanup for GPU resources
             del context, integrator
 
-        return {}
+        return {'system': system_outfile,
+                'state': state_outfile,
+                'integrator': integrator_outfile}
 
 
 class SimulationUnit(ProtocolUnit):
@@ -662,6 +671,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
     of the same type of components as components in stateB.
     """
 
+    _simulation_unit = SimulationUnit
     result_cls = NonEquilibriumCyclingProtocolResult
 
     def __init__(self, settings: Settings):
@@ -699,7 +709,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         setup = SetupUnit(state_a=stateA, state_b=stateB, mapping=mapping, settings=self.settings, name="setup")
 
         simulations = [
-            SimulationUnit(setup=setup, settings=self.settings, name=f"{replicate}")
+            self._simulation_unit(setup=setup, settings=self.settings, name=f"{replicate}")
             for replicate in range(num_replicates)]
 
         end = ResultUnit(name="result", simulations=simulations)
