@@ -205,27 +205,6 @@ class SimulationUnit(ProtocolUnit):
         solvent_a = state_a.components.get("solvent")
         # solvent_b = state_b.components.get("solvent")  # Should not be needed
 
-
-        # Check first state for receptor if not get receptor from second one
-        if receptor_a:
-            receptor_top = receptor_a.to_openmm_topology()
-            receptor_pos = receptor_a.to_openmm_positions()
-        else:
-            receptor_top, receptor_pos = None, None
-
-        # Get solvent parameters from component
-        if solvent_a:
-            ion_concentration = solvent_a.ion_concentration.to_openmm()
-            positive_ion = solvent_a.positive_ion
-            negative_ion = solvent_a.negative_ion
-        else:
-            ion_concentration, positive_ion, negative_ion = None, None, None
-
-        ## Up to this point we have protein top/pos, ligand components and solvent attributes in OpenMM units
-
-
-        #### START OF COPY/PASTE OPENFE ####
-
         # Get settings for system generator
         forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
@@ -339,8 +318,8 @@ class SimulationUnit(ProtocolUnit):
             interpolate_old_and_new_14s=alchemical_settings.interpolate_old_and_new_14s,
             flatten_torsions=alchemical_settings.flatten_torsions,
         )
+        ####### END OF SETUP #########
 
-        ####### UP TO THIS PART IS COPY/PASTE FROM OPENFE #########
         traj_save_frequency = settings.traj_save_frequency
         work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
         selection_expression = settings.atom_selection_expression
