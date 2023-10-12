@@ -679,7 +679,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
     @classmethod
     def _default_settings(cls):
-        from feflow.settings.neq_cycling import NonEquilibriumCyclingSettings
+        from feflow.settings.nonequilibrium_cycling import NonEquilibriumCyclingSettings
         from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
         from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
         from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
