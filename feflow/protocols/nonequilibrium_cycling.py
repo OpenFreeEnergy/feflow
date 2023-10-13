@@ -358,8 +358,8 @@ class SetupUnit(ProtocolUnit):
                 'state': state_outfile,
                 'integrator': integrator_outfile,
                 'phase': phase,
-                'old_atom_indices': hybrid_factory.old_atom_indices,
-                'new_atom_indices': hybrid_factory.new_atom_indices,
+                'initial_atom_indices': hybrid_factory.initial_atom_indices,
+                'final_atom_indices': hybrid_factory.final_atom_indices,
                 }
 
 
@@ -370,7 +370,7 @@ class SimulationUnit(ProtocolUnit):
     """
 
     @staticmethod
-    def extract_positions(context, old_atom_indices, new_atom_indices):
+    def extract_positions(context, initial_atom_indices, final_atom_indices):
         """
         Extract positions from initial and final systems based from the hybrid topology.
 
@@ -401,8 +401,8 @@ class SimulationUnit(ProtocolUnit):
         positions = context.getState(getPositions=True).getPositions(asNumpy=True)
 
         # Get indices for initial and final topologies in hybrid topology
-        initial_indices = np.asarray(old_atom_indices)
-        final_indices = np.asarray(new_atom_indices)
+        initial_indices = np.asarray(initial_atom_indices)
+        final_indices = np.asarray(final_atom_indices)
 
         initial_positions = positions[initial_indices, :]
         final_positions = positions[final_indices, :]
@@ -449,8 +449,8 @@ class SimulationUnit(ProtocolUnit):
         integrator = deserialize(setup.outputs['integrator'])
 
         # Get atom indices for either end of the hybrid topology
-        old_atom_indices = setup.output['old_atom_indices']
-        new_atom_indices = setup.output['new_atom_indices']
+        initial_atom_indices = setup.output['initial_atom_indices']
+        final_atom_indices = setup.output['final_atom_indices']
 
         # Set up context
         platform = get_openmm_platform(settings.platform)
@@ -486,15 +486,15 @@ class SimulationUnit(ProtocolUnit):
                 if step % traj_save_frequency == 0:
                     file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                old_atom_indices,
-                                                                                new_atom_indices)
+                                                                                initial_atom_indices,
+                                                                                final_atom_indices)
                     forward_eq_old.append(initial_positions)
                     forward_eq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
             file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
             initial_positions, final_positions = self.extract_positions(context,
-                                                                        old_atom_indices,
-                                                                        new_atom_indices)
+                                                                        initial_atom_indices,
+                                                                        final_atom_indices)
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
 
@@ -511,14 +511,14 @@ class SimulationUnit(ProtocolUnit):
                 forward_works.append(integrator.get_protocol_work(dimensionless=True))
                 if fwd_step % traj_save_frequency == 0:
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                old_atom_indices,
-                                                                                new_atom_indices)
+                                                                                initial_atom_indices,
+                                                                                final_atom_indices)
                     forward_neq_old.append(initial_positions)
                     forward_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
             initial_positions, final_positions = self.extract_positions(context,
-                                                                        old_atom_indices,
-                                                                        new_atom_indices)
+                                                                        initial_atom_indices,
+                                                                        final_atom_indices)
             forward_neq_old.append(initial_positions)
             forward_neq_new.append(final_positions)
 
@@ -531,14 +531,14 @@ class SimulationUnit(ProtocolUnit):
                 integrator.step(work_save_frequency)
                 if step % traj_save_frequency == 0:
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                old_atom_indices,
-                                                                                new_atom_indices)
+                                                                                initial_atom_indices,
+                                                                                final_atom_indices)
                     reverse_eq_new.append(initial_positions)  # TODO: Maybe better naming not old/new but initial/final
                     reverse_eq_old.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
             initial_positions, final_positions = self.extract_positions(context,
-                                                                        old_atom_indices,
-                                                                        new_atom_indices)
+                                                                        initial_atom_indices,
+                                                                        final_atom_indices)
             reverse_eq_old.append(initial_positions)
             reverse_eq_new.append(final_positions)
 
@@ -553,14 +553,14 @@ class SimulationUnit(ProtocolUnit):
                 reverse_works.append(integrator.get_protocol_work(dimensionless=True))
                 if rev_step % traj_save_frequency == 0:
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                old_atom_indices,
-                                                                                new_atom_indices)
+                                                                                initial_atom_indices,
+                                                                                final_atom_indices)
                     reverse_neq_old.append(initial_positions)
                     reverse_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
             initial_positions, final_positions = self.extract_positions(context,
-                                                                        old_atom_indices,
-                                                                        new_atom_indices)
+                                                                        initial_atom_indices,
+                                                                        final_atom_indices)
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
 
