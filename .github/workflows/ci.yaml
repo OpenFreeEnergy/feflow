@@ -24,12 +24,11 @@ defaults:
 jobs:
   tests:
     runs-on: ${{ matrix.os }}-latest
-    name: "💻-${{matrix.os }} 🐍-${{ matrix.python-version }} 🗃️${{ matrix.pydantic-version }}"
+    name: "💻-${{matrix.os }} 🐍-${{ matrix.python-version }}"
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu"]
-        pydantic-version: [">1"]
         python-version:
           - "3.9"
           - "3.10"
@@ -37,7 +36,6 @@ jobs:
         include:
           - os: "macos"
             python-version: "3.11"
-            pydantic-version: ">1"
 
     steps:
       - uses: actions/checkout@v4

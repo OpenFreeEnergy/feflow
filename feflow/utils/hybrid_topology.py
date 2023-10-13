@@ -64,12 +64,12 @@ class HybridTopologyFactoryModded(HybridTopologyFactory):
         super().__init__(old_system, old_positions, old_topology,
                          new_system, new_positions, new_topology,
                          old_to_new_atom_map, old_to_new_core_atom_map,
-                         use_dispersion_correction=False,
-                         softcore_alpha=0.5,
-                         softcore_LJ_v2=True,
-                         softcore_LJ_v2_alpha=0.85,
-                         interpolate_old_and_new_14s=False,
-                         flatten_torsions=False,
+                         use_dispersion_correction=use_dispersion_correction,
+                         softcore_alpha=softcore_alpha,
+                         softcore_LJ_v2=softcore_LJ_v2,
+                         softcore_LJ_v2_alpha=softcore_LJ_v2_alpha,
+                         interpolate_old_and_new_14s=interpolate_old_and_new_14s,
+                         flatten_torsions=flatten_torsions,
                          **kwargs)
 
     # TODO: We need to refactor for the init to use these properties and have an attribute with the indices

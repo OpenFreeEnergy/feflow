@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
     # Base depends
+  - gufe
   - openfe  # TODO: Remove once we don't depend on openfe
   - python
   - pip
