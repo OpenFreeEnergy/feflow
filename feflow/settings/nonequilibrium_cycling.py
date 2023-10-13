@@ -4,10 +4,12 @@ Settings objects for the different protocols using gufe objects.
 This module implements the objects that will be needed to run relative binding free
 energy calculations using perses.
 """
-
+from typing import Optional
 from gufe.settings import Settings
 from openff.units import unit
 from pydantic import root_validator
+from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
+from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
 # Default settings for the lambda functions
 x = 'lambda'
@@ -44,12 +46,18 @@ class NonEquilibriumCyclingSettings(Settings):
     class Config:
         arbitrary_types_allowed = True
 
+    # System Settings (from openfe)
+    system_settings: SystemSettings
+    forcefield_cache: Optional[str] = "db.json"  # TODO: Remove once it has been integrated with openfe settings
+
+    # Solvation settings
+    solvation_settings: SolvationSettings
+
     # Lambda settings
     lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
 
     # alchemical settings
-    softcore_LJ_v2 = True
-    interpolate_old_and_new_14s = False
+    alchemical_settings: AlchemicalSettings
 
     # NEQ integration settings
     timestep = 4.0 * unit.femtoseconds
@@ -63,7 +71,7 @@ class NonEquilibriumCyclingSettings(Settings):
     work_save_frequency: int = 500
     atom_selection_expression: str = "not water"
 
-    # Number of cycles to run
+    # Number of replicates to run (1 cycle/replicate)
     num_replicates: int = 1
 
     @root_validator
