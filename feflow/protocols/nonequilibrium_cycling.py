@@ -94,58 +94,6 @@ class SetupUnit(ProtocolUnit):
 
         return detected_phase
 
-    @staticmethod
-    def extract_positions(context, hybrid_topology_factory, atom_selection_exp="not water"):
-        """
-        Extract positions from initial and final systems based from the hybrid topology.
-
-        Parameters
-        ----------
-        context: openmm.Context
-            Current simulation context where from extract positions.
-        hybrid_topology_factory: perses.annihilation.relative.HybridTopologyFactory
-            Hybrid topology factory where to extract positions and mapping information
-        atom_selection_exp: str, optional
-            Atom selection expression using mdtraj syntax. Defaults to "not water"
-
-        Returns
-        -------
-
-        Notes
-        -----
-        It achieves this by taking the positions and indices from the initial and final states of
-        the transformation, and computing the overlap of these with the indices of the complete
-        hybrid topology, filtered by some mdtraj selection expression.
-
-        1. Get positions from context
-        2. Get topology from HTF (already mdtraj topology)
-        3. Merge that information into mdtraj.Trajectory
-        4. Filter positions for initial/final according to selection string
-        """
-        # TODO: Maybe we want this as a helper/utils function in perses. We also need tests for this.
-        import mdtraj as md
-        import numpy as np
-
-        # Get positions from current openmm context
-        positions = context.getState(getPositions=True).getPositions(asNumpy=True)
-
-        # Get topology from HTF - indices for initial and final topologies in hybrid topology
-        initial_indices = np.asarray(hybrid_topology_factory.initial_atom_indices)
-        final_indices = np.asarray(hybrid_topology_factory.final_atom_indices)
-        hybrid_topology = hybrid_topology_factory.hybrid_topology
-        selection = atom_selection_exp
-        md_trajectory = md.Trajectory(xyz=positions, topology=hybrid_topology)
-        selection_indices = md_trajectory.topology.select(selection)
-
-        # Now we have to find the intersection/overlap between selected indices in the hybrid
-        # topology and the initial/final positions, respectively
-        initial_selected_indices = np.intersect1d(initial_indices, selection_indices)
-        final_selected_indices = np.intersect1d(final_indices, selection_indices)
-        initial_selected_positions = md_trajectory.xyz[0, initial_selected_indices, :]
-        final_selected_positions = md_trajectory.xyz[0, final_selected_indices, :]
-
-        return initial_selected_positions, final_selected_positions
-
     def _execute(self, ctx, *, state_a, state_b, mapping, settings, **inputs):
         """
         Execute the setup part of the nonequilibrium switching protocol.
