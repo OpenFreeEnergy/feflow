@@ -23,7 +23,7 @@ from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
 from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
-from ..utils.data import serialize
+from ..utils.data import serialize, deserialize
 
 # Specific instance of logger for this module
 # logger = logging.getLogger(__name__)
@@ -148,31 +148,26 @@ class SetupUnit(ProtocolUnit):
 
     def _execute(self, ctx, *, state_a, state_b, mapping, settings, **inputs):
         """
-        Execute the simulation part of the Nonequilibrium switching protocol using GUFE objects.
+        Execute the setup part of the nonequilibrium switching protocol.
 
         Parameters
         ----------
         ctx: gufe.protocols.protocolunit.Context
             The gufe context for the unit.
-
         state_a : gufe.ChemicalSystem
             The initial chemical system.
-
-
         state_b : gufe.ChemicalSystem
             The objective chemical system.
-
         mapping : dict[str, gufe.mapping.ComponentMapping]
             A dict featuring mappings between the two chemical systems.
-
         settings : gufe.settings.model.Settings
             The full settings for the protocol.
 
         Returns
         -------
         dict : dict[str, str]
-            Dictionary with paths to work arrays, both forward and reverse, and trajectory coordinates for systems
-            A and B.
+            Dictionary with paths to work arrays, both forward and reverse, and
+            trajectory coordinates for systems A and B.
         """
         # needed imports
         import numpy as np
@@ -186,6 +181,8 @@ class SetupUnit(ProtocolUnit):
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
+
+        phase = self._detect_phase(state_a, state_b)  # infer phase from systems and components
 
         # Get components from systems if found (None otherwise) -- NOTE: Uses hardcoded keys!
         receptor_a = state_a.components.get("protein")
@@ -310,10 +307,6 @@ class SetupUnit(ProtocolUnit):
         )
         ####### END OF SETUP #########
 
-        traj_save_frequency = settings.traj_save_frequency
-        work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
-        selection_expression = settings.atom_selection_expression
-
         system = hybrid_factory.hybrid_system
         positions = hybrid_factory.hybrid_positions
 
@@ -363,7 +356,11 @@ class SetupUnit(ProtocolUnit):
 
         return {'system': system_outfile,
                 'state': state_outfile,
-                'integrator': integrator_outfile}
+                'integrator': integrator_outfile,
+                'phase': phase,
+                'old_atom_indices': hybrid_factory.old_atom_indices,
+                'new_atom_indices': hybrid_factory.new_atom_indices,
+                }
 
 
 class SimulationUnit(ProtocolUnit):
@@ -373,7 +370,7 @@ class SimulationUnit(ProtocolUnit):
     """
 
     @staticmethod
-    def extract_positions(context, hybrid_topology_factory, atom_selection_exp="not water"):
+    def extract_positions(context, old_atom_indices, new_atom_indices):
         """
         Extract positions from initial and final systems based from the hybrid topology.
 
@@ -383,8 +380,6 @@ class SimulationUnit(ProtocolUnit):
             Current simulation context where from extract positions.
         hybrid_topology_factory: perses.annihilation.relative.HybridTopologyFactory
             Hybrid topology factory where to extract positions and mapping information
-        atom_selection_exp: str, optional
-            Atom selection expression using mdtraj syntax. Defaults to "not water"
 
         Returns
         -------
@@ -400,29 +395,19 @@ class SimulationUnit(ProtocolUnit):
         3. Merge that information into mdtraj.Trajectory
         4. Filter positions for initial/final according to selection string
         """
-        # TODO: Maybe we want this as a helper/utils function in perses. We also need tests for this.
-        import mdtraj as md
         import numpy as np
 
         # Get positions from current openmm context
         positions = context.getState(getPositions=True).getPositions(asNumpy=True)
 
-        # Get topology from HTF - indices for initial and final topologies in hybrid topology
-        initial_indices = np.asarray(hybrid_topology_factory.old_atom_indices)
-        final_indices = np.asarray(hybrid_topology_factory.new_atom_indices)
-        hybrid_topology = hybrid_topology_factory.hybrid_topology
-        selection = atom_selection_exp
-        md_trajectory = md.Trajectory(xyz=positions, topology=hybrid_topology)
-        selection_indices = md_trajectory.topology.select(selection)
+        # Get indices for initial and final topologies in hybrid topology
+        initial_indices = np.asarray(old_atom_indices)
+        final_indices = np.asarray(new_atom_indices)
 
-        # Now we have to find the intersection/overlap between selected indices in the hybrid
-        # topology and the initial/final positions, respectively
-        initial_selected_indices = np.intersect1d(initial_indices, selection_indices)
-        final_selected_indices = np.intersect1d(final_indices, selection_indices)
-        initial_selected_positions = md_trajectory.xyz[0, initial_selected_indices, :]
-        final_selected_positions = md_trajectory.xyz[0, final_selected_indices, :]
+        initial_positions = positions[initial_indices, :]
+        final_positions = positions[final_indices, :]
 
-        return initial_selected_positions, final_selected_positions
+        return initial_positions, final_positions
 
     def _execute(self, ctx, *, setup, settings, **inputs):
         """
@@ -443,7 +428,6 @@ class SimulationUnit(ProtocolUnit):
             Dictionary with paths to work arrays, both forward and reverse, and trajectory coordinates for systems
             A and B.
         """
-        # needed imports
         import numpy as np
         import openmm
         import openmm.unit as openmm_unit
@@ -459,13 +443,26 @@ class SimulationUnit(ProtocolUnit):
         file_handler.setFormatter(log_formatter)
         file_logger.addHandler(file_handler)
 
-        # GET STATE, SYSTEM, AND INTEGRATOR FROM SETUP UNIT
+        # Get state, system, and integrator from setup unit
+        system = deserialize(setup.outputs['system'])
+        state = deserialize(setup.outputs['state'])
+        integrator = deserialize(setup.outputs['integrator'])
+
+        # Get atom indices for either end of the hybrid topology
+        old_atom_indices = setup.output['old_atom_indices']
+        new_atom_indices = setup.output['new_atom_indices']
 
         # Set up context
         platform = get_openmm_platform(settings.platform)
         context = openmm.Context(system, integrator, platform)
-        context.setPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
-        context.setPositions(positions)
+        context.setState(state)
+
+        # Extract settings used below
+        neq_steps = settings.eq_steps
+        eq_steps = settings.neq_steps
+        traj_save_frequency = settings.traj_save_frequency
+        work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
+        selection_expression = settings.atom_selection_expression
 
         try:
 
@@ -475,7 +472,7 @@ class SimulationUnit(ProtocolUnit):
 
             # Coarse number of steps -- each coarse consists of work_save_frequency steps
             coarse_eq_steps = int(eq_steps/work_save_frequency)  # Note: eq_steps is multiple of work save steps
-            coarse_neq_steps = int(neq_steps / work_save_frequency)  # Note: neq_steps is multiple of work save steps
+            coarse_neq_steps = int(neq_steps/work_save_frequency)  # Note: neq_steps is multiple of work save steps
 
             # TODO: Also get the GPU information (plain try-except with nvidia-smi)
 
@@ -489,14 +486,15 @@ class SimulationUnit(ProtocolUnit):
                 if step % traj_save_frequency == 0:
                     file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                hybrid_topology_factory=hybrid_factory,
-                                                                                atom_selection_exp=selection_expression)
+                                                                                old_atom_indices,
+                                                                                new_atom_indices)
                     forward_eq_old.append(initial_positions)
                     forward_eq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
             file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
-                                                                        atom_selection_exp=selection_expression)
+            initial_positions, final_positions = self.extract_positions(context,
+                                                                        old_atom_indices,
+                                                                        new_atom_indices)
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
 
@@ -513,13 +511,14 @@ class SimulationUnit(ProtocolUnit):
                 forward_works.append(integrator.get_protocol_work(dimensionless=True))
                 if fwd_step % traj_save_frequency == 0:
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                hybrid_topology_factory=hybrid_factory,
-                                                                                atom_selection_exp=selection_expression)
+                                                                                old_atom_indices,
+                                                                                new_atom_indices)
                     forward_neq_old.append(initial_positions)
                     forward_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
-                                                                        atom_selection_exp=selection_expression)
+            initial_positions, final_positions = self.extract_positions(context,
+                                                                        old_atom_indices,
+                                                                        new_atom_indices)
             forward_neq_old.append(initial_positions)
             forward_neq_new.append(final_positions)
 
@@ -532,13 +531,14 @@ class SimulationUnit(ProtocolUnit):
                 integrator.step(work_save_frequency)
                 if step % traj_save_frequency == 0:
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                hybrid_topology_factory=hybrid_factory,
-                                                                                atom_selection_exp=selection_expression)
+                                                                                old_atom_indices,
+                                                                                new_atom_indices)
                     reverse_eq_new.append(initial_positions)  # TODO: Maybe better naming not old/new but initial/final
                     reverse_eq_old.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
-                                                                        atom_selection_exp=selection_expression)
+            initial_positions, final_positions = self.extract_positions(context,
+                                                                        old_atom_indices,
+                                                                        new_atom_indices)
             reverse_eq_old.append(initial_positions)
             reverse_eq_new.append(final_positions)
 
@@ -553,13 +553,14 @@ class SimulationUnit(ProtocolUnit):
                 reverse_works.append(integrator.get_protocol_work(dimensionless=True))
                 if rev_step % traj_save_frequency == 0:
                     initial_positions, final_positions = self.extract_positions(context,
-                                                                                hybrid_topology_factory=hybrid_factory,
-                                                                                atom_selection_exp=selection_expression)
+                                                                                old_atom_indices,
+                                                                                new_atom_indices)
                     reverse_neq_old.append(initial_positions)
                     reverse_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
-            initial_positions, final_positions = self.extract_positions(context, hybrid_topology_factory=hybrid_factory,
-                                                                        atom_selection_exp=selection_expression)
+            initial_positions, final_positions = self.extract_positions(context,
+                                                                        old_atom_indices,
+                                                                        new_atom_indices)
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
 
@@ -571,6 +572,7 @@ class SimulationUnit(ProtocolUnit):
             file_logger.info(f"replicate_{self.name} Nonequilibrium cycle total walltime: {cycle_walltime}")
 
             # Computing performance in ns/day
+            timestep = to_openmm(settings.timestep)
             simulation_time = 2*(eq_steps + neq_steps)*timestep
             walltime_in_seconds = cycle_walltime.total_seconds() * openmm_unit.seconds
             estimated_performance = simulation_time.value_in_unit(
@@ -578,7 +580,7 @@ class SimulationUnit(ProtocolUnit):
             file_logger.info(f"replicate_{self.name} Estimated performance: {estimated_performance} ns/day")
 
             # Serialize works
-            phase = self._detect_phase(state_a, state_b)  # infer phase from systems and components
+            phase = setup.outputs['phase']
             forward_work_path = ctx.shared / f"forward_{phase}_{self.name}.npy"
             reverse_work_path = ctx.shared / f"reverse_{phase}_{self.name}.npy"
             with open(forward_work_path, 'wb') as out_file:
