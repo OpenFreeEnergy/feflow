@@ -281,13 +281,10 @@ class SetupUnit(ProtocolUnit):
             # Minimize
             openmm.LocalEnergyMinimizer.minimize(context)
 
-            # Equilibrate
-            context.setVelocitiesToTemperature(temperature)
-
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
 
             system_ = context.getSystem()
-            state_ = context.getState()
+            state_ = context.getState(getPositions=True)
             integrator_ = context.getIntegrator()
 
             system_outfile = ctx.shared / 'system.xml.bz2'
@@ -380,7 +377,6 @@ class SimulationUnit(ProtocolUnit):
         import openmm
         import openmm.unit as openmm_unit
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
-        from perses.utils.openeye import generate_unique_atom_names
 
         # Setting up logging to file in shared filesystem
         file_logger = logging.getLogger("neq-cycling")
@@ -395,15 +391,21 @@ class SimulationUnit(ProtocolUnit):
         system = deserialize(setup.outputs['system'])
         state = deserialize(setup.outputs['state'])
         integrator = deserialize(setup.outputs['integrator'])
+        PeriodicNonequilibriumIntegrator.restore_interface(integrator)
 
         # Get atom indices for either end of the hybrid topology
-        initial_atom_indices = setup.output['initial_atom_indices']
-        final_atom_indices = setup.output['final_atom_indices']
+        initial_atom_indices = setup.outputs['initial_atom_indices']
+        final_atom_indices = setup.outputs['final_atom_indices']
 
         # Set up context
         platform = get_openmm_platform(settings.platform)
         context = openmm.Context(system, integrator, platform)
         context.setState(state)
+
+        # Equilibrate
+        thermodynamic_settings = settings.thermo_settings
+        temperature = to_openmm(thermodynamic_settings.temperature)
+        context.setVelocitiesToTemperature(temperature)
 
         # Extract settings used below
         neq_steps = settings.eq_steps
