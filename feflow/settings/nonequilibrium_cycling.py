@@ -69,7 +69,7 @@ class NonEquilibriumCyclingSettings(Settings):
     platform = 'CUDA'
     traj_save_frequency: int = 2000
     work_save_frequency: int = 500
-    atom_selection_expression: str = "not water"
+    atom_selection_expression: str = "not water"  # no longer used
 
     # Number of replicates to run (1 cycle/replicate)
     num_replicates: int = 1
