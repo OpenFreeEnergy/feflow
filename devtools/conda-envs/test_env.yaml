@@ -5,7 +5,11 @@ channels:
 dependencies:
     # Base depends
   - gufe
+  - numpy
   - openfe  # TODO: Remove once we don't depend on openfe
+  - openff-units
+  - openmm
+  - pymbar
   - python
   - pip
 

@@ -118,9 +118,7 @@ class SetupUnit(ProtocolUnit):
             trajectory coordinates for systems A and B.
         """
         # needed imports
-        import numpy as np
         import openmm
-        import openmm.unit as openmm_unit
         from openff.units.openmm import ensure_quantity
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
         from gufe.components import SmallMoleculeComponent
