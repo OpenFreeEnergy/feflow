@@ -1,6 +1,7 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
 from typing import Optional, Iterable, List, Dict, Any
+from itertools import chain
 
 import datetime
 import logging
