@@ -6,8 +6,9 @@ dependencies:
     # Base depends
   - gufe
   - openfe  # TODO: Remove once we don't depend on openfe
-  - python
   - pip
+  - pydantic=1  # TODO: Modify when we support pydantic 2
+  - python
 
     # Testing
   - pytest
