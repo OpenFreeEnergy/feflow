@@ -165,26 +165,33 @@ class SetupUnit(ProtocolUnit):
         # Note: by default this is cached to ctx.shared/db.json so shouldn't
         # incur too large a cost
         self.logger.info("Parameterizing molecules")
-        small_mols_a = []
-        for comp in state_a.components.values():
-            if isinstance(comp, SmallMoleculeComponent):
-                small_mols_a.append(comp)
+        # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
+        # The following creates a dictionary with all the small molecules in the states, with the structure:
+        #    Keys: state string (e.g. "state_a")
+        #    Values: Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
+        state_a_small_mols = {component: component.to_openff() for component in state_a.components.values() if
+                              isinstance(component, SmallMoleculeComponent)}
+        state_b_small_mols = {component: component.to_openff() for component in state_b.components.values() if
+                              isinstance(component, SmallMoleculeComponent)}
 
-        for comp in small_mols_a:
-            offmol = comp.to_openff()
-            system_generator.create_system(offmol.to_topology().to_openmm(),
-                                           molecules=[offmol])
-            if comp == ligand_a:
-                mol_b = ligand_b.to_openff()
-                system_generator.create_system(mol_b.to_topology().to_openmm(),
-                                               molecules=[mol_b])
+        # Assign charges if unassigned -- more info: Openfe issue #576
+        for off_mol in chain(state_a_small_mols.values(), state_b_small_mols.values()):
+            # skip if we already have user charges
+            if not (off_mol.partial_charges is not None and np.any(off_mol.partial_charges)):
+                # due to issues with partial charge generation in ambertools
+                # we default to using the input conformer for charge generation
+                off_mol.assign_partial_charges(
+                    'am1bcc', use_conformers=off_mol.conformers
+                )
+            system_generator.create_system(off_mol.to_topology().to_openmm(),
+                                           molecules=[off_mol])
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
         solvation_settings = settings.solvation_settings
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_a,
             solvent_comp=solvent_a,
-            small_mols=small_mols_a,
+            small_mols=state_a_small_mols,
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
         )
