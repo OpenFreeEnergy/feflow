@@ -7,7 +7,11 @@ energy calculations using perses.
 from typing import Optional
 from gufe.settings import Settings
 from openff.units import unit
-from pydantic.v1 import root_validator
+# Support for both pydantic 1 and 2
+try:
+    from pydantic.v1 import root_validator
+except ImportError:
+    from pydantic import root_validator
 from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
