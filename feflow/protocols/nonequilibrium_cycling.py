@@ -207,7 +207,7 @@ class SetupUnit(ProtocolUnit):
         # e. create the stateA System
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=[s.to_openff() for s in small_mols_a],
+            molecules=[state_a_small_mols.values()],
         )
 
         # 2. Get stateB system
@@ -218,15 +218,9 @@ class SetupUnit(ProtocolUnit):
             exclude_resids=comp_resids[ligand_a],
         )
 
-        # b. get a list of small molecules for stateB
-        off_mols_state_b = [ligand_b.to_openff(), ]
-        for comp in small_mols_a:
-            if comp != ligand_a:
-                off_mols_state_b.append(comp.to_openff())
-
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=off_mols_state_b,
+            molecules=state_b_small_mols.values(),
         )
 
         #  c. Define correspondence mappings between the two systems
