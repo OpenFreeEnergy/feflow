@@ -168,8 +168,7 @@ class SetupUnit(ProtocolUnit):
         self.logger.info("Parameterizing molecules")
         # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
         # The following creates a dictionary with all the small molecules in the states, with the structure:
-        #    Keys: state string (e.g. "state_a")
-        #    Values: Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
+        #    Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
         state_a_small_mols = {component: component.to_openff() for component in state_a.components.values() if
                               isinstance(component, SmallMoleculeComponent)}
         state_b_small_mols = {component: component.to_openff() for component in state_b.components.values() if
@@ -207,7 +206,7 @@ class SetupUnit(ProtocolUnit):
         # e. create the stateA System
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=[state_a_small_mols.values()],
+            molecules=list(state_a_small_mols.values()),
         )
 
         # 2. Get stateB system
@@ -220,7 +219,7 @@ class SetupUnit(ProtocolUnit):
 
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=state_b_small_mols.values(),
+            molecules=list(state_b_small_mols.values()),
         )
 
         #  c. Define correspondence mappings between the two systems
