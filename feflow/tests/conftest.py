@@ -1,17 +1,16 @@
 # fixtures for chemicalcomponents and chemicalsystems to test protocols with
 import gufe
 import pytest
-import importlib.resources
+from importlib.resources import files, as_file
 from rdkit import Chem
 from gufe.mapping import LigandAtomMapping
 
 
 @pytest.fixture
 def benzene_modifications():
-    with importlib.resources.path('gufe.tests.data',
-                                  'benzene_modifications.sdf') as f:
+    source = files("gufe.tests.data").joinpath("benzene_modifications.sdf")
+    with as_file(source) as f:
         supp = Chem.SDMolSupplier(str(f), removeHs=False)
-
         mols = list(supp)
 
     return {m.GetProp('_Name'): m for m in mols}
