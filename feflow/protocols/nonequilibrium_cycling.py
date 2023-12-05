@@ -216,7 +216,8 @@ class SetupUnit(ProtocolUnit):
         # e. create the stateA System
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=list(chain(alchemical_small_mols_a.values(), common_small_mols)),
+            molecules=list(chain(alchemical_small_mols_a.values(),
+                                 common_small_mols.values())),
         )
 
         # 2. Get stateB system
@@ -229,7 +230,8 @@ class SetupUnit(ProtocolUnit):
 
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=list(chain(alchemical_small_mols_b.values(), common_small_mols)),
+            molecules=list(chain(alchemical_small_mols_b.values(),
+                                 common_small_mols.values())),
         )
 
         #  c. Define correspondence mappings between the two systems
