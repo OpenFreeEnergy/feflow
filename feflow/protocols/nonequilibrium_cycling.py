@@ -133,11 +133,16 @@ class SetupUnit(ProtocolUnit):
 
         phase = self._detect_phase(state_a, state_b)  # infer phase from systems and components
 
-        # Get components from systems if found (None otherwise) -- NOTE: Uses hardcoded keys!
+        # Get receptor components from systems if found (None otherwise) -- NOTE: Uses hardcoded keys!
         receptor_a = state_a.components.get("protein")
         # receptor_b = state_b.components.get("protein")  # Should not be needed
-        ligand_a = mapping.get("ligand").componentA
-        ligand_b = mapping.get("ligand").componentB
+
+        # Get ligand/small-mol components
+        ligand_mapping = mapping["ligand"]
+        ligand_a = ligand_mapping.componentA
+        ligand_b = ligand_mapping.componentB
+
+        # Get solvent components
         solvent_a = state_a.components.get("solvent")
         # solvent_b = state_b.components.get("solvent")  # Should not be needed
 
@@ -166,16 +171,21 @@ class SetupUnit(ProtocolUnit):
         # Note: by default this is cached to ctx.shared/db.json so shouldn't
         # incur too large a cost
         self.logger.info("Parameterizing molecules")
-        # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
         # The following creates a dictionary with all the small molecules in the states, with the structure:
         #    Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
-        state_a_small_mols = {component: component.to_openff() for component in state_a.components.values() if
-                              isinstance(component, SmallMoleculeComponent)}
-        state_b_small_mols = {component: component.to_openff() for component in state_b.components.values() if
-                              isinstance(component, SmallMoleculeComponent)}
+        # Alchemical small mols
+        alchemical_small_mols_a = {ligand_a: ligand_a.to_openff()}
+        alchemical_small_mols_b = {ligand_b: ligand_b.to_openff()}
+        all_alchemical_mols = alchemical_small_mols_a | alchemical_small_mols_b
+        # non-alchemical common small mols
+        common_small_mols = {}
+        for comp in state_a.components.values():
+            # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
+            if isinstance(comp, SmallMoleculeComponent) and comp not in all_alchemical_mols:
+                common_small_mols[comp] = comp.to_openff()
 
-        # Assign charges if unassigned -- more info: Openfe issue #576
-        for off_mol in chain(state_a_small_mols.values(), state_b_small_mols.values()):
+        # Assign charges to ALL small mols, if unassigned -- more info: Openfe issue #576
+        for off_mol in chain(all_alchemical_mols.values(), common_small_mols.values()):
             # skip if we already have user charges
             if not (off_mol.partial_charges is not None and np.any(off_mol.partial_charges)):
                 # due to issues with partial charge generation in ambertools
@@ -191,7 +201,7 @@ class SetupUnit(ProtocolUnit):
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_a,
             solvent_comp=solvent_a,
-            small_mols=state_a_small_mols,
+            small_mols=alchemical_small_mols_a | common_small_mols,
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
         )
@@ -206,7 +216,7 @@ class SetupUnit(ProtocolUnit):
         # e. create the stateA System
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=list(state_a_small_mols.values()),
+            molecules=list(chain(alchemical_small_mols_a.values(), common_small_mols)),
         )
 
         # 2. Get stateB system
@@ -219,7 +229,7 @@ class SetupUnit(ProtocolUnit):
 
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=list(state_b_small_mols.values()),
+            molecules=list(chain(alchemical_small_mols_b.values(), common_small_mols)),
         )
 
         #  c. Define correspondence mappings between the two systems
