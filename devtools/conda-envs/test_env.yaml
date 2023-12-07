@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
     # Base depends
-  - gufe
+  - gufe >=0.9.5
   - numpy
   - openfe  # TODO: Remove once we don't depend on openfe
   - openff-units
