@@ -227,6 +227,27 @@ class TestNonEquilibriumCycling:
         except pymbar.utils.BoundsError as pymbar_error:
             pass
 
+    def test_multiple_small_mols_comp_run(self, protocol_short, host_guest_solvent_cb7_a1, host_guest_solvent_cb7_a2,
+                                          mapping_host_guest_system, tmpdir):
+        """Test running the protocol with systems having multiple (2) small molecules components. Namely,
+        a host-guest cb7-a1/a2 system.
+        """
+        dag = protocol_short.create(
+            stateA=host_guest_solvent_cb7_a1, stateB=host_guest_solvent_cb7_a2, name="Short solvent transformation",
+            mapping={'ligand': mapping_host_guest_system}
+        )
+
+        with tmpdir.as_cwd():
+            shared = Path('shared')
+            shared.mkdir()
+
+            scratch = Path('scratch')
+            scratch.mkdir()
+
+            dagresult: ProtocolDAGResult = execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
+
+        assert dagresult.ok()
+
 
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
     # TODO: Potentially setup (not run) a protein-ligand system

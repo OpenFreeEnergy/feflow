@@ -34,6 +34,30 @@ def toluene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["toluene"])
 
 
+@pytest.fixture
+def a1_guest():
+    """Small molecule component for a1 for host-guest system"""
+    source = files("feflow.tests.data").joinpath("a1.sybyl.sdf")
+    comp = gufe.SmallMoleculeComponent.from_sdf_file(str(source))
+    return comp
+
+
+@pytest.fixture
+def a2_guest():
+    """Small molecule component for a2 for host-guest system"""
+    source = files("feflow.tests.data").joinpath("a2.sybyl.sdf")
+    comp = gufe.SmallMoleculeComponent.from_sdf_file(str(source))
+    return comp
+
+
+@pytest.fixture
+def cb7_host():
+    """Small molecule component for cb7 in host-guest system"""
+    source = files("feflow.tests.data").joinpath("cb7.sybyl.sdf")
+    comp = gufe.SmallMoleculeComponent.from_sdf_file(str(source))
+    return comp
+
+
 # Systems fixtures
 
 @pytest.fixture
@@ -64,6 +88,21 @@ def toluene_solvent_system(toluene, solvent_comp):
     )
 
 
+@pytest.fixture
+def host_guest_solvent_cb7_a1(cb7_host, a1_guest, solvent_comp):
+    """Host-guest ChemicalSystem. cb7 (host) and a1 (guest)"""
+    return gufe.ChemicalSystem(
+        {"host": cb7_host, "ligand": a1_guest, "solvent": solvent_comp}
+    )
+
+
+@pytest.fixture
+def host_guest_solvent_cb7_a2(cb7_host, a2_guest, solvent_comp):
+    """Host-guest ChemicalSystem. cb7 (host) and a2 (guest)"""
+    return gufe.ChemicalSystem(
+        {"host": cb7_host, "ligand": a2_guest, "solvent": solvent_comp}
+    )
+
 # Settings fixtures
 
 @pytest.fixture
@@ -74,6 +113,7 @@ def short_settings():
     settings = NonEquilibriumCyclingProtocol.default_settings()
 
     settings.thermo_settings.temperature = 300 * unit.kelvin
+    settings.thermo_settings.pressure = 1 * unit.atmosphere
     settings.eq_steps = 25000
     settings.neq_steps = 25000
     settings.work_save_frequency = 50
@@ -139,6 +179,20 @@ def mapping_benzene_toluene(benzene, toluene):
         componentA=benzene,
         componentB=toluene,
         componentA_to_componentB=mapping_toluene_to_benzene,
+    )
+    return mapping_obj
+
+
+@pytest.fixture
+def mapping_host_guest_system(a1_guest, a2_guest):
+    """Return Ligand atom mapping object for a1 to a2 in host-guest system, with cb7 as host."""
+    mapping_a1_to_a2 = {0: 4, 1: 1, 2: 2, 3: 0, 4: 3, 5: 9, 6: 7, 7: 10, 8: 5, 9: 8, 10: 6, 11: 13, 12: 11, 13: 12,
+                        14: 22, 15: 23, 16: 18, 17: 19, 18: 24, 19: 25, 20: 15, 21: 14, 22: 20, 23: 21, 24: 16, 25: 17,
+                        26: 26}
+    mapping_obj = LigandAtomMapping(
+        componentA=a1_guest,
+        componentB=a2_guest,
+        componentA_to_componentB=mapping_a1_to_a2,
     )
     return mapping_obj
 
