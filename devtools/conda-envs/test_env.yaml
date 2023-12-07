@@ -8,7 +8,7 @@ dependencies:
   - openfe  # TODO: Remove once we don't depend on openfe
   - openff-units
   - openmm
-  - pymbar
+  - pymbar <4
   - pydantic=1  # TODO: Modify when we support pydantic 2
   - python
 
