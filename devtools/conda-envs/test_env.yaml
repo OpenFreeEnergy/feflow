@@ -1,12 +1,14 @@
 name: feflow-test
 channels:
   - conda-forge
-  - defaults
 dependencies:
     # Base depends
-  - gufe
+  - gufe >=0.9.5
+  - numpy
   - openfe  # TODO: Remove once we don't depend on openfe
-  - pip
+  - openff-units
+  - openmm
+  - pymbar <4
   - pydantic=1  # TODO: Modify when we support pydantic 2
   - python
 
