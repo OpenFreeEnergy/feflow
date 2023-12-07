@@ -10,8 +10,8 @@ dependencies:
   - openff-units
   - openmm
   - pymbar
+  - pydantic=1  # TODO: Modify when we support pydantic 2
   - python
-  - pip
 
     # Testing
   - pytest
