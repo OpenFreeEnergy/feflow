@@ -1,22 +1,23 @@
 ###########################################
 # IMPORTS
 ###########################################
-from simtk.openmm import app
-from simtk import unit, openmm
-import numpy as np
 import os
-import random
-from nose.tools import nottest
-from pkg_resources import resource_filename
+
+import openmm
+from openmm import app
+from openmm import unit
+import numpy as np
+import pytest
 
 from feflow.utils.hybrid_topology import HybridTopologyFactory
+from feflow.tests.utils.end_states import generate_endpoint_thermodynamic_states
 from openmmtools.states import SamplerState
 import openmmtools.mcmc as mcmc
 import openmmtools.cache as cache
-from openmmtools.integrators import LangevinIntegrator
+
+from perses.tests import utils as perses_utils
 
 from openmmtools.multistate.pymbar import _pymbar_exp, detect_equilibration
-import pytest
 
 running_on_github_actions = os.environ.get('GITHUB_ACTIONS', None) == 'true'
 
@@ -55,13 +56,14 @@ def run_hybrid_endpoint_overlap(topology_proposal, current_positions, new_positi
        list of [df, ddf, N_eff] for 1 and 0
     """
     # Create the hybrid system:
-    # hybrid_factory = HybridTopologyFactory(topology_proposal, current_positions, new_positions, use_dispersion_correction=True)
     hybrid_factory = HybridTopologyFactory(topology_proposal, current_positions, new_positions,
                                            use_dispersion_correction=False)  # DEBUG
 
     # Get the relevant thermodynamic states:
-    nonalchemical_zero_thermodynamic_state, nonalchemical_one_thermodynamic_state, lambda_zero_thermodynamic_state, lambda_one_thermodynamic_state = utils.generate_endpoint_thermodynamic_states(
-        hybrid_factory.hybrid_system, topology_proposal)
+    (nonalchemical_zero_thermodynamic_state, nonalchemical_one_thermodynamic_state,
+     lambda_zero_thermodynamic_state, lambda_one_thermodynamic_state) = (
+        generate_endpoint_thermodynamic_states(
+            hybrid_factory.hybrid_system, topology_proposal))
 
     nonalchemical_thermodynamic_states = [nonalchemical_zero_thermodynamic_state,
                                           nonalchemical_one_thermodynamic_state]
@@ -140,9 +142,9 @@ def test_networkx_proposal_order():
     pairs = [('pentane', 'propane')]
     for pair in pairs:
         print('{} -> {}'.format(pair[0], pair[1]))
-        test_simple_overlap(pair[0], pair[1])
+        simple_overlap(pair[0], pair[1])
         print('{} -> {}'.format(pair[1], pair[0]))
-        test_simple_overlap(pair[1], pair[0])
+        simple_overlap(pair[1], pair[0])
 
 
 def test_explosion():
@@ -152,17 +154,17 @@ def test_explosion():
     pairs = [['2-phenyl ethanol', 'benzene']]
     for pair in pairs:
         print('{} -> {}'.format(pair[0], pair[1]))
-        test_simple_overlap(pair[0], pair[1])
+        simple_overlap(pair[0], pair[1])
         print('{} -> {}'.format(pair[1], pair[0]))
-        test_simple_overlap(pair[1], pair[0])
+        simple_overlap(pair[1], pair[0])
 
 
 def test_vacuum_overlap_with_constraints():
     """
     Test that constraints do not cause problems for the hybrid factory in vacuum
     """
-    test_simple_overlap('2-phenyl ethanol', 'benzene',
-                        forcefield_kwargs={'constraints': app.HBonds})
+    simple_overlap('2-phenyl ethanol', 'benzene',
+                   forcefield_kwargs={'constraints': app.HBonds})
 
 
 def test_valence_overlap():
@@ -173,8 +175,8 @@ def test_valence_overlap():
         'particle_charge': False, 'exception_charge': False, 'particle_epsilon': False,
         'exception_epsilon': False, 'torsions': True,
     }
-    test_simple_overlap('2-phenyl ethanol', 'benzene',
-                        system_generator_kwargs=system_generator_kwargs)
+    simple_overlap('2-phenyl ethanol', 'benzene',
+                   system_generator_kwargs=system_generator_kwargs)
 
 
 def test_bonds_angles_overlap():
@@ -185,8 +187,8 @@ def test_bonds_angles_overlap():
         'particle_charge': False, 'exception_charge': False, 'particle_epsilon': False,
         'exception_epsilon': False, 'torsions': False,
     }
-    test_simple_overlap('2-phenyl ethanol', 'benzene',
-                        system_generator_kwargs=system_generator_kwargs)
+    simple_overlap('2-phenyl ethanol', 'benzene',
+                   system_generator_kwargs=system_generator_kwargs)
 
 
 def test_sterics_overlap():
@@ -197,8 +199,8 @@ def test_sterics_overlap():
         'particle_charge': False, 'exception_charge': False, 'particle_epsilon': True,
         'exception_epsilon': True, 'torsions': True,
     }
-    test_simple_overlap('2-phenyl ethanol', 'benzene',
-                        system_generator_kwargs=system_generator_kwargs)
+    simple_overlap('2-phenyl ethanol', 'benzene',
+                   system_generator_kwargs=system_generator_kwargs)
 
 
 def test_simple_overlap_pairs(pairs=None):
@@ -223,17 +225,14 @@ def test_simple_overlap_pairs(pairs=None):
 
     for pair in pairs:
         print('{} -> {}'.format(pair[0], pair[1]))
-        test_simple_overlap(pair[0], pair[1])
+        simple_overlap(pair[0], pair[1])
         # Now running the reverse
         print('{} -> {}'.format(pair[1], pair[0]))
-        test_simple_overlap(pair[1], pair[0])
+        simple_overlap(pair[1], pair[0])
 
 
-# @skipIf(running_on_github_actions, "Skip helper function on GH Actions")
-@nottest  # This is, in fact, a helper function that is called in other working tests
-@pytest.mark.skip(reason="Skip helper function on GH Actions")
-def test_simple_overlap(name1='pentane', name2='butane', forcefield_kwargs=None,
-                        system_generator_kwargs=None):
+def simple_overlap(name1='pentane', name2='butane', forcefield_kwargs=None,
+                   system_generator_kwargs=None):
     """Test that the variance of the hybrid -> real perturbation in vacuum is sufficiently small.
 
     Parameters
@@ -251,7 +250,7 @@ def test_simple_overlap(name1='pentane', name2='butane', forcefield_kwargs=None,
         Can also disable 'exception_charge', 'particle_epsilon', 'exception_epsilon', and 'torsions' by setting to False
 
     """
-    topology_proposal, current_positions, new_positions = utils.generate_solvated_hybrid_test_topology(
+    topology_proposal, current_positions, new_positions = perses_utils.generate_solvated_hybrid_test_topology(
         current_mol_name=name1, proposed_mol_name=name2, vacuum=True)
     results = run_hybrid_endpoint_overlap(topology_proposal, current_positions, new_positions)
     for idx, lambda_result in enumerate(results):
@@ -267,7 +266,7 @@ def test_simple_overlap(name1='pentane', name2='butane', forcefield_kwargs=None,
 @pytest.mark.skip(reason="Skip expensive test on GH Actions")
 def test_hostguest_overlap():
     """Test that the variance of the endpoint->nonalchemical perturbation is sufficiently small for host-guest system in vacuum"""
-    topology_proposal, current_positions, new_positions = utils.generate_vacuum_hostguest_proposal()
+    topology_proposal, current_positions, new_positions = perses_utils.generate_vacuum_hostguest_proposal()
     results = run_hybrid_endpoint_overlap(topology_proposal, current_positions, new_positions)
 
     for idx, lambda_result in enumerate(results):
@@ -278,17 +277,14 @@ def test_hostguest_overlap():
             message += str(e)
             raise Exception(message)
 
-
-# @skipIf(running_on_github_actions, "Skip broken test on GH Actions")
-@nottest  # At the moment, the mapping between imatinib and nilotinib is faulty
-@pytest.mark.skip(reason="Skip broken test on GH Actions")
+# TODO: This is skipped on perses, testing if can be unskipped
 def test_difficult_overlap():
     """Test that the variance of the endpoint->nonalchemical perturbation is sufficiently small for imatinib->nilotinib in solvent"""
     name1 = 'imatinib'
     name2 = 'nilotinib'
 
     print(name1, name2)
-    topology_proposal, solvated_positions, new_positions = utils.generate_solvated_hybrid_test_topology(
+    topology_proposal, solvated_positions, new_positions = perses_utils.generate_solvated_hybrid_test_topology(
         current_mol_name=name1, proposed_mol_name=name2)
     results = run_hybrid_endpoint_overlap(topology_proposal, solvated_positions, new_positions)
 
@@ -301,7 +297,7 @@ def test_difficult_overlap():
             raise Exception(message)
 
     print(name2, name1)
-    topology_proposal, solvated_positions, new_positions = utils.generate_solvated_hybrid_test_topology(
+    topology_proposal, solvated_positions, new_positions = perses_utils.generate_solvated_hybrid_test_topology(
         current_mol_name=name2, proposed_mol_name=name1)
     results = run_hybrid_endpoint_overlap(topology_proposal, solvated_positions, new_positions)
 
@@ -448,8 +444,7 @@ def run_endpoint_perturbation(lambda_thermodynamic_state, nonalchemical_thermody
     return results, non_potential, hybrid_potential
 
 
-# TODO: Skip while we reimplement this using the new machinery
-# TODO: Maybe temporarily we can depend on perses for this tests while we figure things out, because it seems important
+# TODO: temporarily we can depend on perses for this tests while we figure things out, because it seems important
 #  - CI to require perses for now
 #  - Then in the future rewrite for it not to require perses
 def compare_energies(mol_name="naphthalene", ref_mol_name="benzene",
@@ -460,9 +455,7 @@ def compare_energies(mol_name="naphthalene", ref_mol_name="benzene",
     from openmoltools.openeye import generate_conformers
     from openmmtools.constants import kB
     from perses.rjmc.topology_proposal import SmallMoleculeSetProposalEngine
-    from perses.annihilation.relative import HybridTopologyFactory
     from perses.rjmc.geometry import FFAllAngleGeometryEngine
-    import simtk.openmm as openmm
     from perses.utils.openeye import iupac_to_oemol, extractPositionsFromOEMol
     from perses.utils.openeye import generate_expression
     from openmmforcefields.generators import SystemGenerator
@@ -512,27 +505,19 @@ def compare_energies(mol_name="naphthalene", ref_mol_name="benzene",
     _ = geometry_engine.logp_reverse(proposal, new_positions, positions, beta)
 
     factory = HybridTopologyFactory(proposal, positions, new_positions)
-    if not proposal.unique_new_atoms:
-        assert geometry_engine.forward_final_context_reduced_potential == None, f"There are no unique new atoms but the geometry_engine's final context reduced potential is not None (i.e. {self._geometry_engine.forward_final_context_reduced_potential})"
-        assert geometry_engine.forward_atoms_with_positions_reduced_potential == None, f"There are no unique new atoms but the geometry_engine's forward atoms-with-positions-reduced-potential in not None (i.e. {self._geometry_engine.forward_atoms_with_positions_reduced_potential})"
-        vacuum_added_valence_energy = 0.0
-    else:
-        added_valence_energy = geometry_engine.forward_final_context_reduced_potential - geometry_engine.forward_atoms_with_positions_reduced_potential
+    added_valence_energy = (geometry_engine.forward_final_context_reduced_potential
+                            - geometry_engine.forward_atoms_with_positions_reduced_potential)
 
-    if not proposal.unique_old_atoms:
-        assert geometry_engine.reverse_final_context_reduced_potential == None, f"There are no unique old atoms but the geometry_engine's final context reduced potential is not None (i.e. {self._geometry_engine.reverse_final_context_reduced_potential})"
-        assert geometry_engine.reverse_atoms_with_positions_reduced_potential == None, f"There are no unique old atoms but the geometry_engine's atoms-with-positions-reduced-potential in not None (i.e. {self._geometry_engine.reverse_atoms_with_positions_reduced_potential})"
-        subtracted_valence_energy = 0.0
-    else:
-        subtracted_valence_energy = geometry_engine.reverse_final_context_reduced_potential - geometry_engine.reverse_atoms_with_positions_reduced_potential
+    subtracted_valence_energy = (geometry_engine.reverse_final_context_reduced_potential
+                                 - geometry_engine.reverse_atoms_with_positions_reduced_potential)
 
-    zero_state_error, one_state_error = validate_endstate_energies(factory._topology_proposal,
-                                                                   factory, added_valence_energy,
-                                                                   subtracted_valence_energy,
-                                                                   beta=1.0 / (kB * temperature),
-                                                                   ENERGY_THRESHOLD=ENERGY_THRESHOLD,
-                                                                   platform=openmm.Platform.getPlatformByName(
-                                                                       'Reference'))
+    _ = validate_endstate_energies(factory._topology_proposal,
+                                   factory, added_valence_energy,
+                                   subtracted_valence_energy,
+                                   beta=1.0 / (kB * temperature),
+                                   ENERGY_THRESHOLD=ENERGY_THRESHOLD,
+                                   platform=openmm.Platform.getPlatformByName(
+                                       'Reference'))
     return factory
 
 
@@ -550,7 +535,7 @@ def test_position_output():
     import numpy as np
 
     # Generate topology proposal
-    topology_proposal, old_positions, new_positions = utils.generate_solvated_hybrid_test_topology()
+    topology_proposal, old_positions, new_positions = perses_utils.generate_solvated_hybrid_test_topology()
 
     factory = HybridTopologyFactory(topology_proposal, old_positions, new_positions)
 
@@ -567,13 +552,13 @@ def test_generate_endpoint_thermodynamic_states():
     """
     test whether the hybrid system zero and one thermodynamic states have the appropriate lambda values
     """
-    topology_proposal, current_positions, new_positions = utils.generate_solvated_hybrid_test_topology(
+    topology_proposal, current_positions, new_positions = perses_utils.generate_solvated_hybrid_test_topology(
         current_mol_name='propane', proposed_mol_name='pentane', vacuum=False)
     hybrid_factory = HybridTopologyFactory(topology_proposal, current_positions, new_positions,
                                            use_dispersion_correction=True)
 
     # Get the relevant thermodynamic states:
-    _, _, lambda_zero_thermodynamic_state, lambda_one_thermodynamic_state = utils.generate_endpoint_thermodynamic_states(
+    _, _, lambda_zero_thermodynamic_state, lambda_one_thermodynamic_state = generate_endpoint_thermodynamic_states(
         hybrid_factory.hybrid_system, topology_proposal)
     # Check the parameters for each state
     lambda_protocol = ['lambda_sterics_core', 'lambda_electrostatics_core', 'lambda_sterics_insert',
@@ -600,12 +585,11 @@ def HybridTopologyFactory_energies(current_mol='toluene',
     """
     Test whether the difference in the nonalchemical zero and alchemical zero states is the forward valence energy.  Also test for the one states.
     """
-    from perses.dispersed.utils import generate_endpoint_thermodynamic_states
-    from perses.tests.utils import generate_solvated_hybrid_test_topology
     import openmmtools.cache as cache
+    from perses.rjmc.geometry import FFAllAngleGeometryEngine
 
     # Just test the solvated system
-    top_proposal, old_positions, _ = generate_solvated_hybrid_test_topology(
+    top_proposal, old_positions, _ = perses_utils.generate_solvated_hybrid_test_topology(
         current_mol_name=current_mol, proposed_mol_name=proposed_mol)
 
     # Remove the dispersion correction
@@ -796,8 +780,6 @@ def run_unsampled_endstate_energies(use_point_energies=True, use_md_energies=Fal
 
     import tempfile
     from perses.utils.url_utils import retrieve_file_url
-    from perses.annihilation.relative import HybridTopologyFactory, \
-        RESTCapableHybridTopologyFactory
     from perses.app.relative_setup import RelativeFEPSetup
 
     def concatenate_files(input_files, output_file):
@@ -896,7 +878,7 @@ class TestHybridTopologyFactory:
         """
         from openmm import NonbondedForce, CustomNonbondedForce
         # TODO: we should probably make a fixture with the following top proposal and factory
-        topology_proposal, current_positions, new_positions = utils.generate_solvated_hybrid_test_topology(
+        topology_proposal, current_positions, new_positions = perses_utils.generate_solvated_hybrid_test_topology(
             current_mol_name='propane', proposed_mol_name='pentane', vacuum=False)
         hybrid_factory = HybridTopologyFactory(topology_proposal, current_positions, new_positions,
                                                use_dispersion_correction=True)

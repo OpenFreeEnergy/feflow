@@ -13,6 +13,8 @@ dependencies:
   - python
 
     # Testing
+  - openmoltools  # TODO: Remove once we refactor tests
+  - perses  # TODO: Remove once we don't depend on perses for tests
   - pytest
   - pytest-cov
   - pytest-xdist
