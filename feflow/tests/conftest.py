@@ -7,8 +7,14 @@ from gufe.mapping import LigandAtomMapping
 
 
 @pytest.fixture
-def benzene_modifications():
-    source = files("gufe.tests.data").joinpath("benzene_modifications.sdf")
+def gufe_data_dir():
+    path = files("gufe.tests.data")
+    return path
+
+
+@pytest.fixture
+def benzene_modifications(gufe_data_dir):
+    source = gufe_data_dir.joinpath("benzene_modifications.sdf")
     with as_file(source) as f:
         supp = Chem.SDMolSupplier(str(f), removeHs=False)
         mols = list(supp)
