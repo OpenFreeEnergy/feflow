@@ -902,7 +902,9 @@ class HybridTopologyFactory:
         # since they take arguments that are never used...
         r_cutoff = self._old_system_forces['NonbondedForce'].getCutoffDistance()
         sterics_energy_expression = self._nonbonded_custom(self._softcore_LJ_v2)
-        if self._nonbonded_method in [openmm.NonbondedForce.CutoffPeriodic,
+        if self._nonbonded_method in [openmm.NonbondedForce.NoCutoff]:
+            pass
+        elif self._nonbonded_method in [openmm.NonbondedForce.CutoffPeriodic,
                                         openmm.NonbondedForce.CutoffNonPeriodic]:
             epsilon_solvent = self._old_system_forces['NonbondedForce'].getReactionFieldDielectric()
             standard_nonbonded_force.setReactionFieldDielectric(
