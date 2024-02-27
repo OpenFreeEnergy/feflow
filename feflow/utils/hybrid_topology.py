@@ -1413,7 +1413,9 @@ class HybridTopologyFactory:
         old_system_torsion_force = self._old_system_forces['PeriodicTorsionForce']
         new_system_torsion_force = self._new_system_forces['PeriodicTorsionForce']
 
+        # aux list stores the torsions that we already computed such that we don't add them again when checking the new system
         auxiliary_custom_torsion_force = []
+        # aludel/valence.py -- convenient way of handling all the valence terms for alchemistry
         old_custom_torsions_to_standard = []
 
         # We need to keep track of what torsions we added so that we do not
