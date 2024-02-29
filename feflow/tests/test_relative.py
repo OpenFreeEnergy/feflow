@@ -1,3 +1,11 @@
+"""
+Module to test setting up relative FE calculations using hybrid topologies as implemented
+in the HybridTopologyFactory class.
+
+This module should be mostly related to testing the "science" consistency rather than the
+code functionality.
+"""
+
 ###########################################
 # IMPORTS
 ###########################################
@@ -36,7 +44,8 @@ aminos = ['ALA', 'ARG', 'ASN', 'ASP', 'CYS', 'GLN', 'GLU', 'GLY', 'HIS', 'ILE', 
           'PHE', 'PRO', 'SER', 'THR', 'TRP', 'TYR', 'VAL']
 
 
-def run_hybrid_endpoint_overlap(topology_proposal, current_positions, new_positions):
+def run_hybrid_endpoint_overlap(topology_proposal, current_positions, new_positions,
+                                n_iterations=100):
     """
     Test that the variance of the perturbation from lambda={0,1} to the corresponding nonalchemical endpoint is not
     too large.
@@ -88,7 +97,7 @@ def run_hybrid_endpoint_overlap(topology_proposal, current_positions, new_positi
         result, non, hybrid = run_endpoint_perturbation(
             alchemical_thermodynamic_states[lambda_state],
             nonalchemical_thermodynamic_states[lambda_state], initial_sampler_state,
-            mc_move, 100, hybrid_factory, lambda_index=lambda_state)
+            mc_move, n_iterations, hybrid_factory, lambda_index=lambda_state)
         all_results.append(non)
         all_results.append(hybrid)
         print('lambda {} : {}'.format(lambda_state, result))
@@ -282,8 +291,9 @@ def test_hostguest_overlap():
             message += str(e)
             raise Exception(message)
 
-# TODO: This is skipped on perses, testing if can be unskipped
-def test_difficult_overlap():
+# TODO: This is skipped on perses, probably needs more iterations to converge? Skipping for now.
+# @pytest.mark.skip(reason="Expensive. Hard to converge.")
+def test_difficult_overlap(n_iterations=500):
     """Test that the variance of the endpoint->nonalchemical perturbation is sufficiently small for imatinib->nilotinib in solvent"""
     name1 = 'imatinib'
     name2 = 'nilotinib'
@@ -304,7 +314,8 @@ def test_difficult_overlap():
     print(name2, name1)
     topology_proposal, solvated_positions, new_positions = perses_utils.generate_solvated_hybrid_test_topology(
         current_mol_name=name2, proposed_mol_name=name1)
-    results = run_hybrid_endpoint_overlap(topology_proposal, solvated_positions, new_positions)
+    results = run_hybrid_endpoint_overlap(topology_proposal, solvated_positions, new_positions,
+                                          n_iterations=n_iterations)
 
     for idx, lambda_result in enumerate(results):
         try:
@@ -427,13 +438,14 @@ def run_endpoint_perturbation(lambda_thermodynamic_state, nonalchemical_thermody
             print(
                 f'{iteration:8d} {hybrid_reduced_potential:8.3f} {nonalchemical_reduced_potential:8.3f} => {w[iteration]:8.3f}')
 
+    # TODO: Do we need to write trajectories? Maybe for debugging purposes
     if write_trajectories:
         if lambda_index == 0:
             nonalchemical_mdtraj_topology = md.Topology.from_openmm(
-                factory._topology_proposal.old_topology)
+                factory._old_topology)
         elif lambda_index == 1:
             nonalchemical_mdtraj_topology = md.Topology.from_openmm(
-                factory._topology_proposal.new_topology)
+                factory._new_topology)
         md.Trajectory(hybrid_trajectory / unit.nanometers, factory.hybrid_topology).save(
             f'hybrid{lambda_index}.pdb')
         md.Trajectory(nonalchemical_trajectory / unit.nanometers,
