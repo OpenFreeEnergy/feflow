@@ -531,7 +531,7 @@ def compare_energies(mol_name="naphthalene", ref_mol_name="benzene",
     subtracted_valence_energy = (geometry_engine.reverse_final_context_reduced_potential
                                  - geometry_engine.reverse_atoms_with_positions_reduced_potential)
 
-    _ = validate_endstate_energies(factory._topology_proposal,
+    _ = validate_endstate_energies(proposal,
                                    factory, added_valence_energy,
                                    subtracted_valence_energy,
                                    beta=1.0 / (kB * temperature),
