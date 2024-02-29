@@ -2426,7 +2426,7 @@ class HybridTopologyFactory:
         old_positions = unit.Quantity(np.zeros([n_atoms_old, 3]),
                                       unit=unit.nanometer)
         for idx in range(n_atoms_old):
-            hyb_idx = self._new_to_hybrid_map[idx]
+            hyb_idx = self._old_to_hybrid_map[idx]
             old_positions[idx, :] = hybrid_positions[hyb_idx, :]
         return old_positions
 
@@ -2445,7 +2445,7 @@ class HybridTopologyFactory:
         new_positions : [m, 3] np.ndarray with unit
             The positions of the new system
         """
-        n_atoms_new = self._new_system.getNumParticles
+        n_atoms_new = self._new_system.getNumParticles()
         # making sure hybrid positions are simtk.unit.Quantity objects
         if not isinstance(hybrid_positions, unit.Quantity):
             hybrid_positions = unit.Quantity(hybrid_positions,
