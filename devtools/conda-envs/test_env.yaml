@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - gufe >=0.9.5
   - numpy
-  - openfe  # TODO: Remove once we don't depend on openfe
+  - openfe >=0.15  # TODO: Remove once we don't depend on openfe
   - openff-units
   - openmm
   - pymbar <4

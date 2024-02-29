@@ -210,7 +210,7 @@ class LambdaProtocol:
             if self.functions[function](0) != 0:
                 raise ValueError("lambda functions must start at 0")
             if self.functions[function](1) != 1:
-                raise ValueError("lambda fucntions must end at 1")
+                raise ValueError("lambda functions must end at 1")
 
             # now validatate that it's monotonic
             global_lambda = np.linspace(0., 1., n)
