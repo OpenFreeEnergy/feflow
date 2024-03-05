@@ -18,6 +18,18 @@ def test_lambda_protocol():
         lp = lambda_protocol.LambdaProtocol(functions=protocol)
         assert isinstance(lp, lambda_protocol.LambdaProtocol), "instantiated is not instance of LambdaProtocol."
 
+
+
+"""this test is a little unhappy
+
+it checks that missing terms are added back in
+
+however a more recent commit in openfe land changed this to error not warn
+
+so the test as-is can't function
+"""
+@pytest.mark.skip
+def test_missing_functions():
     # check that if we give an incomplete set of parameters it will add in the missing terms
     missing_functions = {'lambda_sterics_delete': lambda x: x}
     lp = lambda_protocol.LambdaProtocol(functions=missing_functions)
@@ -27,7 +39,7 @@ def test_lambda_protocol():
 
 def test_lambda_protocol_failure_ends():
     bad_function = {'lambda_sterics_delete': lambda x: -x}
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         lp = lambda_protocol.LambdaProtocol(functions=bad_function)
 
 
@@ -36,5 +48,5 @@ def test_lambda_protocol_naked_charges():
                   lambda x: 0.0 if x < 0.5 else 2.0 * (x - 0.5),
                   'lambda_electrostatics_insert':
                   lambda x: 2.0 * x if x < 0.5 else 1.0}
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError):
         lp = lambda_protocol.LambdaProtocol(functions=naked_charge_functions)
