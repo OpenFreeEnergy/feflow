@@ -63,5 +63,5 @@ def test_lambda_schedule(windows):
         functions='default',
         windows=windows
     )
-    assert len(lambdas.lamda_schedule) == windows
+    assert len(lambdas.lambda_schedule) == windows
 
