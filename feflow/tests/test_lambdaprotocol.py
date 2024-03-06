@@ -50,3 +50,18 @@ def test_lambda_protocol_naked_charges():
                   lambda x: 2.0 * x if x < 0.5 else 1.0}
     with pytest.raises(ValueError):
         lp = lambda_protocol.LambdaProtocol(functions=naked_charge_functions)
+
+
+def test_lambda_schedule_defaults():
+    lambdas = lambda_protocol.LambdaProtocol(functions='default')
+    assert len(lambdas.lambda_schedule) == 10
+
+
+@pytest.mark.parametrize('windows', [11, 6, 9000])
+def test_lambda_schedule(windows):
+    lambdas = lambda_protocol.LambdaProtocol(
+        functions='default',
+        windows=windows
+    )
+    assert len(lambdas.lamda_schedule) == windows
+
