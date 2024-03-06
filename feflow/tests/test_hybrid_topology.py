@@ -9,6 +9,14 @@ from feflow.utils.hybrid_topology import HybridTopologyFactory
 from feflow.tests.utils import extract_htf_data
 
 from openmm import unit as omm_unit
+from openmm.app import NoCutoff, PME
+from openmm import (
+    MonteCarloBarostat,
+    NonbondedForce,
+    CustomNonbondedForce
+)
+from openmmforcefields.generators import SystemGenerator
+from openff.units.openmm import to_openmm, from_openmm
 from perses.tests import utils as perses_utils
 
 
@@ -22,13 +30,8 @@ def standard_system_generator():
     Returns
     -------
     generator: openmmforcefields.generators.SystemGenerator
-        Dictionary with the key, value pairs to directly use when creating an instance of
-        openmmforcefields.generators.SystemGenerator.
+        SystemGenerator object.
     """
-    from openmm.app import NoCutoff, PME
-    from openmm import MonteCarloBarostat
-    from openmmforcefields.generators import SystemGenerator
-
     sys_gen_config = {}
     sys_gen_config["forcefields"] = ["amber/ff14SB.xml",
                                      "amber/tip3p_standard.xml",
@@ -141,3 +144,165 @@ class TestHybridTopologyFactory:
             "Different number of atoms in HTF compared to original molecules."
 
         # TODO: Validate common atoms include 6 carbon atoms
+
+
+class TestHTFVirtualSites:
+    @pytest.fixture(scope='module')
+    def tip4p_system_generator(self):
+        """
+        SystemGenerator object with tip4p-ew water
+    
+        Returns
+        -------
+        generator: openmmforcefields.generators.SystemGenerator
+            SystemGenerator object.
+        """
+        sys_gen_config = {}
+        sys_gen_config["forcefields"] = ["amber/ff14SB.xml",
+                                         "amber/tip4pew_standard.xml",
+                                         "amber/phosaa10.xml"]
+        sys_gen_config["small_molecule_forcefield"] = "openff-2.1.0"
+        sys_gen_config["nonperiodic_forcefield_kwargs"] = {
+            "nonbondedMethod": NoCutoff,
+        }
+        sys_gen_config["periodic_forcefield_kwargs"] = {
+            "nonbondedMethod": PME,
+            "nonbondedCutoff": 1.0 * omm_unit.nanometer,
+        }
+        sys_gen_config["barostat"] = MonteCarloBarostat(1 * omm_unit.bar, 300 * omm_unit.kelvin)
+    
+        generator = SystemGenerator(**sys_gen_config)
+    
+        return generator
+
+    @pytest.fixture(scope='module')
+    def tip4p_benzene_to_toluene_htf(self, tip4p_system_generator,
+                                     benzene, toluene, mapping_benzene_toluene):
+        """
+        TODO: turn part of this into a method for creating HTFs?
+        """
+        from gufe import SolventComponent
+        # TODO: change imports once utils get moved
+        from openfe.protocols.openmm_utils import system_creation
+        from openfe.protocols.openmm_rfe._rfe_utils import topologyhelpers
+
+        benz_off = benzene.to_openff()
+        tol_off = toluene.to_openff()
+
+        for mol in [benz_off, tol_off]:
+            tip4p_system_generator.create_system(
+                mol.to_openmm(), molecules=[mol]
+            )
+
+        # Create state A model & get relevant OpenMM objects
+        benz_model, comp_resids = system_creation.get_omm_modeller(
+            protein_comp=None,
+            solvent_comp=SolventComponent(),
+            small_mols={benzene: benz_off}
+        )
+
+        benz_topology = benz_model.getTopology()
+        benz_positions = to_openmm(from_openmm(benz_model.getPositions()))
+        benz_system = tip4p_system_generator.create_system(
+            benz_topology, molecules=[benz_off]
+        )
+
+        # Now for state B
+        tol_topology, tol_alchem_resids = topologyhelpers.combined_topology(
+            benz_topology, tol_off.to_openmm(),
+            exclude_resids=comp_resids[benzene]
+        )
+
+        tol_system = tip4p_system_generator.create_system(
+            tol_topology, molecules=[tol_off]
+        )
+
+        ligand_mappings = topologyhelpers.get_system_mappings(
+            mapping_benzene_to_toluene.componentA_to_componentB,
+            benz_system, benz_topology, comp_resids[benzene],
+            tol_system, tol_topology, tol_alchem_resids
+        )
+
+        tol_positions = topologyhelpers.set_and_check_new_positions(
+            ligand_mappings,
+            benz_topology, tol_topology,
+            old_positions=to_openmm(benz_positions),
+            insert_positions=to_openmm(tol_off.conformers[0])
+        )
+
+        # Finally get the HTF
+        hybrid_factory = HybridTopologyFactory(
+            benz_system, benz_positions, benz_topology,
+            tol_system, tol_positions, tol_topology,
+            old_to_new_atom_map=ligand_mappings['old_to_new_atom_map'],
+            old_to_new_core_atom_map=ligand_mappings['old_to_new_core_atom_map'],
+        )
+
+        return hybrid_factory
+
+    def test_tip4p_particle_count(self, tip4p_benzene_to_toluene_htf):
+        """
+        Check that the particle count is conserved, i.e. no vsites are lost
+        or double counted.
+        """
+        htf = tip4p_benzene_to_toluene_htf
+        old_count = htf._old_system.getNumParticles()
+        unique_new_count = len(htf._unique_new_atoms)
+        hybrid_particle_count = htf.hybrid_system.getNumParticles()
+
+        assert old_count + unique_new_count == hybrid_particle_count
+
+    def test_tip4p_num_waters(self, tip4p_benzene_to_toluene_htf):
+        """
+        Check that the nuumber of virtual sites is equal to the number of
+        waters
+        """
+        htf = tip4p_benzene_to_toluene_htf
+
+        num_waters = len(
+            [r for r in htf._old_topology.residues() if r.name == 'HOH']
+        )
+
+        virtual_sites = [
+            ix for ix in range(htf.hybrid_system.getNumParticles()) if
+            htf.hybrid_system.isVirtualSite(ix)
+        ]
+
+        assert num_waters == len(virtual_sites)
+
+    def test_tip4p_check_vsite_parameters(tip4p_benzene_to_toluene_htf):
+
+        htf = tip4p_benzene_to_toluene_htf
+
+        virtual_sites = [
+            ix for ix in range(htf.hybrid_system.getNumParticles()) if
+            htf.hybrid_system.isVirtualSite(ix)
+        ]
+
+        # get the standard and custom nonbonded forces - one of each
+        nonbond = [f for f in htf.hybrid_system.getForces()
+                   if isinstance(f, NonbondedForce)][0]
+    
+        cust_nonbond = [f for f in htf.hybrid_system.getForces()
+                        if isinstance(f, CustomNonbondedForce)][0]
+    
+        # loop through every virtual site and check that they have the
+        # expected tip4p parameters
+        for entry in virtual_sites:
+            vs = htf.hybrid_system.getVirtualSite(entry)
+            vs_mass = htf.hybrid_system.getParticleMass(entry)
+            assert ensure_quantity(vs_mass, 'openff').m == pytest.approx(0)
+            vs_weights = [vs.getWeight(ix) for ix in range(vs.getNumParticles())]
+            np.testing.assert_allclose(
+                vs_weights, [0.786646558, 0.106676721, 0.106676721]
+            )
+            c, s, e = nonbond.getParticleParameters(entry)
+            assert ensure_quantity(c, 'openff').m == pytest.approx(-1.04844)
+            assert ensure_quantity(s, 'openff').m == 1
+            assert ensure_quantity(e, 'openff').m == 0
+    
+            s1, e1, s2, e2, i, j = cust_nonbond.getParticleParameters(entry)
+    
+            assert i == j == 0
+            assert s1 == s2 == 1
+            assert e1 == e2 == 0
