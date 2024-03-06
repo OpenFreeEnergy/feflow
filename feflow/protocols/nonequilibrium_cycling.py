@@ -20,7 +20,12 @@ from gufe.protocols import (
 # TODO: Remove/change when things get migrated to openmmtools or feflow
 from openfe.protocols.openmm_utils import system_creation
 from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
+from openfe.protocols.openmm_rfe.equil_rfe_methods import (
+    RelativeHybridTopologyProtocolUnit as RHTPU
+)
+from openfe.utils import without_oechem_backend
 
+from openff.toolkit.molecule import Molecule as OFFMolecule
 from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
@@ -107,8 +112,8 @@ class SetupUnit(ProtocolUnit):
             The initial chemical system.
         state_b : gufe.ChemicalSystem
             The objective chemical system.
-        mapping : dict[str, gufe.mapping.ComponentMapping]
-            A dict featuring mappings between the two chemical systems.
+        mapping : gufe.mapping.ComponentMapping
+            A single ligand atom mapping between the two chemical systems.
         settings : gufe.settings.model.Settings
             The full settings for the protocol.
 
@@ -136,9 +141,8 @@ class SetupUnit(ProtocolUnit):
         # receptor_b = state_b.components.get("protein")  # Should not be needed
 
         # Get ligand/small-mol components
-        ligand_mapping = mapping["ligand"]
-        ligand_a = ligand_mapping.componentA
-        ligand_b = ligand_mapping.componentB
+        ligand_a = mapping.componentA
+        ligand_b = mapping.componentB
 
         # Get solvent components
         solvent_a = state_a.components.get("solvent")
@@ -148,6 +152,7 @@ class SetupUnit(ProtocolUnit):
         forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
         integrator_settings = settings.integrator_settings
+        charge_settings = settings.partial_charge_settings
 
         # handle cache for system generator
         if settings.forcefield_cache is not None:
@@ -169,37 +174,38 @@ class SetupUnit(ProtocolUnit):
         # Note: by default this is cached to ctx.shared/db.json so shouldn't
         # incur too large a cost
         self.logger.info("Parameterizing molecules")
-        # The following creates a dictionary with all the small molecules in the states, with the structure:
-        #    Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
-        # Alchemical small mols
-        alchemical_small_mols_a = {ligand_a: ligand_a.to_openff()}
-        alchemical_small_mols_b = {ligand_b: ligand_b.to_openff()}
-        all_alchemical_mols = alchemical_small_mols_a | alchemical_small_mols_b
-        # non-alchemical common small mols
-        common_small_mols = {}
-        for comp in state_a.components.values():
-            # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
-            if isinstance(comp, SmallMoleculeComponent) and comp not in all_alchemical_mols:
-                common_small_mols[comp] = comp.to_openff()
+        # Create a dictionary of small molecules for each state
+        off_small_mols: dict[
+            str, list[tuple[SmallMoleculeComponent, OFFMolecule]]
+        ]
+        off_small_mols = {
+            'stateA': [(mapping.componentA, mapping.componentA.to_openff())],
+            'stateB': [(mapping.componentB, mapping.componentB.to_openff())],
+            'both': [(m, m.to_openff() for m in small_mols
+                     if (m != mapping.componentA and m != mapping.componentB)]
+        }
 
         # Assign charges to ALL small mols, if unassigned -- more info: Openfe issue #576
-        for off_mol in chain(all_alchemical_mols.values(), common_small_mols.values()):
-            # skip if we already have user charges
-            if not (off_mol.partial_charges is not None and np.any(off_mol.partial_charges)):
-                # due to issues with partial charge generation in ambertools
-                # we default to using the input conformer for charge generation
-                off_mol.assign_partial_charges(
-                    'am1bcc', use_conformers=off_mol.conformers
+        RHTPU._assign_partial_charges(charge_settings, off_small_mols)
+
+        # disable oechem backend to avoid rdkit -> oechem roundtrip issues
+        with without_oechem_backend():
+            for smc, mol in chain(
+                off_small_mols['stateA'],
+                off_small_mols['stateB'],
+                off_small_mols['both']
+            ):
+                system_generator.create_system(
+                    off_mol.to_topology().to_openmm(),
+                    molecules=[off_mol]
                 )
-            system_generator.create_system(off_mol.to_topology().to_openmm(),
-                                           molecules=[off_mol])
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
         solvation_settings = settings.solvation_settings
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_a,
             solvent_comp=solvent_a,
-            small_mols=alchemical_small_mols_a | common_small_mols,
+            small_mols=off_small_mols['stateA'] | off_small_mols['both'],
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
         )
@@ -214,8 +220,8 @@ class SetupUnit(ProtocolUnit):
         # e. create the stateA System
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=list(chain(alchemical_small_mols_a.values(),
-                                 common_small_mols.values())),
+            molecules=list(m for _, m in chain(off_small_mols['stateA'],
+                                               off_small_mols['both']))
         )
 
         # 2. Get stateB system
@@ -228,13 +234,13 @@ class SetupUnit(ProtocolUnit):
 
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=list(chain(alchemical_small_mols_b.values(),
-                                 common_small_mols.values())),
+            molecules=list(m for _, m in chain(off_small_mols['stateB'],
+                                               off_small_mols['both']))
         )
 
         #  c. Define correspondence mappings between the two systems
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
-            mapping["ligand"].componentA_to_componentB,
+            mapping.componentA_to_componentB,
             state_a_system, state_a_topology, comp_resids[ligand_a],
             state_b_system, state_b_topology, state_b_alchem_resids,
             # These are non-optional settings for this method
@@ -278,6 +284,7 @@ class SetupUnit(ProtocolUnit):
         eq_steps = settings.neq_steps
         timestep = to_openmm(settings.timestep)
         splitting = settings.neq_splitting
+        # TODO: migrate some of this to integrator_settings
         integrator = PeriodicNonequilibriumIntegrator(alchemical_functions=settings.lambda_functions,
                                                       nsteps_neq=neq_steps,
                                                       nsteps_eq=eq_steps,
@@ -791,6 +798,9 @@ class NonEquilibriumCyclingProtocol(Protocol):
     ) -> List[ProtocolUnit]:
 
         # Handle parameters
+        # TODO: change this to do a check on mapping & it's contents
+        # * should be a single mapping entry
+        # * should be a mapping only between two smcs
         if mapping is None:
             raise ValueError("`mapping` is required for this Protocol")
         if 'ligand' not in mapping:
@@ -802,6 +812,8 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # or JSON-serializable objects
         num_replicates = self.settings.num_replicates
 
+        # TODO: don't pass settings but the protocol itself
+        # this allows for better settings migration
         setup = SetupUnit(state_a=stateA, state_b=stateB, mapping=mapping, settings=self.settings, name="setup")
 
         simulations = [
