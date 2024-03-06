@@ -284,7 +284,7 @@ class TestHTFVirtualSites:
 
         assert num_waters == len(virtual_sites)
 
-    def test_tip4p_check_vsite_parameters(tip4p_benzene_to_toluene_htf):
+    def test_tip4p_check_vsite_parameters(self, tip4p_benzene_to_toluene_htf):
 
         htf = tip4p_benzene_to_toluene_htf
 
