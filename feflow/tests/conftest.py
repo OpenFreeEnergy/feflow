@@ -136,7 +136,7 @@ def production_settings(short_settings):
 
 # Mappings fixtures
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def mapping_benzene_toluene(benzene, toluene):
     """Mapping from toluene to benzene"""
     mapping_toluene_to_benzene = {0: 4, 1: 5, 2: 6, 3: 7, 4: 8, 5: 9, 6: 10, 7: 11, 8: 12, 9: 13, 11: 14}
