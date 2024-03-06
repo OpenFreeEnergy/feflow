@@ -8,6 +8,7 @@ import pytest
 from feflow.utils.hybrid_topology import HybridTopologyFactory
 from feflow.tests.utils import extract_htf_data
 
+import mdtraj as mdt
 from openmm import unit as omm_unit
 from openmm.app import NoCutoff, PME
 from openmm import (
@@ -142,6 +143,19 @@ class TestHybridTopologyFactory:
         final_htf_n_atoms = len(htf.final_atom_indices)
         assert initial_htf_n_atoms - final_htf_n_atoms == n_atoms_diff, \
             "Different number of atoms in HTF compared to original molecules."
+
+        # 16 atoms:
+        # 11 common atoms, 1 extra hydrogen in benzene, 4 extra in toluene
+        # 12 bonds in benzene + 4 extra toluene bonds
+        assert len(list(htf.hybrid_topology.atoms)) == 16
+        assert len(list(htf.hybrid_topology.bonds)) == 16
+        # check that the omm_hybrid_topology has the right things
+        assert len(list(htf.omm_hybrid_topology.atoms())) == 16
+        assert len(list(htf.omm_hybrid_topology.bonds())) == 16
+        # check that we can convert back the mdtraj hybrid_topology attribute
+        ret_top = mdt.Topology.to_openmm(htf.hybrid_topology)
+        assert len(list(ret_top.atoms())) == 16
+        assert len(list(ret_top.bonds())) == 16
 
         # TODO: Validate common atoms include 6 carbon atoms
 
