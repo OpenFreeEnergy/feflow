@@ -205,7 +205,7 @@ class TestHTFVirtualSites:
 
         for mol in [benz_off, tol_off]:
             tip4p_system_generator.create_system(
-                mol.to_openmm(), molecules=[mol]
+                mol.to_topology().to_openmm(), molecules=[mol]
             )
 
         # Create state A model & get relevant OpenMM objects
@@ -223,7 +223,7 @@ class TestHTFVirtualSites:
 
         # Now for state B
         tol_topology, tol_alchem_resids = topologyhelpers.combined_topology(
-            benz_topology, tol_off.to_openmm(),
+            benz_topology, tol_off.to_topology().to_openmm(),
             exclude_resids=comp_resids[benzene]
         )
 
