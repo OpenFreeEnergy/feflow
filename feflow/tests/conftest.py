@@ -6,7 +6,7 @@ from rdkit import Chem
 from gufe.mapping import LigandAtomMapping
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def gufe_data_dir():
     path = files("gufe.tests.data")
     return path
