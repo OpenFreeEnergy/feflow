@@ -8,7 +8,12 @@ from typing import Optional
 from gufe.settings import Settings
 from openff.units import unit
 from pydantic import root_validator
-from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
+from openfe.protocols.openmm_utils.omm_settings import (
+    OpenMMSolvationSettings,
+    OpenFFPartialChargeSettings,
+    IntegratorSettings,
+)
+
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
 # Default settings for the lambda functions
@@ -46,12 +51,16 @@ class NonEquilibriumCyclingSettings(Settings):
     class Config:
         arbitrary_types_allowed = True
 
-    # System Settings (from openfe)
-    system_settings: SystemSettings
     forcefield_cache: Optional[str] = "db.json"  # TODO: Remove once it has been integrated with openfe settings
 
     # Solvation settings
-    solvation_settings: SolvationSettings
+    solvation_settings: OpenMMSolvationSettings
+
+    # Partial charge generation settings
+    partial_charge_settings: OpenFFPartialChargeSettings
+
+    # Integrator settings - TODO: subclass for NEQ integrator
+    integrator_settings: IntegratorSettings
 
     # Lambda settings
     lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS

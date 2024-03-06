@@ -147,7 +147,7 @@ class SetupUnit(ProtocolUnit):
         # Get settings for system generator
         forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
-        system_settings = settings.system_settings
+        integrator_settings = settings.integrator_settings
 
         # handle cache for system generator
         if settings.forcefield_cache is not None:
@@ -158,7 +158,7 @@ class SetupUnit(ProtocolUnit):
         system_generator = system_creation.get_system_generator(
             forcefield_settings=forcefield_settings,
             thermo_settings=thermodynamic_settings,
-            system_settings=system_settings,
+            integrator_settings=integrator_settings,
             cache=ffcache,
             has_solvent=solvent_a is not None,
         )
@@ -252,6 +252,11 @@ class SetupUnit(ProtocolUnit):
         alchemical_settings = settings.alchemical_settings
 
         # Now we can create the HTF from the previous objects
+        if alchemical_settings.softcore_LJ.lower() == 'gapsy':
+            sofcore_LJ_v2 = True
+        else:
+            softcore_LJ_v2 = False
+
         hybrid_factory = HybridTopologyFactory(
             state_a_system, state_a_positions, state_a_topology,
             state_b_system, state_b_positions, state_b_topology,
@@ -259,10 +264,8 @@ class SetupUnit(ProtocolUnit):
             old_to_new_core_atom_map=ligand_mappings['old_to_new_core_atom_map'],
             use_dispersion_correction=alchemical_settings.use_dispersion_correction,
             softcore_alpha=alchemical_settings.softcore_alpha,
-            softcore_LJ_v2=alchemical_settings.softcore_LJ_v2,
+            softcore_LJ_v2=softcore_LJ_v2,
             softcore_LJ_v2_alpha=alchemical_settings.softcore_alpha,
-            interpolate_old_and_new_14s=alchemical_settings.interpolate_old_and_new_14s,
-            flatten_torsions=alchemical_settings.flatten_torsions,
         )
         ####### END OF SETUP #########
 
@@ -761,14 +764,21 @@ class NonEquilibriumCyclingProtocol(Protocol):
     def _default_settings(cls):
         from feflow.settings.nonequilibrium_cycling import NonEquilibriumCyclingSettings
         from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
-        from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
+        from openfe.protocols.openmm_utils.omm_settings import (
+            OpenMMSolvationSettings,
+            OpenFFPartialChargeSettings,
+            IntegratorSettings,
+        )
         from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
         return NonEquilibriumCyclingSettings(
             forcefield_settings=OpenMMSystemGeneratorFFSettings(),
-            thermo_settings=ThermoSettings(temperature=300 * unit.kelvin),
-            system_settings=SystemSettings(),
-            solvation_settings=SolvationSettings(),
-            alchemical_settings=AlchemicalSettings(),
+            thermo_settings=ThermoSettings(
+                temperature=298.15 * unit.kelvin, pressure=1 * unit.bar
+            ),
+            partial_charge_settings=OpenFFPartialChargeSettings(),
+            solvation_settings=OpenMMSolvationSettings(),
+            alchemical_settings=AlchemicalSettings(softcore_LJ='gapsys'),
+            integrator_settings=IntegratorSettings(),
         )
 
     # NOTE: create method should be really fast, since it would be running in the work units not the clients!!
