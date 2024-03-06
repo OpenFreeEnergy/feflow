@@ -9,6 +9,7 @@ from feflow.utils.hybrid_topology import HybridTopologyFactory
 from feflow.tests.utils import extract_htf_data
 
 import mdtraj as mdt
+import numpy as np
 from openmm import unit as omm_unit
 from openmm.app import NoCutoff, PME
 from openmm import (
@@ -17,7 +18,11 @@ from openmm import (
     CustomNonbondedForce
 )
 from openmmforcefields.generators import SystemGenerator
-from openff.units.openmm import to_openmm, from_openmm
+from openff.units.openmm import (
+    to_openmm,
+    from_openmm,
+    ensure_quantity
+)
 from perses.tests import utils as perses_utils
 
 
@@ -199,9 +204,13 @@ class TestHTFVirtualSites:
         # TODO: change imports once utils get moved
         from openfe.protocols.openmm_utils import system_creation
         from openfe.protocols.openmm_rfe._rfe_utils import topologyhelpers
+        from openfe.protocols.openmm_utils.omm_settings import SolvationSettings
 
         benz_off = benzene.to_openff()
         tol_off = toluene.to_openff()
+
+        solv_settings = SolvationSettings()
+        solv_settings.solvent_model = 'tip4pew'
 
         for mol in [benz_off, tol_off]:
             tip4p_system_generator.create_system(
@@ -212,7 +221,9 @@ class TestHTFVirtualSites:
         benz_model, comp_resids = system_creation.get_omm_modeller(
             protein_comp=None,
             solvent_comp=SolventComponent(),
-            small_mols={benzene: benz_off}
+            small_mols={benzene: benz_off},
+            omm_forcefield=tip4p_system_generator.forcefield,
+            solvent_settings=solv_settings,
         )
 
         benz_topology = benz_model.getTopology()
@@ -232,7 +243,7 @@ class TestHTFVirtualSites:
         )
 
         ligand_mappings = topologyhelpers.get_system_mappings(
-            mapping_benzene_to_toluene.componentA_to_componentB,
+            mapping_benzene_toluene.componentA_to_componentB,
             benz_system, benz_topology, comp_resids[benzene],
             tol_system, tol_topology, tol_alchem_resids
         )
@@ -240,7 +251,7 @@ class TestHTFVirtualSites:
         tol_positions = topologyhelpers.set_and_check_new_positions(
             ligand_mappings,
             benz_topology, tol_topology,
-            old_positions=to_openmm(benz_positions),
+            old_positions=benz_positions,
             insert_positions=to_openmm(tol_off.conformers[0])
         )
 
