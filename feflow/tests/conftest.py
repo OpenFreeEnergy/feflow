@@ -12,7 +12,7 @@ def gufe_data_dir():
     return path
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def benzene_modifications(gufe_data_dir):
     source = gufe_data_dir.joinpath("benzene_modifications.sdf")
     with as_file(source) as f:
@@ -29,12 +29,12 @@ def solvent_comp():
     yield gufe.SolventComponent(positive_ion="Na", negative_ion="Cl")
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def benzene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["benzene"])
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def toluene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["toluene"])
 
