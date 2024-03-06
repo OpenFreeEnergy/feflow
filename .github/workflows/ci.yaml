@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - main
+      - htf-migration
   push:
     branches:
       - main
