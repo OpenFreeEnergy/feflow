@@ -6,9 +6,15 @@ from rdkit import Chem
 from gufe.mapping import LigandAtomMapping
 
 
-@pytest.fixture
-def benzene_modifications():
-    source = files("gufe.tests.data").joinpath("benzene_modifications.sdf")
+@pytest.fixture(scope='session')
+def gufe_data_dir():
+    path = files("gufe.tests.data")
+    return path
+
+
+@pytest.fixture(scope='session')
+def benzene_modifications(gufe_data_dir):
+    source = gufe_data_dir.joinpath("benzene_modifications.sdf")
     with as_file(source) as f:
         supp = Chem.SDMolSupplier(str(f), removeHs=False)
         mols = list(supp)
@@ -23,12 +29,12 @@ def solvent_comp():
     yield gufe.SolventComponent(positive_ion="Na", negative_ion="Cl")
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def benzene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["benzene"])
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def toluene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["toluene"])
 
@@ -130,7 +136,7 @@ def production_settings(short_settings):
 
 # Mappings fixtures
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def mapping_benzene_toluene(benzene, toluene):
     """Mapping from toluene to benzene"""
     mapping_toluene_to_benzene = {0: 4, 1: 5, 2: 6, 3: 7, 4: 8, 5: 9, 6: 10, 7: 11, 8: 12, 9: 13, 11: 14}

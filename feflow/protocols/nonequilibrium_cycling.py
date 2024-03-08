@@ -120,11 +120,12 @@ class SetupUnit(ProtocolUnit):
         """
         # needed imports
         import openmm
+        import numpy as np
         from openff.units.openmm import ensure_quantity
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
-        from feflow.utils.hybrid_topology import HybridTopologyFactoryModded as HybridTopologyFactory
+        from feflow.utils.hybrid_topology import HybridTopologyFactory
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
