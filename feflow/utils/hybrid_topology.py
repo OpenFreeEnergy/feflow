@@ -142,7 +142,7 @@ class HybridTopologyFactory:
         self._new_system = copy.deepcopy(new_system)
         self._new_positions = new_positions
         self._new_topology = new_topology
-        self._hybrid_system_forces = dict()
+        self._hybrid_system_forces = {}
 
         # Set mappings (full, core, and env maps)
         self._set_mappings(old_to_new_atom_map, old_to_new_core_atom_map)
@@ -555,7 +555,7 @@ class HybridTopologyFactory:
         TODO: condense duplicated code
         """
         # lengths of constraints already added
-        constraint_lengths = dict()
+        constraint_lengths = {}
 
         # old system
         hybrid_map = self._old_to_hybrid_map
@@ -1525,7 +1525,7 @@ class HybridTopologyFactory:
         """
         indices_reversed = indices[::-1]
 
-        torsion_params_list = list()
+        torsion_params_list = []
 
         # Now loop through and try to find the torsion:
         for torsion_idx in range(torsion_force.getNumTorsions()):
@@ -2603,7 +2603,7 @@ class HybridTopologyFactory:
 
         hybrid_topology = copy.deepcopy(old_top)
 
-        added_atoms = dict()
+        added_atoms = {}
 
         # Get the core atoms in the new index system (as opposed to the hybrid
         # index system). We will need this later

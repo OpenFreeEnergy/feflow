@@ -465,16 +465,16 @@ class SimulationUnit(ProtocolUnit):
         try:
             # Prepare objects to store data -- empty lists so far
             forward_eq_old, forward_eq_new, forward_neq_old, forward_neq_new = (
-                list(),
-                list(),
-                list(),
-                list(),
+                [],
+                [],
+                [],
+                [],
             )
             reverse_eq_new, reverse_eq_old, reverse_neq_old, reverse_neq_new = (
-                list(),
-                list(),
-                list(),
-                list(),
+                [],
+                [],
+                [],
+                [],
             )
 
             # Coarse number of steps -- each coarse consists of work_save_frequency steps
