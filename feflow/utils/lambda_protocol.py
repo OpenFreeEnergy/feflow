@@ -101,18 +101,18 @@ class LambdaProtocol:
                 self.functions = {
                     "lambda_sterics_core": lambda x: x,
                     "lambda_electrostatics_core": lambda x: x,
-                    "lambda_sterics_insert": lambda x: (3.0 / 2.0) * x
-                    if x < (2.0 / 3.0)
-                    else 1.0,
-                    "lambda_sterics_delete": lambda x: 0.0
-                    if x < (1.0 / 3.0)
-                    else (x - (1.0 / 3.0)) * (3.0 / 2.0),
-                    "lambda_electrostatics_insert": lambda x: 0.0
-                    if x < 0.5
-                    else 2.0 * (x - 0.5),
-                    "lambda_electrostatics_delete": lambda x: 2.0 * x
-                    if x < 0.5
-                    else 1.0,
+                    "lambda_sterics_insert": lambda x: (
+                        (3.0 / 2.0) * x if x < (2.0 / 3.0) else 1.0
+                    ),
+                    "lambda_sterics_delete": lambda x: (
+                        0.0 if x < (1.0 / 3.0) else (x - (1.0 / 3.0)) * (3.0 / 2.0)
+                    ),
+                    "lambda_electrostatics_insert": lambda x: (
+                        0.0 if x < 0.5 else 2.0 * (x - 0.5)
+                    ),
+                    "lambda_electrostatics_delete": lambda x: (
+                        2.0 * x if x < 0.5 else 1.0
+                    ),
                     "lambda_bonds": lambda x: x,
                     "lambda_angles": lambda x: x,
                     "lambda_torsions": lambda x: x,
@@ -121,34 +121,30 @@ class LambdaProtocol:
                 self.functions = {
                     "lambda_sterics_core": lambda x: x,
                     "lambda_electrostatics_core": lambda x: x,
-                    "lambda_sterics_insert": lambda x: 0.0
-                    if x < 0.5
-                    else 1
-                    if x > 0.75
-                    else 4 * (x - 0.5),
-                    "lambda_sterics_delete": lambda x: 0.0
-                    if x < 0.25
-                    else 1
-                    if x > 0.5
-                    else 4 * (x - 0.25),
-                    "lambda_electrostatics_insert": lambda x: 0.0
-                    if x < 0.75
-                    else 4 * (x - 0.75),
-                    "lambda_electrostatics_delete": lambda x: 4.0 * x
-                    if x < 0.25
-                    else 1.0,
+                    "lambda_sterics_insert": lambda x: (
+                        0.0 if x < 0.5 else 1 if x > 0.75 else 4 * (x - 0.5)
+                    ),
+                    "lambda_sterics_delete": lambda x: (
+                        0.0 if x < 0.25 else 1 if x > 0.5 else 4 * (x - 0.25)
+                    ),
+                    "lambda_electrostatics_insert": lambda x: (
+                        0.0 if x < 0.75 else 4 * (x - 0.75)
+                    ),
+                    "lambda_electrostatics_delete": lambda x: (
+                        4.0 * x if x < 0.25 else 1.0
+                    ),
                     "lambda_bonds": lambda x: x,
                     "lambda_angles": lambda x: x,
                     "lambda_torsions": lambda x: x,
                 }
             elif self.type == "ele-scaled":
                 self.functions = {
-                    "lambda_electrostatics_insert": lambda x: 0.0
-                    if x < 0.5
-                    else ((2 * (x - 0.5)) ** 0.5),
-                    "lambda_electrostatics_delete": lambda x: (2 * x) ** 2
-                    if x < 0.5
-                    else 1.0,
+                    "lambda_electrostatics_insert": lambda x: (
+                        0.0 if x < 0.5 else ((2 * (x - 0.5)) ** 0.5)
+                    ),
+                    "lambda_electrostatics_delete": lambda x: (
+                        (2 * x) ** 2 if x < 0.5 else 1.0
+                    ),
                 }
             elif self.type == "user-defined":
                 self.functions = functions

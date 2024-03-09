@@ -804,8 +804,7 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
             np.std(all_dgs) * unit.k * self.data["temperature"] * unit.avogadro_constant
         ).to("kcal/mol")
 
-    def get_rate_of_convergence(self):
-        ...
+    def get_rate_of_convergence(self): ...
 
     # @lru_cache()
     def _do_bootstrap(self, forward, reverse, n_bootstraps=1000):

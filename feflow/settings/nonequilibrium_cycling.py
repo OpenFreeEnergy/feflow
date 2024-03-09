@@ -4,6 +4,7 @@ Settings objects for the different protocols using gufe objects.
 This module implements the objects that will be needed to run relative binding free
 energy calculations using perses.
 """
+
 from typing import Optional
 from gufe.settings import Settings
 from openff.units import unit
@@ -50,9 +51,9 @@ class NonEquilibriumCyclingSettings(Settings):
 
     # System Settings (from openfe)
     system_settings: SystemSettings
-    forcefield_cache: Optional[
-        str
-    ] = "db.json"  # TODO: Remove once it has been integrated with openfe settings
+    forcefield_cache: Optional[str] = (
+        "db.json"  # TODO: Remove once it has been integrated with openfe settings
+    )
 
     # Solvation settings
     solvation_settings: SolvationSettings

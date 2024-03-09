@@ -180,12 +180,16 @@ def check_result(results, threshold=3.0, neffmin=10):
 
     if N_eff < neffmin:
         raise Exception(
-            "Number of effective samples {:f} was below minimum of {:f}".format(N_eff, neffmin)
+            "Number of effective samples {:f} was below minimum of {:f}".format(
+                N_eff, neffmin
+            )
         )
 
     if ddf > threshold:
         raise Exception(
-            "Standard deviation of {:f} exceeds threshold of {:f}".format(ddf, threshold)
+            "Standard deviation of {:f} exceeds threshold of {:f}".format(
+                ddf, threshold
+            )
         )
 
 

@@ -3,6 +3,7 @@ Module to implement the basic unit testing for the hybrid topology implementatio
 Specifically, regarding the HybridTopologyFactory object.
 More oriented to testing code functionality than science correctness.
 """
+
 import pytest
 
 from feflow.utils.hybrid_topology import HybridTopologyFactory

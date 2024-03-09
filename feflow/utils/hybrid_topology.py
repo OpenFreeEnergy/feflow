@@ -793,9 +793,9 @@ class HybridTopologyFactory:
         # Create and add the torsion term for unique/environment atoms
         unique_atom_torsion_force = openmm.PeriodicTorsionForce()
         self._hybrid_system.addForce(unique_atom_torsion_force)
-        self._hybrid_system_forces[
-            "unique_atom_torsion_force"
-        ] = unique_atom_torsion_force
+        self._hybrid_system_forces["unique_atom_torsion_force"] = (
+            unique_atom_torsion_force
+        )
 
     @staticmethod
     def _nonbonded_custom(v2):
@@ -950,9 +950,9 @@ class HybridTopologyFactory:
         # changing.
         standard_nonbonded_force = openmm.NonbondedForce()
         self._hybrid_system.addForce(standard_nonbonded_force)
-        self._hybrid_system_forces[
-            "standard_nonbonded_force"
-        ] = standard_nonbonded_force
+        self._hybrid_system_forces["standard_nonbonded_force"] = (
+            standard_nonbonded_force
+        )
 
         # Create a CustomNonbondedForce to handle alchemically interpolated
         # nonbonded parameters.
@@ -1040,9 +1040,9 @@ class HybridTopologyFactory:
         sterics_custom_nonbonded_force.setNonbondedMethod(custom_nonbonded_method)
 
         self._hybrid_system.addForce(sterics_custom_nonbonded_force)
-        self._hybrid_system_forces[
-            "core_sterics_force"
-        ] = sterics_custom_nonbonded_force
+        self._hybrid_system_forces["core_sterics_force"] = (
+            sterics_custom_nonbonded_force
+        )
 
         # Set the use of dispersion correction to be the same between the new
         # nonbonded force and the old one:
@@ -2423,9 +2423,9 @@ class HybridTopologyFactory:
         self._hybrid_system.addForce(nonbonded_exceptions_force)
 
         # For reference, set name in force dict
-        self._hybrid_system_forces[
-            "old_new_exceptions_force"
-        ] = nonbonded_exceptions_force
+        self._hybrid_system_forces["old_new_exceptions_force"] = (
+            nonbonded_exceptions_force
+        )
 
         if self._softcore_LJ_v2:
             nonbonded_exceptions_force.addGlobalParameter(
