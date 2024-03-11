@@ -2,4 +2,5 @@
 openmmtools/perses and Open Free Energy toolkits"""
 
 from importlib.metadata import version
+
 __version__ = version("openfe")

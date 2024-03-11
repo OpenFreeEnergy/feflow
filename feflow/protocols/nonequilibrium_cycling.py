@@ -1,6 +1,7 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
-from typing import Optional, Iterable, List, Dict, Any
+from typing import Optional, List, Dict, Any
+from collections.abc import Iterable
 from itertools import chain
 
 import datetime
@@ -45,10 +46,14 @@ class SetupUnit(ProtocolUnit):
         """
         # If any of them has a solvent, check the parameters are the same
         if any(["solvent" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("solvent") == state_b.get("solvent"), "Solvent parameters differ between solvent components."
+            assert state_a.get("solvent") == state_b.get(
+                "solvent"
+            ), "Solvent parameters differ between solvent components."
         # check protein component is the same in both states if protein component is found
         if any(["protein" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("protein") == state_b.get("protein"), "Receptors in states are not compatible."
+            assert state_a.get("protein") == state_b.get(
+                "protein"
+            ), "Receptors in states are not compatible."
 
     @staticmethod
     def _detect_phase(state_a, state_b):
@@ -83,7 +88,7 @@ class SetupUnit(ProtocolUnit):
         key_options = {
             "complex": ["ligand", "protein", "solvent"],
             "solvent": ["ligand", "solvent"],
-            "vacuum": ["ligand"]
+            "vacuum": ["ligand"],
         }
         for phase, keys in key_options.items():
             if all([key in state for state in states for key in keys]):
@@ -91,7 +96,8 @@ class SetupUnit(ProtocolUnit):
                 break
         else:
             raise ValueError(
-                "Could not detect phase from system states. Make sure the component in both systems match.")
+                "Could not detect phase from system states. Make sure the component in both systems match."
+            )
 
         return detected_phase
 
@@ -130,7 +136,9 @@ class SetupUnit(ProtocolUnit):
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
 
-        phase = self._detect_phase(state_a, state_b)  # infer phase from systems and components
+        phase = self._detect_phase(
+            state_a, state_b
+        )  # infer phase from systems and components
 
         # Get receptor components from systems if found (None otherwise) -- NOTE: Uses hardcoded keys!
         receptor_a = state_a.components.get("protein")
@@ -180,20 +188,26 @@ class SetupUnit(ProtocolUnit):
         common_small_mols = {}
         for comp in state_a.components.values():
             # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
-            if isinstance(comp, SmallMoleculeComponent) and comp not in all_alchemical_mols:
+            if (
+                isinstance(comp, SmallMoleculeComponent)
+                and comp not in all_alchemical_mols
+            ):
                 common_small_mols[comp] = comp.to_openff()
 
         # Assign charges to ALL small mols, if unassigned -- more info: Openfe issue #576
         for off_mol in chain(all_alchemical_mols.values(), common_small_mols.values()):
             # skip if we already have user charges
-            if not (off_mol.partial_charges is not None and np.any(off_mol.partial_charges)):
+            if not (
+                off_mol.partial_charges is not None and np.any(off_mol.partial_charges)
+            ):
                 # due to issues with partial charge generation in ambertools
                 # we default to using the input conformer for charge generation
                 off_mol.assign_partial_charges(
-                    'am1bcc', use_conformers=off_mol.conformers
+                    "am1bcc", use_conformers=off_mol.conformers
                 )
-            system_generator.create_system(off_mol.to_topology().to_openmm(),
-                                           molecules=[off_mol])
+            system_generator.create_system(
+                off_mol.to_topology().to_openmm(), molecules=[off_mol]
+            )
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
         solvation_settings = settings.solvation_settings
@@ -208,20 +222,22 @@ class SetupUnit(ProtocolUnit):
         # d. get topology & positions
         # Note: roundtrip positions to remove vec3 issues
         state_a_topology = state_a_modeller.getTopology()
-        state_a_positions = to_openmm(
-            from_openmm(state_a_modeller.getPositions())
-        )
+        state_a_positions = to_openmm(from_openmm(state_a_modeller.getPositions()))
 
         # e. create the stateA System
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=list(chain(alchemical_small_mols_a.values(),
-                                 common_small_mols.values())),
+            molecules=list(
+                chain(alchemical_small_mols_a.values(), common_small_mols.values())
+            ),
         )
 
         # 2. Get stateB system
         # a. get the topology
-        state_b_topology, state_b_alchem_resids = _rfe_utils.topologyhelpers.combined_topology(
+        (
+            state_b_topology,
+            state_b_alchem_resids,
+        ) = _rfe_utils.topologyhelpers.combined_topology(
             state_a_topology,
             ligand_b.to_openff().to_topology().to_openmm(),
             exclude_resids=comp_resids[ligand_a],
@@ -229,24 +245,33 @@ class SetupUnit(ProtocolUnit):
 
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=list(chain(alchemical_small_mols_b.values(),
-                                 common_small_mols.values())),
+            molecules=list(
+                chain(alchemical_small_mols_b.values(), common_small_mols.values())
+            ),
         )
 
         #  c. Define correspondence mappings between the two systems
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
             mapping["ligand"].componentA_to_componentB,
-            state_a_system, state_a_topology, comp_resids[ligand_a],
-            state_b_system, state_b_topology, state_b_alchem_resids,
+            state_a_system,
+            state_a_topology,
+            comp_resids[ligand_a],
+            state_b_system,
+            state_b_topology,
+            state_b_alchem_resids,
             # These are non-optional settings for this method
             fix_constraints=True,
         )
 
         #  d. Finally get the positions
         state_b_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
-            ligand_mappings, state_a_topology, state_b_topology,
-            old_positions=ensure_quantity(state_a_positions, 'openmm'),
-            insert_positions=ensure_quantity(ligand_b.to_openff().conformers[0], 'openmm'),
+            ligand_mappings,
+            state_a_topology,
+            state_b_topology,
+            old_positions=ensure_quantity(state_a_positions, "openmm"),
+            insert_positions=ensure_quantity(
+                ligand_b.to_openff().conformers[0], "openmm"
+            ),
         )
 
         # Get alchemical settings
@@ -254,10 +279,14 @@ class SetupUnit(ProtocolUnit):
 
         # Now we can create the HTF from the previous objects
         hybrid_factory = HybridTopologyFactory(
-            state_a_system, state_a_positions, state_a_topology,
-            state_b_system, state_b_positions, state_b_topology,
-            old_to_new_atom_map=ligand_mappings['old_to_new_atom_map'],
-            old_to_new_core_atom_map=ligand_mappings['old_to_new_core_atom_map'],
+            state_a_system,
+            state_a_positions,
+            state_a_topology,
+            state_b_system,
+            state_b_positions,
+            state_b_topology,
+            old_to_new_atom_map=ligand_mappings["old_to_new_atom_map"],
+            old_to_new_core_atom_map=ligand_mappings["old_to_new_core_atom_map"],
             use_dispersion_correction=alchemical_settings.use_dispersion_correction,
             softcore_alpha=alchemical_settings.softcore_alpha,
             softcore_LJ_v2=alchemical_settings.softcore_LJ_v2,
@@ -276,12 +305,14 @@ class SetupUnit(ProtocolUnit):
         eq_steps = settings.neq_steps
         timestep = to_openmm(settings.timestep)
         splitting = settings.neq_splitting
-        integrator = PeriodicNonequilibriumIntegrator(alchemical_functions=settings.lambda_functions,
-                                                      nsteps_neq=neq_steps,
-                                                      nsteps_eq=eq_steps,
-                                                      splitting=splitting,
-                                                      timestep=timestep,
-                                                      temperature=temperature, )
+        integrator = PeriodicNonequilibriumIntegrator(
+            alchemical_functions=settings.lambda_functions,
+            nsteps_neq=neq_steps,
+            nsteps_eq=eq_steps,
+            splitting=splitting,
+            timestep=timestep,
+            temperature=temperature,
+        )
 
         # Set up context
         platform = get_openmm_platform(settings.platform)
@@ -299,9 +330,9 @@ class SetupUnit(ProtocolUnit):
             state_ = context.getState(getPositions=True)
             integrator_ = context.getIntegrator()
 
-            system_outfile = ctx.shared / 'system.xml.bz2'
-            state_outfile = ctx.shared / 'state.xml.bz2'
-            integrator_outfile = ctx.shared / 'integrator.xml.bz2'
+            system_outfile = ctx.shared / "system.xml.bz2"
+            state_outfile = ctx.shared / "state.xml.bz2"
+            integrator_outfile = ctx.shared / "integrator.xml.bz2"
 
             serialize(system_, system_outfile)
             serialize(state_, state_outfile)
@@ -311,13 +342,14 @@ class SetupUnit(ProtocolUnit):
             # Explicit cleanup for GPU resources
             del context, integrator
 
-        return {'system': system_outfile,
-                'state': state_outfile,
-                'integrator': integrator_outfile,
-                'phase': phase,
-                'initial_atom_indices': hybrid_factory.initial_atom_indices,
-                'final_atom_indices': hybrid_factory.final_atom_indices,
-                }
+        return {
+            "system": system_outfile,
+            "state": state_outfile,
+            "integrator": integrator_outfile,
+            "phase": phase,
+            "initial_atom_indices": hybrid_factory.initial_atom_indices,
+            "final_atom_indices": hybrid_factory.final_atom_indices,
+        }
 
 
 class SimulationUnit(ProtocolUnit):
@@ -375,7 +407,7 @@ class SimulationUnit(ProtocolUnit):
         ctx : gufe.protocols.protocolunit.Context
             The gufe context for the unit.
 
-        setup : 
+        setup :
         settings : gufe.settings.model.Settings
             The full settings for the protocol.
 
@@ -395,19 +427,21 @@ class SimulationUnit(ProtocolUnit):
         output_log_path = ctx.shared / "perses-neq-cycling.log"
         file_handler = logging.FileHandler(output_log_path, mode="w")
         file_handler.setLevel(logging.DEBUG)  # TODO: Set to INFO in production
-        log_formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        log_formatter = logging.Formatter(
+            fmt="%(asctime)s %(levelname)-8s %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+        )
         file_handler.setFormatter(log_formatter)
         file_logger.addHandler(file_handler)
 
         # Get state, system, and integrator from setup unit
-        system = deserialize(setup.outputs['system'])
-        state = deserialize(setup.outputs['state'])
-        integrator = deserialize(setup.outputs['integrator'])
+        system = deserialize(setup.outputs["system"])
+        state = deserialize(setup.outputs["state"])
+        integrator = deserialize(setup.outputs["integrator"])
         PeriodicNonequilibriumIntegrator.restore_interface(integrator)
 
         # Get atom indices for either end of the hybrid topology
-        initial_atom_indices = setup.outputs['initial_atom_indices']
-        final_atom_indices = setup.outputs['final_atom_indices']
+        initial_atom_indices = setup.outputs["initial_atom_indices"]
+        final_atom_indices = setup.outputs["final_atom_indices"]
 
         # Set up context
         platform = get_openmm_platform(settings.platform)
@@ -423,18 +457,33 @@ class SimulationUnit(ProtocolUnit):
         neq_steps = settings.eq_steps
         eq_steps = settings.neq_steps
         traj_save_frequency = settings.traj_save_frequency
-        work_save_frequency = settings.work_save_frequency  # Note: this is divisor of traj save freq.
+        work_save_frequency = (
+            settings.work_save_frequency
+        )  # Note: this is divisor of traj save freq.
         selection_expression = settings.atom_selection_expression
 
         try:
-
             # Prepare objects to store data -- empty lists so far
-            forward_eq_old, forward_eq_new, forward_neq_old, forward_neq_new = list(), list(), list(), list()
-            reverse_eq_new, reverse_eq_old, reverse_neq_old, reverse_neq_new = list(), list(), list(), list()
+            forward_eq_old, forward_eq_new, forward_neq_old, forward_neq_new = (
+                [],
+                [],
+                [],
+                [],
+            )
+            reverse_eq_new, reverse_eq_old, reverse_neq_old, reverse_neq_new = (
+                [],
+                [],
+                [],
+                [],
+            )
 
             # Coarse number of steps -- each coarse consists of work_save_frequency steps
-            coarse_eq_steps = int(eq_steps/work_save_frequency)  # Note: eq_steps is multiple of work save steps
-            coarse_neq_steps = int(neq_steps/work_save_frequency)  # Note: neq_steps is multiple of work save steps
+            coarse_eq_steps = int(
+                eq_steps / work_save_frequency
+            )  # Note: eq_steps is multiple of work save steps
+            coarse_neq_steps = int(
+                neq_steps / work_save_frequency
+            )  # Note: neq_steps is multiple of work save steps
 
             # TODO: Also get the GPU information (plain try-except with nvidia-smi)
 
@@ -443,26 +492,36 @@ class SimulationUnit(ProtocolUnit):
             start_time = time.perf_counter()
             for step in range(coarse_eq_steps):
                 integrator.step(work_save_frequency)
-                file_logger.debug(f"coarse step: {step}: saving work (freq {work_save_frequency})")
+                file_logger.debug(
+                    f"coarse step: {step}: saving work (freq {work_save_frequency})"
+                )
                 # Save positions
                 if step % traj_save_frequency == 0:
-                    file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
-                    initial_positions, final_positions = self.extract_positions(context,
-                                                                                initial_atom_indices,
-                                                                                final_atom_indices)
+                    file_logger.debug(
+                        f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})"
+                    )
+                    initial_positions, final_positions = self.extract_positions(
+                        context, initial_atom_indices, final_atom_indices
+                    )
                     forward_eq_old.append(initial_positions)
                     forward_eq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
-            file_logger.debug(f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})")
-            initial_positions, final_positions = self.extract_positions(context,
-                                                                        initial_atom_indices,
-                                                                        final_atom_indices)
+            file_logger.debug(
+                f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})"
+            )
+            initial_positions, final_positions = self.extract_positions(
+                context, initial_atom_indices, final_atom_indices
+            )
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
 
             eq_forward_time = time.perf_counter()
-            eq_forward_walltime = datetime.timedelta(seconds=eq_forward_time - start_time)
-            file_logger.info(f"replicate_{self.name} Forward (lamba = 0) equilibration time : {eq_forward_walltime}")
+            eq_forward_walltime = datetime.timedelta(
+                seconds=eq_forward_time - start_time
+            )
+            file_logger.info(
+                f"replicate_{self.name} Forward (lamba = 0) equilibration time : {eq_forward_walltime}"
+            )
 
             # Run neq
             # Forward (0 -> 1)
@@ -472,41 +531,51 @@ class SimulationUnit(ProtocolUnit):
                 integrator.step(work_save_frequency)
                 forward_works.append(integrator.get_protocol_work(dimensionless=True))
                 if fwd_step % traj_save_frequency == 0:
-                    initial_positions, final_positions = self.extract_positions(context,
-                                                                                initial_atom_indices,
-                                                                                final_atom_indices)
+                    initial_positions, final_positions = self.extract_positions(
+                        context, initial_atom_indices, final_atom_indices
+                    )
                     forward_neq_old.append(initial_positions)
                     forward_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
-            initial_positions, final_positions = self.extract_positions(context,
-                                                                        initial_atom_indices,
-                                                                        final_atom_indices)
+            initial_positions, final_positions = self.extract_positions(
+                context, initial_atom_indices, final_atom_indices
+            )
             forward_neq_old.append(initial_positions)
             forward_neq_new.append(final_positions)
 
             neq_forward_time = time.perf_counter()
-            neq_forward_walltime = datetime.timedelta(seconds=neq_forward_time - eq_forward_time)
-            file_logger.info(f"replicate_{self.name} Forward nonequilibrium time (lambda 0 -> 1): {neq_forward_walltime}")
+            neq_forward_walltime = datetime.timedelta(
+                seconds=neq_forward_time - eq_forward_time
+            )
+            file_logger.info(
+                f"replicate_{self.name} Forward nonequilibrium time (lambda 0 -> 1): {neq_forward_walltime}"
+            )
 
             # Equilibrium (lambda = 1)
             for step in range(coarse_eq_steps):
                 integrator.step(work_save_frequency)
                 if step % traj_save_frequency == 0:
-                    initial_positions, final_positions = self.extract_positions(context,
-                                                                                initial_atom_indices,
-                                                                                final_atom_indices)
-                    reverse_eq_new.append(initial_positions)  # TODO: Maybe better naming not old/new but initial/final
+                    initial_positions, final_positions = self.extract_positions(
+                        context, initial_atom_indices, final_atom_indices
+                    )
+                    reverse_eq_new.append(
+                        initial_positions
+                    )  # TODO: Maybe better naming not old/new but initial/final
                     reverse_eq_old.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
-            initial_positions, final_positions = self.extract_positions(context,
-                                                                        initial_atom_indices,
-                                                                        final_atom_indices)
+            initial_positions, final_positions = self.extract_positions(
+                context, initial_atom_indices, final_atom_indices
+            )
             reverse_eq_old.append(initial_positions)
             reverse_eq_new.append(final_positions)
 
             eq_reverse_time = time.perf_counter()
-            eq_reverse_walltime = datetime.timedelta(seconds=eq_reverse_time - neq_forward_time)
-            file_logger.info(f"replicate_{self.name} Reverse (lambda 1) time: {eq_reverse_walltime}")
+            eq_reverse_walltime = datetime.timedelta(
+                seconds=eq_reverse_time - neq_forward_time
+            )
+            file_logger.info(
+                f"replicate_{self.name} Reverse (lambda 1) time: {eq_reverse_walltime}"
+            )
 
             # Reverse work (1 -> 0)
             reverse_works = [integrator.get_protocol_work(dimensionless=True)]
@@ -514,40 +583,51 @@ class SimulationUnit(ProtocolUnit):
                 integrator.step(work_save_frequency)
                 reverse_works.append(integrator.get_protocol_work(dimensionless=True))
                 if rev_step % traj_save_frequency == 0:
-                    initial_positions, final_positions = self.extract_positions(context,
-                                                                                initial_atom_indices,
-                                                                                final_atom_indices)
+                    initial_positions, final_positions = self.extract_positions(
+                        context, initial_atom_indices, final_atom_indices
+                    )
                     reverse_neq_old.append(initial_positions)
                     reverse_neq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
-            initial_positions, final_positions = self.extract_positions(context,
-                                                                        initial_atom_indices,
-                                                                        final_atom_indices)
+            initial_positions, final_positions = self.extract_positions(
+                context, initial_atom_indices, final_atom_indices
+            )
             forward_eq_old.append(initial_positions)
             forward_eq_new.append(final_positions)
 
             neq_reverse_time = time.perf_counter()
-            neq_reverse_walltime = datetime.timedelta(seconds=neq_reverse_time - eq_reverse_time)
-            file_logger.info(f"replicate_{self.name} Reverse nonequilibrium time (lambda 1 -> 0): {neq_reverse_walltime}")
+            neq_reverse_walltime = datetime.timedelta(
+                seconds=neq_reverse_time - eq_reverse_time
+            )
+            file_logger.info(
+                f"replicate_{self.name} Reverse nonequilibrium time (lambda 1 -> 0): {neq_reverse_walltime}"
+            )
             # Elapsed time for the whole cycle
             cycle_walltime = datetime.timedelta(seconds=neq_reverse_time - start_time)
-            file_logger.info(f"replicate_{self.name} Nonequilibrium cycle total walltime: {cycle_walltime}")
+            file_logger.info(
+                f"replicate_{self.name} Nonequilibrium cycle total walltime: {cycle_walltime}"
+            )
 
             # Computing performance in ns/day
             timestep = to_openmm(settings.timestep)
-            simulation_time = 2*(eq_steps + neq_steps)*timestep
+            simulation_time = 2 * (eq_steps + neq_steps) * timestep
             walltime_in_seconds = cycle_walltime.total_seconds() * openmm_unit.seconds
             estimated_performance = simulation_time.value_in_unit(
-                openmm_unit.nanosecond) / walltime_in_seconds.value_in_unit(openmm_unit.days)  # in ns/day
-            file_logger.info(f"replicate_{self.name} Estimated performance: {estimated_performance} ns/day")
+                openmm_unit.nanosecond
+            ) / walltime_in_seconds.value_in_unit(
+                openmm_unit.days
+            )  # in ns/day
+            file_logger.info(
+                f"replicate_{self.name} Estimated performance: {estimated_performance} ns/day"
+            )
 
             # Serialize works
-            phase = setup.outputs['phase']
+            phase = setup.outputs["phase"]
             forward_work_path = ctx.shared / f"forward_{phase}_{self.name}.npy"
             reverse_work_path = ctx.shared / f"reverse_{phase}_{self.name}.npy"
-            with open(forward_work_path, 'wb') as out_file:
+            with open(forward_work_path, "wb") as out_file:
                 np.save(out_file, forward_works)
-            with open(reverse_work_path, 'wb') as out_file:
+            with open(reverse_work_path, "wb") as out_file:
                 np.save(out_file, reverse_works)
 
             # Store timings and performance info in dictionary
@@ -556,35 +636,43 @@ class SimulationUnit(ProtocolUnit):
                 "neq_forward_time_in_s": neq_forward_walltime.total_seconds(),
                 "eq_reverse_time_in_s": eq_reverse_walltime.total_seconds(),
                 "neq_reverse_time_in_s": neq_reverse_walltime.total_seconds(),
-                "performance_in_ns_day": estimated_performance
+                "performance_in_ns_day": estimated_performance,
             }
 
             # TODO: Do we need to save the trajectories?
             # Serialize trajectories
             forward_eq_old_path = ctx.shared / f"forward_eq_old_{phase}_{self.name}.npy"
             forward_eq_new_path = ctx.shared / f"forward_eq_new_{phase}_{self.name}.npy"
-            forward_neq_old_path = ctx.shared / f"forward_neq_old_{phase}_{self.name}.npy"
-            forward_neq_new_path = ctx.shared / f"forward_neq_new_{phase}_{self.name}.npy"
+            forward_neq_old_path = (
+                ctx.shared / f"forward_neq_old_{phase}_{self.name}.npy"
+            )
+            forward_neq_new_path = (
+                ctx.shared / f"forward_neq_new_{phase}_{self.name}.npy"
+            )
             reverse_eq_new_path = ctx.shared / f"reverse_eq_new_{phase}_{self.name}.npy"
             reverse_eq_old_path = ctx.shared / f"reverse_eq_old_{phase}_{self.name}.npy"
-            reverse_neq_old_path = ctx.shared / f"reverse_neq_old_{phase}_{self.name}.npy"
-            reverse_neq_new_path = ctx.shared / f"reverse_neq_new_{phase}_{self.name}.npy"
+            reverse_neq_old_path = (
+                ctx.shared / f"reverse_neq_old_{phase}_{self.name}.npy"
+            )
+            reverse_neq_new_path = (
+                ctx.shared / f"reverse_neq_new_{phase}_{self.name}.npy"
+            )
 
-            with open(forward_eq_old_path, 'wb') as out_file:
+            with open(forward_eq_old_path, "wb") as out_file:
                 np.save(out_file, np.array(forward_eq_old))
-            with open(forward_eq_new_path, 'wb') as out_file:
+            with open(forward_eq_new_path, "wb") as out_file:
                 np.save(out_file, np.array(forward_eq_new))
-            with open(reverse_eq_old_path, 'wb') as out_file:
+            with open(reverse_eq_old_path, "wb") as out_file:
                 np.save(out_file, np.array(reverse_eq_old))
-            with open(reverse_eq_new_path, 'wb') as out_file:
+            with open(reverse_eq_new_path, "wb") as out_file:
                 np.save(out_file, np.array(reverse_eq_new))
-            with open(forward_neq_old_path, 'wb') as out_file:
+            with open(forward_neq_old_path, "wb") as out_file:
                 np.save(out_file, np.array(forward_neq_old))
-            with open(forward_neq_new_path, 'wb') as out_file:
+            with open(forward_neq_new_path, "wb") as out_file:
                 np.save(out_file, np.array(forward_neq_new))
-            with open(reverse_neq_old_path, 'wb') as out_file:
+            with open(reverse_neq_old_path, "wb") as out_file:
                 np.save(out_file, np.array(reverse_neq_old))
-            with open(reverse_neq_new_path, 'wb') as out_file:
+            with open(reverse_neq_new_path, "wb") as out_file:
                 np.save(out_file, np.array(reverse_neq_new))
 
             # Saving trajectory paths in dictionary structure
@@ -596,18 +684,18 @@ class SimulationUnit(ProtocolUnit):
                 "reverse_eq_initial": reverse_eq_old_path,
                 "reverse_eq_final": reverse_eq_new_path,
                 "reverse_neq_initial": reverse_neq_old_path,
-                "reverse_neq_final": reverse_neq_new_path
+                "reverse_neq_final": reverse_neq_new_path,
             }
         finally:
             # Explicit cleanup for GPU resources
             del context, integrator
 
         return {
-            'forward_work': forward_work_path,
-            'reverse_work': reverse_work_path,
+            "forward_work": forward_work_path,
+            "reverse_work": reverse_work_path,
             "trajectory_paths": trajectory_paths,
-            'log': output_log_path,
-            'timing_info': timing_info,
+            "log": output_log_path,
+            "timing_info": timing_info,
         }
 
 
@@ -619,26 +707,34 @@ class ResultUnit(ProtocolUnit):
     @staticmethod
     def _execute(ctx, *, simulations, **inputs):
         import numpy as np
+
         # TODO: This can take the settings and process a debug flag, and populate all the paths for trajectories as needed
         # Load the works from shared serialized objects
         # TODO: We need to make sure the array is the CUMULATIVE work and that we just want the last value
         forward_works = []
         reverse_works = []
         for simulation in simulations:
-            forward_work = np.load(simulation.outputs['forward_work'])
-            reverse_work = np.load(simulation.outputs['reverse_work'])
+            forward_work = np.load(simulation.outputs["forward_work"])
+            reverse_work = np.load(simulation.outputs["reverse_work"])
 
             forward_works.append(forward_work - forward_work[0])
             reverse_works.append(reverse_work - reverse_work[0])
 
         # Path dictionary
-        paths_dict = {"forward_work": [simulation.outputs["forward_work"] for simulation in simulations],
-                      "reverse_work": [simulation.outputs["reverse_work"] for simulation in simulations]}
+        paths_dict = {
+            "forward_work": [
+                simulation.outputs["forward_work"] for simulation in simulations
+            ],
+            "reverse_work": [
+                simulation.outputs["reverse_work"] for simulation in simulations
+            ],
+        }
 
-        return {"forward_work": forward_works,
-                "reverse_work": reverse_works,
-                "paths": paths_dict,
-                }
+        return {
+            "forward_work": forward_works,
+            "reverse_work": reverse_works,
+            "paths": paths_dict,
+        }
 
 
 class NonEquilibriumCyclingProtocolResult(ProtocolResult):
@@ -666,14 +762,16 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
         import numpy.typing as npt
         import pymbar
 
-        forward_work = [i[-1] for i in self.data['forward_work']]
-        reverse_work = [i[-1] for i in self.data['reverse_work']]
+        forward_work = [i[-1] for i in self.data["forward_work"]]
+        reverse_work = [i[-1] for i in self.data["reverse_work"]]
 
         forward_work: npt.NDArray[float] = np.array(forward_work)
         reverse_work: npt.NDArray[float] = np.array(reverse_work)
         free_energy, error = pymbar.bar.BAR(forward_work, reverse_work)
 
-        return (free_energy * unit.k * self.data['temperature'] * unit.avogadro_constant).to('kcal/mol')
+        return (
+            free_energy * unit.k * self.data["temperature"] * unit.avogadro_constant
+        ).to("kcal/mol")
 
     def get_uncertainty(self, n_bootstraps=1000):
         """
@@ -693,8 +791,8 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
         import numpy as np
         import numpy.typing as npt
 
-        forward_work = [i[-1] for i in self.data['forward_work']]
-        reverse_work = [i[-1] for i in self.data['reverse_work']]
+        forward_work = [i[-1] for i in self.data["forward_work"]]
+        reverse_work = [i[-1] for i in self.data["reverse_work"]]
 
         forward: npt.NDArray[float] = np.array(forward_work)
         reverse: npt.NDArray[float] = np.array(reverse_work)
@@ -702,10 +800,11 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
         all_dgs = self._do_bootstrap(forward, reverse, n_bootstraps=n_bootstraps)
 
         # TODO: Check if standard deviation is a good uncertainty estimator
-        return (np.std(all_dgs) * unit.k * self.data['temperature'] * unit.avogadro_constant).to('kcal/mol')
+        return (
+            np.std(all_dgs) * unit.k * self.data["temperature"] * unit.avogadro_constant
+        ).to("kcal/mol")
 
-    def get_rate_of_convergence(self):
-        ...
+    def get_rate_of_convergence(self): ...
 
     # @lru_cache()
     def _do_bootstrap(self, forward, reverse, n_bootstraps=1000):
@@ -730,14 +829,18 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
         import numpy.typing as npt
 
         # Check to make sure forward and reverse work values match in length
-        assert len(forward) == len(reverse), "Forward and reverse work values are not paired"
+        assert len(forward) == len(
+            reverse
+        ), "Forward and reverse work values are not paired"
 
         all_dgs: npt.NDArray[float] = np.zeros(n_bootstraps)  # initialize dgs array
 
         traj_size = len(forward)
         for i in range(n_bootstraps):
             # Sample trajectory indices with replacement
-            indices = np.random.choice(np.arange(traj_size), size=[traj_size], replace=True)
+            indices = np.random.choice(
+                np.arange(traj_size), size=[traj_size], replace=True
+            )
             dg, ddg = pymbar.bar.BAR(forward[indices], reverse[indices])
             all_dgs[i] = dg
 
@@ -762,8 +865,12 @@ class NonEquilibriumCyclingProtocol(Protocol):
     def _default_settings(cls):
         from feflow.settings.nonequilibrium_cycling import NonEquilibriumCyclingSettings
         from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
-        from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
+        from openfe.protocols.openmm_utils.omm_settings import (
+            SystemSettings,
+            SolvationSettings,
+        )
         from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
+
         return NonEquilibriumCyclingSettings(
             forcefield_settings=OpenMMSystemGeneratorFFSettings(),
             thermo_settings=ThermoSettings(temperature=300 * unit.kelvin),
@@ -774,17 +881,16 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
     # NOTE: create method should be really fast, since it would be running in the work units not the clients!!
     def _create(
-            self,
-            stateA: ChemicalSystem,
-            stateB: ChemicalSystem,
-            mapping: Optional[dict[str, ComponentMapping]] = None,
-            extends: Optional[ProtocolDAGResult] = None,
-    ) -> List[ProtocolUnit]:
-
+        self,
+        stateA: ChemicalSystem,
+        stateB: ChemicalSystem,
+        mapping: Optional[dict[str, ComponentMapping]] = None,
+        extends: Optional[ProtocolDAGResult] = None,
+    ) -> list[ProtocolUnit]:
         # Handle parameters
         if mapping is None:
             raise ValueError("`mapping` is required for this Protocol")
-        if 'ligand' not in mapping:
+        if "ligand" not in mapping:
             raise ValueError("'ligand' must be specified in `mapping` dict")
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
@@ -793,11 +899,20 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # or JSON-serializable objects
         num_replicates = self.settings.num_replicates
 
-        setup = SetupUnit(state_a=stateA, state_b=stateB, mapping=mapping, settings=self.settings, name="setup")
+        setup = SetupUnit(
+            state_a=stateA,
+            state_b=stateB,
+            mapping=mapping,
+            settings=self.settings,
+            name="setup",
+        )
 
         simulations = [
-            self._simulation_unit(setup=setup, settings=self.settings, name=f"{replicate}")
-            for replicate in range(num_replicates)]
+            self._simulation_unit(
+                setup=setup, settings=self.settings, name=f"{replicate}"
+            )
+            for replicate in range(num_replicates)
+        ]
 
         end = ResultUnit(name="result", simulations=simulations)
 
@@ -805,9 +920,9 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
     def _gather(
         self, protocol_dag_results: Iterable[ProtocolDAGResult]
-    ) -> Dict[str, Any]:
-
+    ) -> dict[str, Any]:
         from collections import defaultdict
+
         outputs = defaultdict(list)
         for pdr in protocol_dag_results:
             for pur in pdr.protocol_unit_results:
@@ -816,11 +931,11 @@ class NonEquilibriumCyclingProtocol(Protocol):
                     outputs["reverse_work"].extend(pur.outputs["reverse_work"])
                     # TODO: below is broken; extending from a dict only puts in keys
                     # don't need it right now anyway
-                    #outputs["work_file_paths"].extend(pur.outputs["paths"])
+                    # outputs["work_file_paths"].extend(pur.outputs["paths"])
 
         # include the temperature so the ProtocolResult object can convert out
         # of kT units
-        outputs['temperature'] = self.settings.thermo_settings.temperature
+        outputs["temperature"] = self.settings.thermo_settings.temperature
 
         # This can be populated however we want
         return outputs

@@ -3,4 +3,7 @@
 using OpenMM[tools] and OpenFE toolkits.
 """
 
-from .nonequilibrium_cycling import NonEquilibriumCyclingProtocol, NonEquilibriumCyclingProtocolResult
+from .nonequilibrium_cycling import (
+    NonEquilibriumCyclingProtocol,
+    NonEquilibriumCyclingProtocolResult,
+)

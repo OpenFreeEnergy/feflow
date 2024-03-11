@@ -5,6 +5,7 @@ for FEFlow/OpenFE
 
 from perses.rjmc.topology_proposal import TopologyProposal
 
+
 def extract_htf_data(top_proposal: TopologyProposal):
     """
     Extract OpenMM system and OpenMM topology data objects from a perses TopologyProposal object.
@@ -30,8 +31,9 @@ def extract_htf_data(top_proposal: TopologyProposal):
     # Extract atom maps
     old_to_new_atom_map = top_proposal.old_to_new_atom_map
     # TODO: Check that core atoms are understood as the same in Perses. I'm not sure they are.
-    old_to_new_core_atom_map = {value: key for key, value in
-                                top_proposal.core_new_to_old_atom_map.items()}
+    old_to_new_core_atom_map = {
+        value: key for key, value in top_proposal.core_new_to_old_atom_map.items()
+    }
 
     htf_data = {
         "old_system": old_system,
@@ -39,7 +41,7 @@ def extract_htf_data(top_proposal: TopologyProposal):
         "old_topology": old_topology,
         "new_topology": new_topology,
         "old_to_new_atom_map": old_to_new_atom_map,
-        "old_to_new_core_atom_map": old_to_new_core_atom_map
+        "old_to_new_core_atom_map": old_to_new_core_atom_map,
     }
 
     return htf_data

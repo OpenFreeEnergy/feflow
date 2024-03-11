@@ -6,70 +6,65 @@ from rdkit import Chem
 from gufe.mapping import LigandAtomMapping
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def gufe_data_dir():
     path = files("gufe.tests.data")
     return path
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def benzene_modifications(gufe_data_dir):
     source = gufe_data_dir.joinpath("benzene_modifications.sdf")
     with as_file(source) as f:
         supp = Chem.SDMolSupplier(str(f), removeHs=False)
         mols = list(supp)
 
-    return {m.GetProp('_Name'): m for m in mols}
+    return {m.GetProp("_Name"): m for m in mols}
 
 
 # Components fixtures
+
 
 @pytest.fixture
 def solvent_comp():
     yield gufe.SolventComponent(positive_ion="Na", negative_ion="Cl")
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def benzene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["benzene"])
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def toluene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["toluene"])
 
 
 # Systems fixtures
 
+
 @pytest.fixture
 def benzene_vacuum_system(benzene):
-    return gufe.ChemicalSystem(
-        {"ligand": benzene}
-    )
+    return gufe.ChemicalSystem({"ligand": benzene})
 
 
 @pytest.fixture
 def benzene_solvent_system(benzene, solvent_comp):
-    return gufe.ChemicalSystem(
-        {"ligand": benzene, "solvent": solvent_comp}
-    )
+    return gufe.ChemicalSystem({"ligand": benzene, "solvent": solvent_comp})
 
 
 @pytest.fixture
 def toluene_vacuum_system(toluene):
-    return gufe.ChemicalSystem(
-        {"ligand": toluene}
-    )
+    return gufe.ChemicalSystem({"ligand": toluene})
 
 
 @pytest.fixture
 def toluene_solvent_system(toluene, solvent_comp):
-    return gufe.ChemicalSystem(
-        {"ligand": toluene, "solvent": solvent_comp}
-    )
+    return gufe.ChemicalSystem({"ligand": toluene, "solvent": solvent_comp})
 
 
 # Settings fixtures
+
 
 @pytest.fixture
 def short_settings():
@@ -136,10 +131,23 @@ def production_settings(short_settings):
 
 # Mappings fixtures
 
-@pytest.fixture(scope='session')
+
+@pytest.fixture(scope="session")
 def mapping_benzene_toluene(benzene, toluene):
     """Mapping from toluene to benzene"""
-    mapping_toluene_to_benzene = {0: 4, 1: 5, 2: 6, 3: 7, 4: 8, 5: 9, 6: 10, 7: 11, 8: 12, 9: 13, 11: 14}
+    mapping_toluene_to_benzene = {
+        0: 4,
+        1: 5,
+        2: 6,
+        3: 7,
+        4: 8,
+        5: 9,
+        6: 10,
+        7: 11,
+        8: 12,
+        9: 13,
+        11: 14,
+    }
     mapping_obj = LigandAtomMapping(
         componentA=benzene,
         componentB=toluene,
@@ -151,7 +159,9 @@ def mapping_benzene_toluene(benzene, toluene):
 @pytest.fixture
 def mapping_toluene_toluene(toluene):
     """Mapping from toluene to toluene"""
-    mapping_toluene_to_toluene = {i: i for i in range(len(toluene.to_rdkit().GetAtoms()))}
+    mapping_toluene_to_toluene = {
+        i: i for i in range(len(toluene.to_rdkit().GetAtoms()))
+    }
     mapping_obj = LigandAtomMapping(
         componentA=toluene,
         componentB=toluene,
@@ -164,7 +174,19 @@ def mapping_toluene_toluene(toluene):
 def broken_mapping(benzene, toluene):
     """Broken mapping"""
     # Mapping that doesn't make sense for benzene and toluene
-    broken_mapping = {40: 20, 5: 1, 6: 2, 7: 3, 38: 4, 9: 5, 10: 6, 191: 7, 12: 8, 13: 99, 14: 11}
+    broken_mapping = {
+        40: 20,
+        5: 1,
+        6: 2,
+        7: 3,
+        38: 4,
+        9: 5,
+        10: 6,
+        191: 7,
+        12: 8,
+        13: 99,
+        14: 11,
+    }
     broken_mapping_obj = LigandAtomMapping(
         componentA=benzene,
         componentB=toluene,
