@@ -35,24 +35,25 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     @validator("timestep")
     def must_be_positive(cls, v):
         if v <= 0:
-            errmsg = (f"timestep must be positive, received {v}.")
+            errmsg = f"timestep must be positive, received {v}."
             raise ValueError(errmsg)
         return v
 
     # TODO: This validator is used in other settings, better create a new Type
-    @validator('timestep')
+    @validator("timestep")
     def is_time(cls, v):
         # these are time units, not simulation steps
         if not v.is_compatible_with(unit.picosecond):
-            raise ValueError("timestep must be in time units "
-                             "(i.e. picoseconds)")
+            raise ValueError("timestep must be in time units " "(i.e. picoseconds)")
         return v
 
     # TODO: This validator is used in other settings, better create a new Type
     @validator("equilibrium_steps", "nonequilibrium_steps")
     def must_be_positive_or_zero(cls, v):
         if v < 0:
-            errmsg = ("langevin_collision_rate, and n_restart_attempts must be"
-                      f" zero or positive values, got {v}.")
+            errmsg = (
+                "langevin_collision_rate, and n_restart_attempts must be"
+                f" zero or positive values, got {v}."
+            )
             raise ValueError(errmsg)
         return v
