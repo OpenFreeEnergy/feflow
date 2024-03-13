@@ -301,16 +301,13 @@ class SetupUnit(ProtocolUnit):
 
         # Set up integrator
         temperature = to_openmm(thermodynamic_settings.temperature)
-        neq_steps = settings.eq_steps
-        eq_steps = settings.neq_steps
-        timestep = to_openmm(settings.timestep)
-        splitting = settings.neq_splitting
+        integrator_settings = settings.integrator_settings
         integrator = PeriodicNonequilibriumIntegrator(
             alchemical_functions=settings.lambda_functions,
-            nsteps_neq=neq_steps,
-            nsteps_eq=eq_steps,
-            splitting=splitting,
-            timestep=timestep,
+            nsteps_neq=integrator_settings.nonequilibrium_steps,
+            nsteps_eq=integrator_settings.equilibrium_steps,
+            splitting=integrator_settings.splitting,
+            timestep=to_openmm(integrator_settings.timestep),  # needs openmm Quantity
             temperature=temperature,
         )
 
@@ -454,8 +451,8 @@ class SimulationUnit(ProtocolUnit):
         context.setVelocitiesToTemperature(temperature)
 
         # Extract settings used below
-        neq_steps = settings.eq_steps
-        eq_steps = settings.neq_steps
+        neq_steps = settings.integrator_settings.nonequilibrium_steps
+        eq_steps = settings.integrator_settings.equilibrium_steps
         traj_save_frequency = settings.traj_save_frequency
         work_save_frequency = (
             settings.work_save_frequency
@@ -609,7 +606,7 @@ class SimulationUnit(ProtocolUnit):
             )
 
             # Computing performance in ns/day
-            timestep = to_openmm(settings.timestep)
+            timestep = to_openmm(settings.integrator_settings.timestep)
             simulation_time = 2 * (eq_steps + neq_steps) * timestep
             walltime_in_seconds = cycle_walltime.total_seconds() * openmm_unit.seconds
             estimated_performance = simulation_time.value_in_unit(
@@ -863,7 +860,10 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
     @classmethod
     def _default_settings(cls):
-        from feflow.settings.nonequilibrium_cycling import NonEquilibriumCyclingSettings
+        from feflow.settings import (
+            NonEquilibriumCyclingSettings,
+            PeriodicNonequilibriumIntegratorSettings,
+        )
         from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
         from openfe.protocols.openmm_utils.omm_settings import (
             SystemSettings,
@@ -877,6 +877,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
             system_settings=SystemSettings(),
             solvation_settings=SolvationSettings(),
             alchemical_settings=AlchemicalSettings(),
+            integrator_settings=PeriodicNonequilibriumIntegratorSettings(),
         )
 
     # NOTE: create method should be really fast, since it would be running in the work units not the clients!!

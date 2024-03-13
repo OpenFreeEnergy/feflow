@@ -6,11 +6,14 @@ energy calculations using perses.
 """
 
 from typing import Optional
+
+from feflow.settings import PeriodicNonequilibriumIntegratorSettings
+
 from gufe.settings import Settings
-from openff.units import unit
 from pydantic import root_validator
 from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
+
 
 # Default settings for the lambda functions
 x = "lambda"
@@ -64,11 +67,8 @@ class NonEquilibriumCyclingSettings(Settings):
     # alchemical settings
     alchemical_settings: AlchemicalSettings
 
-    # NEQ integration settings
-    timestep = 4.0 * unit.femtoseconds
-    neq_splitting = "V R H O R V"
-    eq_steps = 250000
-    neq_steps = 250000
+    # integrator settings
+    integrator_settings: PeriodicNonequilibriumIntegratorSettings
 
     # platform and serialization
     platform = "CUDA"
