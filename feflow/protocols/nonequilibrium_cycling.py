@@ -866,16 +866,14 @@ class NonEquilibriumCyclingProtocol(Protocol):
         )
         from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
         from openfe.protocols.openmm_utils.omm_settings import (
-            SystemSettings,
-            SolvationSettings,
+            OpenMMSolvationSettings,
         )
         from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
         return NonEquilibriumCyclingSettings(
             forcefield_settings=OpenMMSystemGeneratorFFSettings(),
             thermo_settings=ThermoSettings(temperature=300 * unit.kelvin),
-            system_settings=SystemSettings(),
-            solvation_settings=SolvationSettings(),
+            solvation_settings=OpenMMSolvationSettings(),
             alchemical_settings=AlchemicalSettings(),
             integrator_settings=PeriodicNonequilibriumIntegratorSettings(),
         )

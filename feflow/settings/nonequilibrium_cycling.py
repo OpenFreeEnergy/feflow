@@ -11,7 +11,7 @@ from feflow.settings import PeriodicNonequilibriumIntegratorSettings
 
 from gufe.settings import Settings
 from pydantic import root_validator
-from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
+from openfe.protocols.openmm_utils.omm_settings import OpenMMSolvationSettings
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
 
@@ -52,14 +52,12 @@ class NonEquilibriumCyclingSettings(Settings):
     class Config:
         arbitrary_types_allowed = True
 
-    # System Settings (from openfe)
-    system_settings: SystemSettings
     forcefield_cache: Optional[str] = (
         "db.json"  # TODO: Remove once it has been integrated with openfe settings
     )
 
     # Solvation settings
-    solvation_settings: SolvationSettings
+    solvation_settings: OpenMMSolvationSettings
 
     # Lambda settings
     lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
