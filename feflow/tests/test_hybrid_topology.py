@@ -237,7 +237,7 @@ class TestHTFVirtualSites:
         benz_off = benzene.to_openff()
         tol_off = toluene.to_openff()
 
-        solv_settings = SolvationSettings()
+        solv_settings = OpenMMSolvationSettings()
         solv_settings.solvent_model = "tip4pew"
 
         for mol in [benz_off, tol_off]:
