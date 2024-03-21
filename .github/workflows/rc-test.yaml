@@ -52,7 +52,7 @@ jobs:
       - name: "Install RC versions of Openfe and Gufe"
         run: |
           echo "Installing Gufe and OpenFe RC versions"
-          micromamba install -y -c conda-forge/label/gufe_rc -c conda-forge/label/openfe_rc gufe openfe
+          micromamba install -y -c conda-forge/label/gufe_rc -c conda-forge/label/openfe_rc gufe=1.0 openfe=1.0
 
       - name: "Install"
         run: python -m pip install --no-deps -e .
