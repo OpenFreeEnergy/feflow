@@ -37,7 +37,7 @@ class TestNonEquilibriumCycling:
             stateA=benzene_vacuum_system,
             stateB=toluene_vacuum_system,
             name="Short vacuum transformation",
-            mapping={"ligand": mapping_benzene_toluene},
+            mapping=mapping_benzene_toluene,
         )
 
         with tmpdir.as_cwd():

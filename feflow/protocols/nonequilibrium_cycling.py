@@ -113,7 +113,7 @@ class SetupUnit(ProtocolUnit):
             The initial chemical system.
         state_b : gufe.ChemicalSystem
             The objective chemical system.
-        mapping : dict[str, gufe.mapping.ComponentMapping]
+        mapping : gufe.mapping.ComponentMapping
             A dict featuring mappings between the two chemical systems.
         settings : gufe.settings.model.Settings
             The full settings for the protocol.
@@ -123,6 +123,10 @@ class SetupUnit(ProtocolUnit):
         dict : dict[str, str]
             Dictionary with paths to work arrays, both forward and reverse, and
             trajectory coordinates for systems A and B.
+
+        Notes
+        -----
+        * Here we assume the mapping is only between ``SmallMoleculeComponent``s.
         """
         # needed imports
         import openmm
@@ -145,7 +149,7 @@ class SetupUnit(ProtocolUnit):
         # receptor_b = state_b.components.get("protein")  # Should not be needed
 
         # Get ligand/small-mol components
-        ligand_mapping = mapping["ligand"]
+        ligand_mapping = mapping
         ligand_a = ligand_mapping.componentA
         ligand_b = ligand_mapping.componentB
 
@@ -252,7 +256,7 @@ class SetupUnit(ProtocolUnit):
 
         #  c. Define correspondence mappings between the two systems
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
-            mapping["ligand"].componentA_to_componentB,
+            mapping.componentA_to_componentB,
             state_a_system,
             state_a_topology,
             comp_resids[ligand_a],
@@ -893,8 +897,6 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # Handle parameters
         if mapping is None:
             raise ValueError("`mapping` is required for this Protocol")
-        if "ligand" not in mapping:
-            raise ValueError("'ligand' must be specified in `mapping` dict")
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
 
