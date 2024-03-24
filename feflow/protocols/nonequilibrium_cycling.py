@@ -278,9 +278,9 @@ class SetupUnit(ProtocolUnit):
         alchemical_settings = settings.alchemical_settings
         # TODO: handle the literals directly in the HTF object (issue #42)
         # Get softcore potential settings
-        if alchemical_settings.softcore_LJ.lower() == 'gapsys':
+        if alchemical_settings.softcore_LJ.lower() == "gapsys":
             softcore_LJ_v2 = True
-        elif alchemical_settings.softcore_LJ.lower() == 'beutler':
+        elif alchemical_settings.softcore_LJ.lower() == "beutler":
             softcore_LJ_v2 = False
         # Now we can create the HTF from the previous objects
         hybrid_factory = HybridTopologyFactory(
