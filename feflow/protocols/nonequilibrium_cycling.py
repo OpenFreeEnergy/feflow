@@ -276,7 +276,12 @@ class SetupUnit(ProtocolUnit):
 
         # Get alchemical settings
         alchemical_settings = settings.alchemical_settings
-
+        # TODO: handle the literals directly in the HTF object (issue #42)
+        # Get softcore potential settings
+        if alchemical_settings.softcore_LJ.lower() == 'gapsys':
+            softcore_LJ_v2 = True
+        elif alchemical_settings.softcore_LJ.lower() == 'beutler':
+            softcore_LJ_v2 = False
         # Now we can create the HTF from the previous objects
         hybrid_factory = HybridTopologyFactory(
             state_a_system,
@@ -289,10 +294,9 @@ class SetupUnit(ProtocolUnit):
             old_to_new_core_atom_map=ligand_mappings["old_to_new_core_atom_map"],
             use_dispersion_correction=alchemical_settings.use_dispersion_correction,
             softcore_alpha=alchemical_settings.softcore_alpha,
-            softcore_LJ_v2=alchemical_settings.softcore_LJ_v2,
+            softcore_LJ_v2=softcore_LJ_v2,
             softcore_LJ_v2_alpha=alchemical_settings.softcore_alpha,
-            interpolate_old_and_new_14s=alchemical_settings.interpolate_old_and_new_14s,
-            flatten_torsions=alchemical_settings.flatten_torsions,
+            interpolate_old_and_new_14s=alchemical_settings.turn_off_core_unique_exceptions,
         )
         ####### END OF SETUP #########
 
@@ -874,7 +878,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
             forcefield_settings=OpenMMSystemGeneratorFFSettings(),
             thermo_settings=ThermoSettings(temperature=300 * unit.kelvin),
             solvation_settings=OpenMMSolvationSettings(),
-            alchemical_settings=AlchemicalSettings(),
+            alchemical_settings=AlchemicalSettings(softcore_LJ="gapsys"),
             integrator_settings=PeriodicNonequilibriumIntegratorSettings(),
         )
 

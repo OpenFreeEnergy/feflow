@@ -63,7 +63,7 @@ class NonEquilibriumCyclingSettings(Settings):
     lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
 
     # alchemical settings
-    alchemical_settings: AlchemicalSettings
+    alchemical_settings: AlchemicalSettings = AlchemicalSettings(softcore_LJ="gapsys")
 
     # integrator settings
     integrator_settings: PeriodicNonequilibriumIntegratorSettings
