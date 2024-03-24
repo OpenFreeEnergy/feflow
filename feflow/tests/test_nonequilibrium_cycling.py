@@ -66,7 +66,7 @@ class TestNonEquilibriumCycling:
             stateA=benzene_vacuum_system,
             stateB=toluene_vacuum_system,
             name="Broken vacuum transformation",
-            mapping={"ligand": broken_mapping},
+            mapping=broken_mapping,
         )
         with tmpdir.as_cwd():
             shared = Path("shared")
@@ -124,7 +124,7 @@ class TestNonEquilibriumCycling:
             stateA=benzene_vacuum_system,
             stateB=toluene_vacuum_system,
             name="a broken dummy run",
-            mapping={"ligand": broken_mapping},
+            mapping=broken_mapping,
         )
 
         # tries to access an atom index that does not exist
@@ -174,7 +174,7 @@ class TestNonEquilibriumCycling:
             stateA=benzene_vacuum_system,
             stateB=toluene_vacuum_system,
             name="Short vacuum transformation",
-            mapping={"ligand": mapping_benzene_toluene},
+            mapping=mapping_benzene_toluene,
         )
 
         results = []
@@ -239,7 +239,7 @@ class TestNonEquilibriumCycling:
             stateA=toluene_vacuum_system,
             stateB=toluene_vacuum_system,
             name="Toluene vacuum transformation",
-            mapping={"ligand": mapping_toluene_toluene},
+            mapping=mapping_toluene_toluene,
         )
 
         results = []
