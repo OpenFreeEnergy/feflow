@@ -156,7 +156,7 @@ class SetupUnit(ProtocolUnit):
         # Get settings for system generator
         forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
-        system_settings = settings.system_settings
+        integrator_settings = settings.integrator_settings
 
         # handle cache for system generator
         if settings.forcefield_cache is not None:
@@ -167,7 +167,7 @@ class SetupUnit(ProtocolUnit):
         system_generator = system_creation.get_system_generator(
             forcefield_settings=forcefield_settings,
             thermo_settings=thermodynamic_settings,
-            system_settings=system_settings,
+            integrator_settings=integrator_settings,
             cache=ffcache,
             has_solvent=solvent_a is not None,
         )

@@ -30,6 +30,10 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """Number of steps for the equilibrium parts of the cycle. Default 250000"""
     nonequilibrium_steps: int = 250000
     """Number of steps for the non-equilibrium parts of the cycle. Default 250000"""
+    remove_com: bool = False
+    """
+    Whether or not to remove the center of mass motion. Default False.
+    """
 
     # TODO: This validator is used in other settings, better create a new Type
     @validator("timestep")
