@@ -100,6 +100,77 @@ class TestNonEquilibriumCycling:
         assert isinstance(finals[0], ProtocolUnitResult)
         assert finals[0].name == "result"
 
+    def test_pdr_extend(
+        self,
+        protocol_short,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+        tmpdir,
+    ):
+        dag = protocol_short.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation",
+            mapping={"ligand": mapping_benzene_toluene},
+        )
+
+        with tmpdir.as_cwd():
+
+            base_path = Path("original")
+
+            shared = base_path / "shared"
+            shared.mkdir(parents=True)
+
+            scratch = base_path / "scratch"
+            scratch.mkdir(parents=True)
+
+            pdr: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        setup, simulation, result = pdr.protocol_units
+        r_setup, r_simulation, r_result = pdr.protocol_unit_results
+
+        assert setup.inputs['extends_data'] == {}
+        assert isinstance(r_simulation.outputs['system'], bytes)
+        assert isinstance(r_simulation.outputs['state'], bytes)
+        assert isinstance(r_simulation.outputs['integrator'], bytes)
+
+        end_state = r_simulation.outputs['state']
+
+        dag = protocol_short.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation, but extended",
+            mapping={"ligand": mapping_benzene_toluene},
+            extends=pdr,
+        )
+
+        with tmpdir.as_cwd():
+
+            base_path = Path("extended")
+
+            shared = base_path / "shared"
+            shared.mkdir(parents=True)
+
+            scratch = base_path / "scratch"
+            scratch.mkdir(parents=True)
+            pdr: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        setup, simulation, result = pdr.protocol_units
+        r_setup, r_simulation, r_result = pdr.protocol_unit_results
+
+        assert r_setup.inputs['extends_data'] != {}
+
+        assert isinstance(r_setup.inputs['extends_data']['system'], bytes)
+        assert isinstance(r_setup.inputs['extends_data']['state'], bytes)
+        assert isinstance(r_setup.inputs['extends_data']['integrator'], bytes)
+
+        assert r_setup.inputs['extends_data']['state'] == end_state
+
     def test_dag_execute_failure(self, protocol_dag_broken):
         protocol, dag, dagfailure = protocol_dag_broken
 

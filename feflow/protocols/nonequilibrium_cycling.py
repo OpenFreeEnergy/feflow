@@ -25,7 +25,7 @@ from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
 from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
-from ..utils.data import serialize, deserialize
+from ..utils.data import serialize, deserialize, serialize_and_compress, decompress_and_deserialize
 
 # Specific instance of logger for this module
 # logger = logging.getLogger(__name__)
@@ -132,6 +132,31 @@ class SetupUnit(ProtocolUnit):
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
         from feflow.utils.hybrid_topology import HybridTopologyFactory
+
+        if extends_data := self.inputs.get('extends_data', None):
+            system_outfile = ctx.shared / "system.xml.bz2"
+            state_outfile = ctx.shared / "state.xml.bz2"
+            integrator_outfile = ctx.shared / "integrator.xml.bz2"
+
+            def _write_xml(data, filename):
+                openmm_object = decompress_and_deserialize(data)
+                serialize(openmm_object, filename)
+                return filename
+
+            extends_data['system'] = _write_xml(
+                extends_data['system'],
+                system_outfile,
+            )
+            extends_data['state'] = _write_xml(
+               extends_data['state'],
+               state_outfile,
+            )
+            extends_data['integrator'] = _write_xml(
+                extends_data['integrator'],
+                integrator_outfile,
+            )
+
+            return extends_data
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
@@ -687,7 +712,20 @@ class SimulationUnit(ProtocolUnit):
                 "reverse_neq_final": reverse_neq_new_path,
             }
         finally:
+            compressed_state = serialize_and_compress(
+                context.getState(getPositions=True),
+            )
+
+            compressed_system = serialize_and_compress(
+                context.getSystem(),
+            )
+
+            compressed_integrator = serialize_and_compress(
+                context.getIntegrator(),
+            )
+
             # Explicit cleanup for GPU resources
+
             del context, integrator
 
         return {
@@ -696,6 +734,9 @@ class SimulationUnit(ProtocolUnit):
             "trajectory_paths": trajectory_paths,
             "log": output_log_path,
             "timing_info": timing_info,
+            "system": compressed_system,
+            "state": compressed_state,
+            "integrator": compressed_integrator,
         }
 
 
@@ -890,10 +931,41 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # Handle parameters
         if mapping is None:
             raise ValueError("`mapping` is required for this Protocol")
+
         if "ligand" not in mapping:
             raise ValueError("'ligand' must be specified in `mapping` dict")
-        if extends:
-            raise NotImplementedError("Can't extend simulations yet")
+
+        extends_data = {}
+        if isinstance(extends, ProtocolDAGResult):
+
+            if not all(map(lambda r: r.ok(), extends.protocol_unit_results)):
+                raise ValueError("Cannot extend units that failed")
+
+            setup, simulation, _ = extends.protocol_units
+            r_setup, r_simulation, _ = extends.protocol_unit_results
+
+            # confirm consistency
+            original_state_a = setup.inputs['state_a'].key
+            original_state_b = setup.inputs['state_b'].key
+            original_mapping = setup.inputs['mapping']
+
+            if original_state_a != stateA.key:
+                raise ValueError()
+
+            if original_state_b != stateB.key:
+                raise ValueError()
+
+            if original_mapping != mapping:
+                raise ValueError()
+
+            extends_data = dict(
+                system=r_simulation.outputs['system'],
+                state=r_simulation.outputs['state'],
+                integrator=r_simulation.outputs['integrator'],
+                phase=r_setup.outputs["phase"],
+                initial_atom_indices=r_setup.outputs['initial_atom_indices'],
+                final_atom_indices=r_setup.outputs["final_atom_indices"],
+            )
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
@@ -905,6 +977,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
             mapping=mapping,
             settings=self.settings,
             name="setup",
+            extends_data=extends_data,
         )
 
         simulations = [

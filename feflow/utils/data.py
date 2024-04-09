@@ -1,5 +1,45 @@
 import os
 import pathlib
+import gzip
+
+from openmm import XmlSerializer
+
+
+def serialize_and_compress(item):
+    """Serialize an OpenMM System, State, or Integrator and compress.
+
+    Parameters
+    ----------
+    item : System, State, or Integrator
+        The OpenMM object to serialize and compress.
+
+    Returns
+    -------
+    bytes : bytes
+        The compressed serialized OpenMM object.
+    """
+    serialized = XmlSerializer.serialize(item).encode()
+    data = gzip.compress(serialized)
+    return data
+
+
+def decompress_and_deserialize(data: bytes):
+    """Recover an OpenMM object from compression.
+
+    Parameters
+    ----------
+    data : bytes
+        Bytes containing a gzip compressed XML serialization
+        of an OpenMM object.
+
+    Returns
+    -------
+    deserialized
+        The deserialized OpenMM object.
+    """
+    decompressed = gzip.decompress(data).decode()
+    deserialized = XmlSerializer.deserialize(decompressed)
+    return deserialized
 
 
 def serialize(item, filename: pathlib.Path):
@@ -13,7 +53,6 @@ def serialize(item, filename: pathlib.Path):
     filename : str
         The filename to serialize to
     """
-    from openmm import XmlSerializer
 
     # Create parent directory if it doesn't exist
     filename_basedir = filename.parent
