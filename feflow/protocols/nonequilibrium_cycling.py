@@ -133,28 +133,30 @@ class SetupUnit(ProtocolUnit):
         from openfe.protocols.openmm_rfe import _rfe_utils
         from feflow.utils.hybrid_topology import HybridTopologyFactory
 
-        if extends_data := self.inputs.get('extends_data', None):
-            system_outfile = ctx.shared / "system.xml.bz2"
-            state_outfile = ctx.shared / "state.xml.bz2"
-            integrator_outfile = ctx.shared / "integrator.xml.bz2"
-
+        if extends_data := self.inputs.get('extends_data'):
             def _write_xml(data, filename):
                 openmm_object = decompress_and_deserialize(data)
                 serialize(openmm_object, filename)
                 return filename
 
-            extends_data['system'] = _write_xml(
-                extends_data['system'],
-                system_outfile,
-            )
-            extends_data['state'] = _write_xml(
-               extends_data['state'],
-               state_outfile,
-            )
-            extends_data['integrator'] = _write_xml(
-                extends_data['integrator'],
-                integrator_outfile,
-            )
+            for replicate in range(settings.num_replicates):
+                replicate = str(replicate)
+                system_outfile = ctx.shared / f"system_{replicate}.xml.bz2"
+                state_outfile = ctx.shared / f"state_{replicate}.xml.bz2"
+                integrator_outfile = ctx.shared / f"integrator_{replicate}.xml.bz2"
+
+                extends_data['systems'][replicate] = _write_xml(
+                    extends_data['systems'][replicate],
+                    system_outfile,
+                )
+                extends_data['states'][replicate] = _write_xml(
+                   extends_data['states'][replicate],
+                   state_outfile,
+                )
+                extends_data['integrators'][replicate] = _write_xml(
+                    extends_data['integrators'][replicate],
+                    integrator_outfile,
+                )
 
             return extends_data
 
@@ -367,10 +369,14 @@ class SetupUnit(ProtocolUnit):
             # Explicit cleanup for GPU resources
             del context, integrator
 
+        systems = {str(replicate_name): system_outfile for replicate_name in range(settings.num_replicates)}
+        states = {str(replicate_name): state_outfile for replicate_name in range(settings.num_replicates)}
+        integrators = {str(replicate_name): integrator_outfile for replicate_name in range(settings.num_replicates)}
+
         return {
-            "system": system_outfile,
-            "state": state_outfile,
-            "integrator": integrator_outfile,
+            "systems": systems,
+            "states": states,
+            "integrators": integrators,
             "phase": phase,
             "initial_atom_indices": hybrid_factory.initial_atom_indices,
             "final_atom_indices": hybrid_factory.final_atom_indices,
@@ -459,9 +465,9 @@ class SimulationUnit(ProtocolUnit):
         file_logger.addHandler(file_handler)
 
         # Get state, system, and integrator from setup unit
-        system = deserialize(setup.outputs["system"])
-        state = deserialize(setup.outputs["state"])
-        integrator = deserialize(setup.outputs["integrator"])
+        system = deserialize(setup.outputs["systems"][self.name])
+        state = deserialize(setup.outputs["states"][self.name])
+        integrator = deserialize(setup.outputs["integrators"][self.name])
         PeriodicNonequilibriumIntegrator.restore_interface(integrator)
 
         # Get atom indices for either end of the hybrid topology
@@ -941,8 +947,11 @@ class NonEquilibriumCyclingProtocol(Protocol):
             if not all(map(lambda r: r.ok(), extends.protocol_unit_results)):
                 raise ValueError("Cannot extend units that failed")
 
-            setup, simulation, _ = extends.protocol_units
-            r_setup, r_simulation, _ = extends.protocol_unit_results
+            setup = extends.protocol_units[0]
+            simulations = extends.protocol_units[1:-1]
+
+            r_setup = extends.protocol_unit_results[0]
+            r_simulations = extends.protocol_unit_results[1:-1]
 
             # confirm consistency
             original_state_a = setup.inputs['state_a'].key
@@ -958,10 +967,20 @@ class NonEquilibriumCyclingProtocol(Protocol):
             if original_mapping != mapping:
                 raise ValueError()
 
+            systems = {}
+            states = {}
+            integrators = {}
+
+            for r_simulation, simulation in zip(r_simulations, simulations):
+                sim_name = simulation.name
+                systems[sim_name] = r_simulation.outputs['system']
+                states[sim_name] = r_simulation.outputs['state']
+                integrators[sim_name] = r_simulation.outputs['integrator']
+
             extends_data = dict(
-                system=r_simulation.outputs['system'],
-                state=r_simulation.outputs['state'],
-                integrator=r_simulation.outputs['integrator'],
+                systems=systems,
+                states=states,
+                integrators=integrators,
                 phase=r_setup.outputs["phase"],
                 initial_atom_indices=r_setup.outputs['initial_atom_indices'],
                 final_atom_indices=r_setup.outputs["final_atom_indices"],

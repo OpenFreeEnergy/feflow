@@ -100,15 +100,25 @@ class TestNonEquilibriumCycling:
         assert isinstance(finals[0], ProtocolUnitResult)
         assert finals[0].name == "result"
 
+    @pytest.mark.parametrize(
+        "protocol",
+        [
+            'protocol_short',
+            "protocol_short_multiple_cycles",
+        ],
+    )
     def test_pdr_extend(
         self,
-        protocol_short,
+        protocol,
         benzene_vacuum_system,
         toluene_vacuum_system,
         mapping_benzene_toluene,
         tmpdir,
+        request,
     ):
-        dag = protocol_short.create(
+
+        protocol = request.getfixturevalue(protocol)
+        dag = protocol.create(
             stateA=benzene_vacuum_system,
             stateB=toluene_vacuum_system,
             name="Short vacuum transformation",
@@ -129,17 +139,21 @@ class TestNonEquilibriumCycling:
                 dag, shared_basedir=shared, scratch_basedir=scratch
             )
 
-        setup, simulation, result = pdr.protocol_units
-        r_setup, r_simulation, r_result = pdr.protocol_unit_results
+        setup = pdr.protocol_units[0]
+        r_setup = pdr.protocol_unit_results[0]
 
         assert setup.inputs['extends_data'] == {}
-        assert isinstance(r_simulation.outputs['system'], bytes)
-        assert isinstance(r_simulation.outputs['state'], bytes)
-        assert isinstance(r_simulation.outputs['integrator'], bytes)
 
-        end_state = r_simulation.outputs['state']
+        end_states = {}
+        for simulation, r_simulation in zip(pdr.protocol_units[1:-1], pdr.protocol_unit_results[1:-1]):
+            assert isinstance(r_simulation.outputs['system'], bytes)
+            assert isinstance(r_simulation.outputs['state'], bytes)
+            assert isinstance(r_simulation.outputs['integrator'], bytes)
 
-        dag = protocol_short.create(
+            end_states[simulation.name] = r_simulation.outputs["state"]
+
+
+        dag = protocol.create(
             stateA=benzene_vacuum_system,
             stateB=toluene_vacuum_system,
             name="Short vacuum transformation, but extended",
@@ -160,16 +174,17 @@ class TestNonEquilibriumCycling:
                 dag, shared_basedir=shared, scratch_basedir=scratch
             )
 
-        setup, simulation, result = pdr.protocol_units
-        r_setup, r_simulation, r_result = pdr.protocol_unit_results
+        r_setup = pdr.protocol_unit_results[0]
 
         assert r_setup.inputs['extends_data'] != {}
 
-        assert isinstance(r_setup.inputs['extends_data']['system'], bytes)
-        assert isinstance(r_setup.inputs['extends_data']['state'], bytes)
-        assert isinstance(r_setup.inputs['extends_data']['integrator'], bytes)
+        for replicate in range(protocol.settings.num_replicates):
+            replicate = str(replicate)
+            assert isinstance(r_setup.inputs["extends_data"]["systems"][replicate], bytes)
+            assert isinstance(r_setup.inputs["extends_data"]["states"][replicate], bytes)
+            assert isinstance(r_setup.inputs["extends_data"]["integrators"][replicate], bytes)
 
-        assert r_setup.inputs['extends_data']['state'] == end_state
+            assert r_setup.inputs["extends_data"]["states"][replicate] == end_states[replicate]
 
     def test_dag_execute_failure(self, protocol_dag_broken):
         protocol, dag, dagfailure = protocol_dag_broken
