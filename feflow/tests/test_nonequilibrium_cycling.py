@@ -103,7 +103,7 @@ class TestNonEquilibriumCycling:
     @pytest.mark.parametrize(
         "protocol",
         [
-            'protocol_short',
+            "protocol_short",
             "protocol_short_multiple_cycles",
         ],
     )
@@ -142,16 +142,17 @@ class TestNonEquilibriumCycling:
         setup = pdr.protocol_units[0]
         r_setup = pdr.protocol_unit_results[0]
 
-        assert setup.inputs['extends_data'] == {}
+        assert setup.inputs["extends_data"] == {}
 
         end_states = {}
-        for simulation, r_simulation in zip(pdr.protocol_units[1:-1], pdr.protocol_unit_results[1:-1]):
-            assert isinstance(r_simulation.outputs['system'], bytes)
-            assert isinstance(r_simulation.outputs['state'], bytes)
-            assert isinstance(r_simulation.outputs['integrator'], bytes)
+        for simulation, r_simulation in zip(
+            pdr.protocol_units[1:-1], pdr.protocol_unit_results[1:-1]
+        ):
+            assert isinstance(r_simulation.outputs["system"], bytes)
+            assert isinstance(r_simulation.outputs["state"], bytes)
+            assert isinstance(r_simulation.outputs["integrator"], bytes)
 
             end_states[simulation.name] = r_simulation.outputs["state"]
-
 
         dag = protocol.create(
             stateA=benzene_vacuum_system,
@@ -176,15 +177,24 @@ class TestNonEquilibriumCycling:
 
         r_setup = pdr.protocol_unit_results[0]
 
-        assert r_setup.inputs['extends_data'] != {}
+        assert r_setup.inputs["extends_data"] != {}
 
         for replicate in range(protocol.settings.num_replicates):
             replicate = str(replicate)
-            assert isinstance(r_setup.inputs["extends_data"]["systems"][replicate], bytes)
-            assert isinstance(r_setup.inputs["extends_data"]["states"][replicate], bytes)
-            assert isinstance(r_setup.inputs["extends_data"]["integrators"][replicate], bytes)
+            assert isinstance(
+                r_setup.inputs["extends_data"]["systems"][replicate], bytes
+            )
+            assert isinstance(
+                r_setup.inputs["extends_data"]["states"][replicate], bytes
+            )
+            assert isinstance(
+                r_setup.inputs["extends_data"]["integrators"][replicate], bytes
+            )
 
-            assert r_setup.inputs["extends_data"]["states"][replicate] == end_states[replicate]
+            assert (
+                r_setup.inputs["extends_data"]["states"][replicate]
+                == end_states[replicate]
+            )
 
     def test_dag_execute_failure(self, protocol_dag_broken):
         protocol, dag, dagfailure = protocol_dag_broken

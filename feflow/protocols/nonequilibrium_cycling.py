@@ -25,7 +25,12 @@ from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
 from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
-from ..utils.data import serialize, deserialize, serialize_and_compress, decompress_and_deserialize
+from ..utils.data import (
+    serialize,
+    deserialize,
+    serialize_and_compress,
+    decompress_and_deserialize,
+)
 
 # Specific instance of logger for this module
 # logger = logging.getLogger(__name__)
@@ -133,7 +138,8 @@ class SetupUnit(ProtocolUnit):
         from openfe.protocols.openmm_rfe import _rfe_utils
         from feflow.utils.hybrid_topology import HybridTopologyFactory
 
-        if extends_data := self.inputs.get('extends_data'):
+        if extends_data := self.inputs.get("extends_data"):
+
             def _write_xml(data, filename):
                 openmm_object = decompress_and_deserialize(data)
                 serialize(openmm_object, filename)
@@ -145,16 +151,16 @@ class SetupUnit(ProtocolUnit):
                 state_outfile = ctx.shared / f"state_{replicate}.xml.bz2"
                 integrator_outfile = ctx.shared / f"integrator_{replicate}.xml.bz2"
 
-                extends_data['systems'][replicate] = _write_xml(
-                    extends_data['systems'][replicate],
+                extends_data["systems"][replicate] = _write_xml(
+                    extends_data["systems"][replicate],
                     system_outfile,
                 )
-                extends_data['states'][replicate] = _write_xml(
-                   extends_data['states'][replicate],
-                   state_outfile,
+                extends_data["states"][replicate] = _write_xml(
+                    extends_data["states"][replicate],
+                    state_outfile,
                 )
-                extends_data['integrators'][replicate] = _write_xml(
-                    extends_data['integrators'][replicate],
+                extends_data["integrators"][replicate] = _write_xml(
+                    extends_data["integrators"][replicate],
                     integrator_outfile,
                 )
 
@@ -369,9 +375,18 @@ class SetupUnit(ProtocolUnit):
             # Explicit cleanup for GPU resources
             del context, integrator
 
-        systems = {str(replicate_name): system_outfile for replicate_name in range(settings.num_replicates)}
-        states = {str(replicate_name): state_outfile for replicate_name in range(settings.num_replicates)}
-        integrators = {str(replicate_name): integrator_outfile for replicate_name in range(settings.num_replicates)}
+        systems = {
+            str(replicate_name): system_outfile
+            for replicate_name in range(settings.num_replicates)
+        }
+        states = {
+            str(replicate_name): state_outfile
+            for replicate_name in range(settings.num_replicates)
+        }
+        integrators = {
+            str(replicate_name): integrator_outfile
+            for replicate_name in range(settings.num_replicates)
+        }
 
         return {
             "systems": systems,
@@ -954,9 +969,9 @@ class NonEquilibriumCyclingProtocol(Protocol):
             r_simulations = extends.protocol_unit_results[1:-1]
 
             # confirm consistency
-            original_state_a = setup.inputs['state_a'].key
-            original_state_b = setup.inputs['state_b'].key
-            original_mapping = setup.inputs['mapping']
+            original_state_a = setup.inputs["state_a"].key
+            original_state_b = setup.inputs["state_b"].key
+            original_mapping = setup.inputs["mapping"]
 
             if original_state_a != stateA.key:
                 raise ValueError()
@@ -973,16 +988,16 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
             for r_simulation, simulation in zip(r_simulations, simulations):
                 sim_name = simulation.name
-                systems[sim_name] = r_simulation.outputs['system']
-                states[sim_name] = r_simulation.outputs['state']
-                integrators[sim_name] = r_simulation.outputs['integrator']
+                systems[sim_name] = r_simulation.outputs["system"]
+                states[sim_name] = r_simulation.outputs["state"]
+                integrators[sim_name] = r_simulation.outputs["integrator"]
 
             extends_data = dict(
                 systems=systems,
                 states=states,
                 integrators=integrators,
                 phase=r_setup.outputs["phase"],
-                initial_atom_indices=r_setup.outputs['initial_atom_indices'],
+                initial_atom_indices=r_setup.outputs["initial_atom_indices"],
                 final_atom_indices=r_setup.outputs["final_atom_indices"],
             )
 
