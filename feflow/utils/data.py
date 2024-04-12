@@ -1,11 +1,12 @@
 import os
 import pathlib
-import gzip
+import bz2
+import base64
 
 from openmm import XmlSerializer
 
 
-def serialize_and_compress(item):
+def serialize_and_compress(item) -> str:
     """Serialize an OpenMM System, State, or Integrator and compress.
 
     Parameters
@@ -15,21 +16,22 @@ def serialize_and_compress(item):
 
     Returns
     -------
-    bytes : bytes
-        The compressed serialized OpenMM object.
+    b64string : str
+        The compressed serialized OpenMM object encoded in a Base64 string.
     """
     serialized = XmlSerializer.serialize(item).encode()
-    data = gzip.compress(serialized)
-    return data
+    compressed = bz2.compress(serialized)
+    b64string = base64.b64encode(compressed).decode("ascii")
+    return b64string
 
 
-def decompress_and_deserialize(data: bytes):
+def decompress_and_deserialize(data: str):
     """Recover an OpenMM object from compression.
 
     Parameters
     ----------
-    data : bytes
-        Bytes containing a gzip compressed XML serialization
+    data : str
+        String containing a Base64 encoded bzip2 compressed XML serialization
         of an OpenMM object.
 
     Returns
@@ -37,7 +39,8 @@ def decompress_and_deserialize(data: bytes):
     deserialized
         The deserialized OpenMM object.
     """
-    decompressed = gzip.decompress(data).decode()
+    compressed = base64.b64decode(data)
+    decompressed = bz2.decompress(compressed).decode("utf-8")
     deserialized = XmlSerializer.deserialize(decompressed)
     return deserialized
 

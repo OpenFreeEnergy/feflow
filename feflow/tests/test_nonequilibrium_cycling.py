@@ -148,9 +148,9 @@ class TestNonEquilibriumCycling:
         for simulation, r_simulation in zip(
             pdr.protocol_units[1:-1], pdr.protocol_unit_results[1:-1]
         ):
-            assert isinstance(r_simulation.outputs["system"], bytes)
-            assert isinstance(r_simulation.outputs["state"], bytes)
-            assert isinstance(r_simulation.outputs["integrator"], bytes)
+            assert isinstance(r_simulation.outputs["system"], str)
+            assert isinstance(r_simulation.outputs["state"], str)
+            assert isinstance(r_simulation.outputs["integrator"], str)
 
             end_states[simulation.name] = r_simulation.outputs["state"]
 
@@ -159,7 +159,7 @@ class TestNonEquilibriumCycling:
             stateB=toluene_vacuum_system,
             name="Short vacuum transformation, but extended",
             mapping={"ligand": mapping_benzene_toluene},
-            extends=pdr,
+            extends=ProtocolDAGResult.from_dict(pdr.to_dict()),
         )
 
         with tmpdir.as_cwd():
@@ -182,13 +182,13 @@ class TestNonEquilibriumCycling:
         for replicate in range(protocol.settings.num_replicates):
             replicate = str(replicate)
             assert isinstance(
-                r_setup.inputs["extends_data"]["systems"][replicate], bytes
+                r_setup.inputs["extends_data"]["systems"][replicate], str
             )
             assert isinstance(
-                r_setup.inputs["extends_data"]["states"][replicate], bytes
+                r_setup.inputs["extends_data"]["states"][replicate], str
             )
             assert isinstance(
-                r_setup.inputs["extends_data"]["integrators"][replicate], bytes
+                r_setup.inputs["extends_data"]["integrators"][replicate], str
             )
 
             assert (
