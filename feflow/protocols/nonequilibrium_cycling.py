@@ -974,13 +974,16 @@ class NonEquilibriumCyclingProtocol(Protocol):
             original_mapping = setup.inputs["mapping"]
 
             if original_state_a != stateA.key:
-                raise ValueError()
+                raise ValueError("'stateA' key is not the same as the key provided by the 'extends' ProtocolDAGResult.")
 
             if original_state_b != stateB.key:
-                raise ValueError()
+                raise ValueError("'stateB' key is not the same as the key provided by the 'extends' ProtocolDAGResult.")
 
-            if original_mapping != mapping:
-                raise ValueError()
+            if mapping is not None:
+                if original_mapping != mapping:
+                    raise ValueError("'mapping' is not consistent with the mapping provided by the 'extnds' ProtocolDAGResult.")
+            else:
+                mapping = original_mapping
 
             systems = {}
             states = {}
