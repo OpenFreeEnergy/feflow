@@ -293,9 +293,12 @@ class SetupUnit(ProtocolUnit):
             openmm.LocalEnergyMinimizer.minimize(context)
 
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
+            thermodynamic_settings = settings.thermo_settings
+            temperature = to_openmm(thermodynamic_settings.temperature)
+            context.setVelocitiesToTemperature(temperature)
 
             system_ = context.getSystem()
-            state_ = context.getState(getPositions=True)
+            state_ = context.getState(getPositions=True, getForces=True, getVelocities=True, getEnergy=True)
             integrator_ = context.getIntegrator()
 
             system_outfile = ctx.shared / 'system.xml.bz2'
