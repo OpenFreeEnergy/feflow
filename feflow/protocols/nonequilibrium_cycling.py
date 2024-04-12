@@ -298,7 +298,9 @@ class SetupUnit(ProtocolUnit):
             context.setVelocitiesToTemperature(temperature)
 
             system_ = context.getSystem()
-            state_ = context.getState(getPositions=True, getForces=True, getVelocities=True, getEnergy=True)
+            state_ = context.getState(
+                getPositions=True, getForces=True, getVelocities=True, getEnergy=True
+            )
             integrator_ = context.getIntegrator()
 
             system_outfile = ctx.shared / 'system.xml.bz2'
