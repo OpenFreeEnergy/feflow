@@ -181,12 +181,8 @@ class TestNonEquilibriumCycling:
 
         for replicate in range(protocol.settings.num_replicates):
             replicate = str(replicate)
-            assert isinstance(
-                r_setup.inputs["extends_data"]["systems"][replicate], str
-            )
-            assert isinstance(
-                r_setup.inputs["extends_data"]["states"][replicate], str
-            )
+            assert isinstance(r_setup.inputs["extends_data"]["systems"][replicate], str)
+            assert isinstance(r_setup.inputs["extends_data"]["states"][replicate], str)
             assert isinstance(
                 r_setup.inputs["extends_data"]["integrators"][replicate], str
             )
