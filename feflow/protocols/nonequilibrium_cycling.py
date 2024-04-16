@@ -954,8 +954,8 @@ class NonEquilibriumCyclingProtocol(Protocol):
         extends_data = {}
         if isinstance(extends, ProtocolDAGResult):
 
-            if not all(map(lambda r: r.ok(), extends.protocol_unit_results)):
-                raise ValueError("Cannot extend units that failed")
+            if not extends.ok():
+                raise ValueError("Cannot extend protocols that failed")
 
             setup = extends.protocol_units[0]
             simulations = extends.protocol_units[1:-1]
