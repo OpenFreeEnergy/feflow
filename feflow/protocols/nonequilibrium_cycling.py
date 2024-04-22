@@ -375,9 +375,9 @@ class SetupUnit(ProtocolUnit):
             # Explicit cleanup for GPU resources
             del context, integrator
 
-        systems = dict()
-        states = dict()
-        integrators = dict()
+        systems = {}
+        states = {}
+        integrators = {}
         for replicate_name in map(str, range(settings.num_replicates)):
             systems[replicate_name] = system_outfile
             states[replicate_name] = state_outfile
