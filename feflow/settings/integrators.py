@@ -30,7 +30,9 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """Number of steps for the equilibrium parts of the cycle. Default 250000"""
     nonequilibrium_steps: int = 12500
     """Number of steps for the non-equilibrium parts of the cycle. Default 250000"""
-    barostat_frequency: FloatQuantity['timestep'] = 25 * unit.timestep  # todo: IntQuantity
+    barostat_frequency: FloatQuantity["timestep"] = (
+        25 * unit.timestep
+    )  # todo: IntQuantity
     """
     Frequency at which volume scaling changes should be attempted.
     Note: The barostat frequency is ignored for gas-phase simulations.
