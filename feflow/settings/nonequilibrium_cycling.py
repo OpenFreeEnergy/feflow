@@ -75,7 +75,7 @@ class NonEquilibriumCyclingSettings(Settings):
     atom_selection_expression: str = "not water"  # no longer used
 
     # Number of replicates to run (1 cycle/replicate)
-    num_replicates: int = 1
+    num_replicates: int = 100  # TODO: Should we rename this to num_cycles?
 
     @root_validator
     def save_frequencies_consistency(cls, values):

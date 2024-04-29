@@ -26,9 +26,9 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """Size of the simulation timestep. Default 4 fs."""
     splitting: str = "V R H O R V"
     """Operator splitting"""
-    equilibrium_steps: int = 250000
+    equilibrium_steps: int = 12500
     """Number of steps for the equilibrium parts of the cycle. Default 250000"""
-    nonequilibrium_steps: int = 250000
+    nonequilibrium_steps: int = 12500
     """Number of steps for the non-equilibrium parts of the cycle. Default 250000"""
     barostat_frequency: FloatQuantity['timestep'] = 25 * unit.timestep  # todo: IntQuantity
     """
