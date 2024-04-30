@@ -563,10 +563,10 @@ class SimulationUnit(ProtocolUnit):
                     initial_positions, final_positions = self.extract_positions(
                         context, initial_atom_indices, final_atom_indices
                     )
-                    reverse_eq_new.append(
+                    reverse_eq_old.append(
                         initial_positions
                     )  # TODO: Maybe better naming not old/new but initial/final
-                    reverse_eq_old.append(final_positions)
+                    reverse_eq_new.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
             initial_positions, final_positions = self.extract_positions(
                 context, initial_atom_indices, final_atom_indices
