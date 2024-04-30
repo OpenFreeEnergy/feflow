@@ -4,6 +4,7 @@ Settings objects for the different protocols using gufe objects.
 This module implements the objects that will be needed to run relative binding free
 energy calculations using perses.
 """
+
 from typing import Optional
 from gufe.settings import Settings
 from openff.units import unit
@@ -12,18 +13,19 @@ from openfe.protocols.openmm_utils.omm_settings import SystemSettings, Solvation
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
 # Default settings for the lambda functions
-x = 'lambda'
+x = "lambda"
 DEFAULT_ALCHEMICAL_FUNCTIONS = {
-    'lambda_sterics_core': x,
-    'lambda_electrostatics_core': x,
-    'lambda_sterics_insert': f"select(step({x} - 0.5), 1.0, 2.0 * {x})",
-    'lambda_sterics_delete': f"select(step({x} - 0.5), 2.0 * ({x} - 0.5), 0.0)",
-    'lambda_electrostatics_insert': f"select(step({x} - 0.5), 2.0 * ({x} - 0.5), 0.0)",
-    'lambda_electrostatics_delete': f"select(step({x} - 0.5), 1.0, 2.0 * {x})",
-    'lambda_bonds': x,
-    'lambda_angles': x,
-    'lambda_torsions': x
+    "lambda_sterics_core": x,
+    "lambda_electrostatics_core": x,
+    "lambda_sterics_insert": f"select(step({x} - 0.5), 1.0, 2.0 * {x})",
+    "lambda_sterics_delete": f"select(step({x} - 0.5), 2.0 * ({x} - 0.5), 0.0)",
+    "lambda_electrostatics_insert": f"select(step({x} - 0.5), 2.0 * ({x} - 0.5), 0.0)",
+    "lambda_electrostatics_delete": f"select(step({x} - 0.5), 1.0, 2.0 * {x})",
+    "lambda_bonds": x,
+    "lambda_angles": x,
+    "lambda_torsions": x,
 }
+
 
 class NonEquilibriumCyclingSettings(Settings):
     """
@@ -42,13 +44,16 @@ class NonEquilibriumCyclingSettings(Settings):
     alchemical : AlchemicalSettings
         The alchemical settings to use.
     """
+
     # TODO: Add type hints
     class Config:
         arbitrary_types_allowed = True
 
     # System Settings (from openfe)
     system_settings: SystemSettings
-    forcefield_cache: Optional[str] = "db.json"  # TODO: Remove once it has been integrated with openfe settings
+    forcefield_cache: Optional[str] = (
+        "db.json"  # TODO: Remove once it has been integrated with openfe settings
+    )
 
     # Solvation settings
     solvation_settings: SolvationSettings
@@ -66,7 +71,7 @@ class NonEquilibriumCyclingSettings(Settings):
     neq_steps = 250000
 
     # platform and serialization
-    platform = 'CUDA'
+    platform = "CUDA"
     traj_save_frequency: int = 2000
     work_save_frequency: int = 500
     atom_selection_expression: str = "not water"  # no longer used
@@ -78,7 +83,9 @@ class NonEquilibriumCyclingSettings(Settings):
     def save_frequencies_consistency(cls, values):
         """Checks trajectory save frequency is a multiple of work save frequency, for convenience"""
         if values.get("traj_save_frequency") % values.get("work_save_frequency") != 0:
-            raise ValueError("Work save frequency must be a divisor of trajectory save frequency. "
-                             "Please specify consistent values for trajectory and work save settings")
+            raise ValueError(
+                "Work save frequency must be a divisor of trajectory save frequency. "
+                "Please specify consistent values for trajectory and work save settings"
+            )
         # TODO: Add check for eq and neq steps and save frequencies
         return values

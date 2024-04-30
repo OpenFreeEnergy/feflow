@@ -1,11 +1,12 @@
 name: feflow-test
 channels:
   - conda-forge
+  - openeye
 dependencies:
     # Base depends
   - gufe >=0.9.5
   - numpy
-  - openfe  # TODO: Remove once we don't depend on openfe
+  - openfe >=0.15  # TODO: Remove once we don't depend on openfe
   - openff-units
   - openmm
   - pymbar <4
@@ -13,6 +14,9 @@ dependencies:
   - python
 
     # Testing
+  - openeye-toolkits
+  - openmoltools  # TODO: Remove once we refactor tests
+  - perses  # TODO: Remove once we don't depend on perses for tests
   - pytest
   - pytest-cov
   - pytest-xdist
