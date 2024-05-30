@@ -334,7 +334,9 @@ class SetupUnit(ProtocolUnit):
 
             # state needs to include positions, forces, velocities, and energy
             # to be usable by the Folding@Home openmm-core
-            state_ = context.getState(getPositions=True, getForces=True, getVelocities=True, getEnergy=True)
+            state_ = context.getState(
+                getPositions=True, getForces=True, getVelocities=True, getEnergy=True
+            )
             system_ = context.getSystem()
             integrator_ = context.getIntegrator()
 
