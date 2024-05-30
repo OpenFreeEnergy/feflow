@@ -125,6 +125,7 @@ class SetupUnit(ProtocolUnit):
             trajectory coordinates for systems A and B.
         """
         # needed imports
+        import numpy as np
         import openmm
         import numpy as np
         from openff.units.openmm import ensure_quantity
