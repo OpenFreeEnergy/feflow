@@ -469,13 +469,23 @@ class CycleUnit(ProtocolUnit):
 
         try:
             # Prepare objects to store positions -- empty lists so far
-            forward_eq_initial, forward_eq_final, forward_neq_initial, forward_neq_final = (
+            (
+                forward_eq_initial,
+                forward_eq_final,
+                forward_neq_initial,
+                forward_neq_final,
+            ) = (
                 [],
                 [],
                 [],
                 [],
             )
-            reverse_eq_final, reverse_eq_initial, reverse_neq_initial, reverse_neq_final = (
+            (
+                reverse_eq_final,
+                reverse_eq_initial,
+                reverse_neq_initial,
+                reverse_neq_final,
+            ) = (
                 [],
                 [],
                 [],
@@ -875,7 +885,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
         from openfe.protocols.openmm_utils.omm_settings import (
             OpenMMSolvationSettings,
-            OpenMMEngineSettings
+            OpenMMEngineSettings,
         )
         from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 

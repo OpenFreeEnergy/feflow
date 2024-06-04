@@ -11,7 +11,10 @@ from feflow.settings import PeriodicNonequilibriumIntegratorSettings
 
 from gufe.settings import Settings
 from pydantic import root_validator
-from openfe.protocols.openmm_utils.omm_settings import OpenMMSolvationSettings, OpenMMEngineSettings
+from openfe.protocols.openmm_utils.omm_settings import (
+    OpenMMSolvationSettings,
+    OpenMMEngineSettings,
+)
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
 
