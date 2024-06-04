@@ -357,10 +357,10 @@ class SetupUnit(ProtocolUnit):
         }
 
 
-class SimulationUnit(ProtocolUnit):
+class CycleUnit(ProtocolUnit):
     """
-    Monolithic unit for simulation. It runs NEQ switching simulation from chemical systems and stores the
-    work computed in numpy-formatted files, to be analyzed by another unit.
+    Monolithic unit for simulation. It runs a single NEQ cycle simulation from chemical systems
+    and stores the work computed in numpy-formatted files, to be analyzed by a result unit.
     """
 
     @staticmethod
@@ -468,14 +468,14 @@ class SimulationUnit(ProtocolUnit):
         selection_expression = settings.atom_selection_expression
 
         try:
-            # Prepare objects to store data -- empty lists so far
-            forward_eq_old, forward_eq_new, forward_neq_old, forward_neq_new = (
+            # Prepare objects to store positions -- empty lists so far
+            forward_eq_initial, forward_eq_final, forward_neq_initial, forward_neq_final = (
                 [],
                 [],
                 [],
                 [],
             )
-            reverse_eq_new, reverse_eq_old, reverse_neq_old, reverse_neq_new = (
+            reverse_eq_final, reverse_eq_initial, reverse_neq_initial, reverse_neq_final = (
                 [],
                 [],
                 [],
@@ -508,8 +508,8 @@ class SimulationUnit(ProtocolUnit):
                     initial_positions, final_positions = self.extract_positions(
                         context, initial_atom_indices, final_atom_indices
                     )
-                    forward_eq_old.append(initial_positions)
-                    forward_eq_new.append(final_positions)
+                    forward_eq_initial.append(initial_positions)
+                    forward_eq_final.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
             file_logger.debug(
                 f"coarse step: {step}: saving trajectory (freq {traj_save_frequency})"
@@ -517,8 +517,8 @@ class SimulationUnit(ProtocolUnit):
             initial_positions, final_positions = self.extract_positions(
                 context, initial_atom_indices, final_atom_indices
             )
-            forward_eq_old.append(initial_positions)
-            forward_eq_new.append(final_positions)
+            forward_eq_initial.append(initial_positions)
+            forward_eq_final.append(final_positions)
 
             eq_forward_time = time.perf_counter()
             eq_forward_walltime = datetime.timedelta(
@@ -539,14 +539,14 @@ class SimulationUnit(ProtocolUnit):
                     initial_positions, final_positions = self.extract_positions(
                         context, initial_atom_indices, final_atom_indices
                     )
-                    forward_neq_old.append(initial_positions)
-                    forward_neq_new.append(final_positions)
+                    forward_neq_initial.append(initial_positions)
+                    forward_neq_final.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
             initial_positions, final_positions = self.extract_positions(
                 context, initial_atom_indices, final_atom_indices
             )
-            forward_neq_old.append(initial_positions)
-            forward_neq_new.append(final_positions)
+            forward_neq_initial.append(initial_positions)
+            forward_neq_final.append(final_positions)
 
             neq_forward_time = time.perf_counter()
             neq_forward_walltime = datetime.timedelta(
@@ -563,16 +563,16 @@ class SimulationUnit(ProtocolUnit):
                     initial_positions, final_positions = self.extract_positions(
                         context, initial_atom_indices, final_atom_indices
                     )
-                    reverse_eq_old.append(
+                    reverse_eq_initial.append(
                         initial_positions
                     )  # TODO: Maybe better naming not old/new but initial/final
-                    reverse_eq_new.append(final_positions)
+                    reverse_eq_final.append(final_positions)
             # Make sure trajectories are stored at the end of the eq loop
             initial_positions, final_positions = self.extract_positions(
                 context, initial_atom_indices, final_atom_indices
             )
-            reverse_eq_old.append(initial_positions)
-            reverse_eq_new.append(final_positions)
+            reverse_eq_initial.append(initial_positions)
+            reverse_eq_final.append(final_positions)
 
             eq_reverse_time = time.perf_counter()
             eq_reverse_walltime = datetime.timedelta(
@@ -591,14 +591,14 @@ class SimulationUnit(ProtocolUnit):
                     initial_positions, final_positions = self.extract_positions(
                         context, initial_atom_indices, final_atom_indices
                     )
-                    reverse_neq_old.append(initial_positions)
-                    reverse_neq_new.append(final_positions)
+                    reverse_neq_initial.append(initial_positions)
+                    reverse_neq_final.append(final_positions)
             # Make sure trajectories are stored at the end of the neq loop
             initial_positions, final_positions = self.extract_positions(
                 context, initial_atom_indices, final_atom_indices
             )
-            forward_eq_old.append(initial_positions)
-            forward_eq_new.append(final_positions)
+            forward_eq_initial.append(initial_positions)
+            forward_eq_final.append(final_positions)
 
             neq_reverse_time = time.perf_counter()
             neq_reverse_walltime = datetime.timedelta(
@@ -664,21 +664,21 @@ class SimulationUnit(ProtocolUnit):
             )
 
             with open(forward_eq_old_path, "wb") as out_file:
-                np.save(out_file, np.array(forward_eq_old))
+                np.save(out_file, np.array(forward_eq_initial))
             with open(forward_eq_new_path, "wb") as out_file:
-                np.save(out_file, np.array(forward_eq_new))
+                np.save(out_file, np.array(forward_eq_final))
             with open(reverse_eq_old_path, "wb") as out_file:
-                np.save(out_file, np.array(reverse_eq_old))
+                np.save(out_file, np.array(reverse_eq_initial))
             with open(reverse_eq_new_path, "wb") as out_file:
-                np.save(out_file, np.array(reverse_eq_new))
+                np.save(out_file, np.array(reverse_eq_final))
             with open(forward_neq_old_path, "wb") as out_file:
-                np.save(out_file, np.array(forward_neq_old))
+                np.save(out_file, np.array(forward_neq_initial))
             with open(forward_neq_new_path, "wb") as out_file:
-                np.save(out_file, np.array(forward_neq_new))
+                np.save(out_file, np.array(forward_neq_final))
             with open(reverse_neq_old_path, "wb") as out_file:
-                np.save(out_file, np.array(reverse_neq_old))
+                np.save(out_file, np.array(reverse_neq_initial))
             with open(reverse_neq_new_path, "wb") as out_file:
-                np.save(out_file, np.array(reverse_neq_new))
+                np.save(out_file, np.array(reverse_neq_final))
 
             # Saving trajectory paths in dictionary structure
             trajectory_paths = {
@@ -860,7 +860,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
     of the same type of components as components in stateB.
     """
 
-    _simulation_unit = SimulationUnit
+    _simulation_unit = CycleUnit
     result_cls = NonEquilibriumCyclingProtocolResult
 
     def __init__(self, settings: Settings):
@@ -902,7 +902,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
-        num_replicates = self.settings.num_replicates
+        num_cycles = self.settings.num_cycles
 
         setup = SetupUnit(
             state_a=stateA,
@@ -916,7 +916,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
             self._simulation_unit(
                 setup=setup, settings=self.settings, name=f"{replicate}"
             )
-            for replicate in range(num_replicates)
+            for replicate in range(num_cycles)
         ]
 
         end = ResultUnit(name="result", simulations=simulations)

@@ -74,8 +74,8 @@ def short_settings():
     settings = NonEquilibriumCyclingProtocol.default_settings()
 
     settings.thermo_settings.temperature = 300 * unit.kelvin
-    settings.integrator_settings.equilibrium_steps = 25000
-    settings.integrator_settings.nonequilibrium_steps = 25000
+    settings.integrator_settings.equilibrium_steps = 250
+    settings.integrator_settings.nonequilibrium_steps = 250
     settings.work_save_frequency = 50
     settings.traj_save_frequency = 250
     settings.platform = "CPU"
@@ -103,7 +103,7 @@ def short_settings_multiple_cycles():
     settings.integrator_settings.nonequilibrium_steps = 1000
     settings.work_save_frequency = 50
     settings.traj_save_frequency = 250
-    settings.num_replicates = 5
+    settings.num_cycles = 5
     settings.platform = "CPU"
 
     return settings
@@ -121,10 +121,11 @@ def short_settings_multiple_cycles_gpu(short_settings_multiple_cycles):
 def production_settings(short_settings):
     settings = short_settings.copy(deep=True)
 
-    settings.eq_steps = 250000
-    settings.neq_steps = 250000
+    settings.eq_steps = 12500
+    settings.neq_steps = 12500
     settings.work_save_frequency = 500
     settings.traj_save_frequency = 2000
+    settings.num_cycles = 100
 
     return settings
 
