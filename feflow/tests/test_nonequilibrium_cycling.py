@@ -231,6 +231,8 @@ class TestNonEquilibriumCycling:
         -----
         The error estimate for the free energy calculations is tried up to 5 times in case there
         are stochastic errors with the BAR calculations.
+
+        This test is prone to fail on GPU. Numerical precision issues?
         """
         import numpy as np
 

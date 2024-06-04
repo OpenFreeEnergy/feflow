@@ -320,7 +320,7 @@ class SetupUnit(ProtocolUnit):
         )
 
         # Set up context
-        platform = get_openmm_platform(settings.platform)
+        platform = get_openmm_platform(settings.engine_settings.compute_platform)
         context = openmm.Context(system, integrator, platform)
         context.setPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
         context.setPositions(positions)
@@ -449,7 +449,7 @@ class CycleUnit(ProtocolUnit):
         final_atom_indices = setup.outputs["final_atom_indices"]
 
         # Set up context
-        platform = get_openmm_platform(settings.platform)
+        platform = get_openmm_platform(settings.engine_settings.compute_platform)
         context = openmm.Context(system, integrator, platform)
         context.setState(state)
 
@@ -875,6 +875,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         from gufe.settings import OpenMMSystemGeneratorFFSettings, ThermoSettings
         from openfe.protocols.openmm_utils.omm_settings import (
             OpenMMSolvationSettings,
+            OpenMMEngineSettings
         )
         from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
@@ -884,6 +885,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
             solvation_settings=OpenMMSolvationSettings(),
             alchemical_settings=AlchemicalSettings(softcore_LJ="gapsys"),
             integrator_settings=PeriodicNonequilibriumIntegratorSettings(),
+            engine_settings=OpenMMEngineSettings(),
         )
 
     # NOTE: create method should be really fast, since it would be running in the work units not the clients!!

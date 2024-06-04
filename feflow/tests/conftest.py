@@ -78,7 +78,6 @@ def short_settings():
     settings.integrator_settings.nonequilibrium_steps = 250
     settings.work_save_frequency = 50
     settings.traj_save_frequency = 250
-    settings.platform = "CPU"
 
     return settings
 
@@ -86,7 +85,7 @@ def short_settings():
 @pytest.fixture
 def short_settings_gpu(short_settings):
     settings = short_settings.copy(deep=True)
-    settings.platform = "CUDA"
+    settings.engine_settings.compute_platform = "CUDA"
 
     return settings
 
@@ -104,7 +103,7 @@ def short_settings_multiple_cycles():
     settings.work_save_frequency = 50
     settings.traj_save_frequency = 250
     settings.num_cycles = 5
-    settings.platform = "CPU"
+    settings.engine_settings.compute_platform = "CPU"
 
     return settings
 
@@ -112,7 +111,7 @@ def short_settings_multiple_cycles():
 @pytest.fixture
 def short_settings_multiple_cycles_gpu(short_settings_multiple_cycles):
     settings = short_settings_multiple_cycles.copy(deep=True)
-    settings.platform = "CUDA"
+    settings.engine_settings.compute_platform = "CUDA"
 
     return settings
 

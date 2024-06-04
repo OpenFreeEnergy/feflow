@@ -11,7 +11,7 @@ from feflow.settings import PeriodicNonequilibriumIntegratorSettings
 
 from gufe.settings import Settings
 from pydantic import root_validator
-from openfe.protocols.openmm_utils.omm_settings import OpenMMSolvationSettings
+from openfe.protocols.openmm_utils.omm_settings import OpenMMSolvationSettings, OpenMMEngineSettings
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
 
@@ -69,10 +69,10 @@ class NonEquilibriumCyclingSettings(Settings):
     integrator_settings: PeriodicNonequilibriumIntegratorSettings
 
     # platform and serialization
-    platform = "CUDA"
+    engine_settings: OpenMMEngineSettings  # This defines platform
     traj_save_frequency: int = 2000
     work_save_frequency: int = 500
-    atom_selection_expression: str = "not water"  # no longer used
+    atom_selection_expression: str = "not water"  # TODO: no longer used
 
     # Number of replicates to run (1 cycle/replicate)
     num_cycles: int = 100
