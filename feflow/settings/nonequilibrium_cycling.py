@@ -7,7 +7,7 @@ energy calculations using perses.
 
 from typing import Optional
 
-from feflow.settings import PeriodicNonequilibriumIntegratorSettings
+from feflow.settings import PeriodicNonequilibriumIntegratorSettings, OpenFFPartialChargeSettings
 
 from gufe.settings import Settings
 from pydantic import root_validator
@@ -61,6 +61,8 @@ class NonEquilibriumCyclingSettings(Settings):
 
     # Solvation settings
     solvation_settings: OpenMMSolvationSettings
+    partial_charge_settings: OpenFFPartialChargeSettings
+    """Settings for assigning partial charges to small molecules."""
 
     # Lambda settings
     lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
