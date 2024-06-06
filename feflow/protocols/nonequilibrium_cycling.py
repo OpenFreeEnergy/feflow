@@ -113,7 +113,7 @@ class SetupUnit(ProtocolUnit):
             The initial chemical system.
         state_b : gufe.ChemicalSystem
             The objective chemical system.
-        mapping : gufe.mapping.ComponentMapping
+        mapping : gufe.mapping.LigandAtomMapping
             A dict featuring mappings between the two chemical systems.
         settings : gufe.settings.model.Settings
             The full settings for the protocol.
