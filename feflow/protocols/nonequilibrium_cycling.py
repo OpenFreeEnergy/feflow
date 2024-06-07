@@ -1042,9 +1042,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         )
 
         simulations = [
-            self._simulation_unit(
-                setup=setup, settings=self.settings, name=f"{cycle}"
-            )
+            self._simulation_unit(setup=setup, settings=self.settings, name=f"{cycle}")
             for cycle in range(num_cycles)
         ]
 

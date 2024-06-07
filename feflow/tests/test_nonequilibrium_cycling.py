@@ -182,14 +182,9 @@ class TestNonEquilibriumCycling:
             cycle = str(cycle)
             assert isinstance(r_setup.inputs["extends_data"]["systems"][cycle], str)
             assert isinstance(r_setup.inputs["extends_data"]["states"][cycle], str)
-            assert isinstance(
-                r_setup.inputs["extends_data"]["integrators"][cycle], str
-            )
+            assert isinstance(r_setup.inputs["extends_data"]["integrators"][cycle], str)
 
-            assert (
-                r_setup.inputs["extends_data"]["states"][cycle]
-                == end_states[cycle]
-            )
+            assert r_setup.inputs["extends_data"]["states"][cycle] == end_states[cycle]
 
     # TODO: We probably need to find failure test cases as control
     # def test_dag_execute_failure(self, protocol_dag_broken):
