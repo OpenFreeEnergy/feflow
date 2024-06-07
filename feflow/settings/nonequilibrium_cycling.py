@@ -6,11 +6,17 @@ energy calculations using perses.
 """
 
 from typing import Optional
+
+from feflow.settings import PeriodicNonequilibriumIntegratorSettings
+
 from gufe.settings import Settings
-from openff.units import unit
 from pydantic import root_validator
-from openfe.protocols.openmm_utils.omm_settings import SystemSettings, SolvationSettings
+from openfe.protocols.openmm_utils.omm_settings import (
+    OpenMMSolvationSettings,
+    OpenMMEngineSettings,
+)
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
+
 
 # Default settings for the lambda functions
 x = "lambda"
@@ -49,35 +55,29 @@ class NonEquilibriumCyclingSettings(Settings):
     class Config:
         arbitrary_types_allowed = True
 
-    # System Settings (from openfe)
-    system_settings: SystemSettings
     forcefield_cache: Optional[str] = (
         "db.json"  # TODO: Remove once it has been integrated with openfe settings
     )
 
     # Solvation settings
-    solvation_settings: SolvationSettings
+    solvation_settings: OpenMMSolvationSettings
 
     # Lambda settings
     lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
 
     # alchemical settings
-    alchemical_settings: AlchemicalSettings
+    alchemical_settings: AlchemicalSettings = AlchemicalSettings(softcore_LJ="gapsys")
 
-    # NEQ integration settings
-    timestep = 4.0 * unit.femtoseconds
-    neq_splitting = "V R H O R V"
-    eq_steps = 250000
-    neq_steps = 250000
+    # integrator settings
+    integrator_settings: PeriodicNonequilibriumIntegratorSettings
 
     # platform and serialization
-    platform = "CUDA"
+    engine_settings: OpenMMEngineSettings  # This defines platform
     traj_save_frequency: int = 2000
     work_save_frequency: int = 500
-    atom_selection_expression: str = "not water"  # no longer used
+    atom_selection_expression: str = "not water"  # TODO: no longer used
 
-    # Number of replicates to run (1 cycle/replicate)
-    num_replicates: int = 1
+    num_cycles: int = 100  # Number of cycles to run
 
     @root_validator
     def save_frequencies_consistency(cls, values):
