@@ -106,8 +106,8 @@ class SetupUnit(ProtocolUnit):
 
     @staticmethod
     def _assign_openff_partial_charges(
-            charge_settings: OpenFFPartialChargeSettings,
-            off_small_mols: Iterable[OFFMolecule],
+        charge_settings: OpenFFPartialChargeSettings,
+        off_small_mols: Iterable[OFFMolecule],
     ) -> None:
         """
         Assign partial charges to SmallMoleculeComponents given the specified settings,
@@ -122,6 +122,7 @@ class SetupUnit(ProtocolUnit):
           state and SmallMoleculeComponent.
         """
         from feflow.utils.charge import assign_offmol_partial_charges
+
         for mol in off_small_mols:
             assign_offmol_partial_charges(
                 offmol=mol,
@@ -230,9 +231,12 @@ class SetupUnit(ProtocolUnit):
                 common_small_mols[comp] = comp.to_openff()
 
         # Assign partial charges to all small mols
-        all_openff_mols = chain(all_alchemical_mols.values(), common_small_mols.values())
-        self._assign_openff_partial_charges(charge_settings=charge_settings,
-                                            off_small_mols=all_openff_mols)
+        all_openff_mols = chain(
+            all_alchemical_mols.values(), common_small_mols.values()
+        )
+        self._assign_openff_partial_charges(
+            charge_settings=charge_settings, off_small_mols=all_openff_mols
+        )
 
         # Force the creation of parameters
         # This is necessary because we need to have the FF templates
@@ -313,8 +317,11 @@ class SetupUnit(ProtocolUnit):
                 alchemical_settings.explicit_charge_correction_cutoff,
             )
             _rfe_utils.topologyhelpers.handle_alchemical_waters(
-                alchem_water_resids, state_b_topology, state_b_system,
-                ligand_mappings, charge_difference,
+                alchem_water_resids,
+                state_b_topology,
+                state_b_system,
+                ligand_mappings,
+                charge_difference,
                 solvent_comp,
             )
 

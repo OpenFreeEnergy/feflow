@@ -7,7 +7,10 @@ energy calculations using perses.
 
 from typing import Optional
 
-from feflow.settings import PeriodicNonequilibriumIntegratorSettings, OpenFFPartialChargeSettings
+from feflow.settings import (
+    PeriodicNonequilibriumIntegratorSettings,
+    OpenFFPartialChargeSettings,
+)
 
 from gufe.settings import Settings
 from pydantic import root_validator
