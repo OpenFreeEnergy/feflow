@@ -166,6 +166,7 @@ class SetupUnit(ProtocolUnit):
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
         from feflow.utils.hybrid_topology import HybridTopologyFactory
+        from feflow.utils.charge import get_alchemical_charge_difference
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
@@ -185,7 +186,7 @@ class SetupUnit(ProtocolUnit):
         ligand_b = ligand_mapping.componentB
 
         # Get solvent components
-        solvent_a = state_a.components.get("solvent")
+        solvent_comp = state_a.components.get("solvent")
         # solvent_b = state_b.components.get("solvent")  # Should not be needed
 
         # Get all the relevant settings
@@ -194,6 +195,7 @@ class SetupUnit(ProtocolUnit):
         integrator_settings = settings.integrator_settings
         charge_settings: OpenFFPartialChargeSettings = settings.partial_charge_settings
         solvation_settings = settings.solvation_settings
+        alchemical_settings = settings.alchemical_settings
 
         # handle cache for system generator
         if settings.forcefield_cache is not None:
@@ -206,7 +208,7 @@ class SetupUnit(ProtocolUnit):
             thermo_settings=thermodynamic_settings,
             integrator_settings=integrator_settings,
             cache=ffcache,
-            has_solvent=solvent_a is not None,
+            has_solvent=solvent_comp is not None,
         )
 
         # Parameterizing small molecules
@@ -243,7 +245,7 @@ class SetupUnit(ProtocolUnit):
         # c. get OpenMM Modeller + a dictionary of resids for each component
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_a,
-            solvent_comp=solvent_a,
+            solvent_comp=solvent_comp,
             small_mols=alchemical_small_mols_a | common_small_mols,
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
@@ -293,6 +295,29 @@ class SetupUnit(ProtocolUnit):
             fix_constraints=True,
         )
 
+        # Handle charge corrections/transformations
+        # Get the change difference between the end states
+        # and check if the charge correction used is appropriate
+        charge_difference = get_alchemical_charge_difference(
+            mapping,
+            forcefield_settings.nonbonded_method,
+            alchemical_settings.explicit_charge_correction,
+            solvent_comp,
+        )
+
+        if alchemical_settings.explicit_charge_correction:
+            alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(
+                state_a_topology,
+                state_a_positions,
+                charge_difference,
+                alchemical_settings.explicit_charge_correction_cutoff,
+            )
+            _rfe_utils.topologyhelpers.handle_alchemical_waters(
+                alchem_water_resids, state_b_topology, state_b_system,
+                ligand_mappings, charge_difference,
+                solvent_comp,
+            )
+
         #  d. Finally get the positions
         state_b_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
             ligand_mappings,
@@ -304,8 +329,6 @@ class SetupUnit(ProtocolUnit):
             ),
         )
 
-        # Get alchemical settings
-        alchemical_settings = settings.alchemical_settings
         # TODO: handle the literals directly in the HTF object (issue #42)
         # Get softcore potential settings
         if alchemical_settings.softcore_LJ.lower() == "gapsys":

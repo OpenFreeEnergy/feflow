@@ -6,7 +6,6 @@ import pytest
 from feflow.protocols import NonEquilibriumCyclingProtocol
 from gufe.protocols.protocoldag import ProtocolDAGResult, execute_DAG
 from gufe.protocols.protocolunit import ProtocolUnitResult
-from gufe.protocols.protocolunit import ProtocolUnitFailure
 
 
 class TestNonEquilibriumCycling:
