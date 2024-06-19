@@ -226,9 +226,12 @@ class SetupUnit(ProtocolUnit):
                 common_small_mols[comp] = comp.to_openff()
 
         # Assign partial charges to all small mols
-        all_openff_mols = list(chain(all_alchemical_mols.values(), common_small_mols.values()))
-        self._assign_openff_partial_charges(charge_settings=charge_settings,
-                                            off_small_mols=all_openff_mols)
+        all_openff_mols = list(
+            chain(all_alchemical_mols.values(), common_small_mols.values())
+        )
+        self._assign_openff_partial_charges(
+            charge_settings=charge_settings, off_small_mols=all_openff_mols
+        )
 
         # Force the creation of parameters
         # This is necessary because we need to have the FF templates
@@ -939,8 +942,9 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
         return NonEquilibriumCyclingSettings(
             forcefield_settings=OpenMMSystemGeneratorFFSettings(),
-            thermo_settings=ThermoSettings(temperature=300 * unit.kelvin,
-                                           pressure=1 * unit.bar),
+            thermo_settings=ThermoSettings(
+                temperature=300 * unit.kelvin, pressure=1 * unit.bar
+            ),
             solvation_settings=OpenMMSolvationSettings(),
             partial_charge_settings=OpenFFPartialChargeSettings(),
             alchemical_settings=AlchemicalSettings(softcore_LJ="gapsys"),
