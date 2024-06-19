@@ -166,6 +166,7 @@ class SetupUnit(ProtocolUnit):
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
+        from openfe.protocols.openmm_utils.system_validation import get_components
         from feflow.utils.hybrid_topology import HybridTopologyFactory
         from feflow.utils.charge import get_alchemical_charge_difference
 
@@ -176,19 +177,13 @@ class SetupUnit(ProtocolUnit):
             state_a, state_b
         )  # infer phase from systems and components
 
-        # Get receptor components from systems if found (None otherwise) -- NOTE: Uses hardcoded keys!
-        # TODO: use/migrate openfe system_validation.get_component utility function?
-        receptor_a = state_a.components.get("protein")
-        # receptor_b = state_b.components.get("protein")  # Should not be needed
+        # Get receptor components from systems if found (None otherwise)
+        solvent_comp, receptor_comp, small_mols_a = get_components(state_a)
 
         # Get ligand/small-mol components
         ligand_mapping = mapping
         ligand_a = ligand_mapping.componentA
         ligand_b = ligand_mapping.componentB
-
-        # Get solvent components
-        solvent_comp = state_a.components.get("solvent")
-        # solvent_b = state_b.components.get("solvent")  # Should not be needed
 
         # Get all the relevant settings
         forcefield_settings = settings.forcefield_settings
@@ -231,12 +226,9 @@ class SetupUnit(ProtocolUnit):
                 common_small_mols[comp] = comp.to_openff()
 
         # Assign partial charges to all small mols
-        all_openff_mols = chain(
-            all_alchemical_mols.values(), common_small_mols.values()
-        )
-        self._assign_openff_partial_charges(
-            charge_settings=charge_settings, off_small_mols=all_openff_mols
-        )
+        all_openff_mols = list(chain(all_alchemical_mols.values(), common_small_mols.values()))
+        self._assign_openff_partial_charges(charge_settings=charge_settings,
+                                            off_small_mols=all_openff_mols)
 
         # Force the creation of parameters
         # This is necessary because we need to have the FF templates
@@ -248,7 +240,7 @@ class SetupUnit(ProtocolUnit):
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
-            protein_comp=receptor_a,
+            protein_comp=receptor_comp,
             solvent_comp=solvent_comp,
             small_mols=alchemical_small_mols_a | common_small_mols,
             omm_forcefield=system_generator.forcefield,
@@ -947,7 +939,8 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
         return NonEquilibriumCyclingSettings(
             forcefield_settings=OpenMMSystemGeneratorFFSettings(),
-            thermo_settings=ThermoSettings(temperature=300 * unit.kelvin),
+            thermo_settings=ThermoSettings(temperature=300 * unit.kelvin,
+                                           pressure=1 * unit.bar),
             solvation_settings=OpenMMSolvationSettings(),
             partial_charge_settings=OpenFFPartialChargeSettings(),
             alchemical_settings=AlchemicalSettings(softcore_LJ="gapsys"),
