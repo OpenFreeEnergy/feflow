@@ -78,6 +78,7 @@ class NonEquilibriumCyclingSettings(Settings):
 
     # platform and serialization
     engine_settings: OpenMMEngineSettings  # This defines platform
+    # TODO: Need to do validation checking on these values related to IntegratorSettings eq/neq steps
     traj_save_frequency: int = 2000
     work_save_frequency: int = 500
     atom_selection_expression: str = "not water"  # TODO: no longer used
