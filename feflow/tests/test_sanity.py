@@ -7,10 +7,12 @@ transformations for both A->B and B->A, among others.
 
 from openff.units import unit
 
+
 # TODO: Use openfe analysis tools and functions instead
 def ki_to_dg(
-        ki: unit.Quantity, uncertainty: unit.Quantity,
-        temperature: unit.Quantity = 298.15 * unit.kelvin
+    ki: unit.Quantity,
+    uncertainty: unit.Quantity,
+    temperature: unit.Quantity = 298.15 * unit.kelvin,
 ) -> tuple[unit.Quantity, unit.Quantity]:
     """
     Convenience method to convert a Ki w/ a given uncertainty to an
@@ -33,14 +35,19 @@ def ki_to_dg(
         Error in binding free energy.
     """
     import math
+
     if ki > 1e-15 * unit.nanomolar:
-        DG = (unit.molar_gas_constant * temperature.to(unit.kelvin)
-              * math.log(ki / unit.molar)).to(unit.kilocalorie_per_mole)
+        DG = (
+            unit.molar_gas_constant
+            * temperature.to(unit.kelvin)
+            * math.log(ki / unit.molar)
+        ).to(unit.kilocalorie_per_mole)
     else:
         raise ValueError("negative Ki values are not supported")
     if uncertainty > 0 * unit.molar:
-        dDG = (unit.molar_gas_constant * temperature.to(unit.kelvin)
-               * uncertainty / ki).to(unit.kilocalorie_per_mole)
+        dDG = (
+            unit.molar_gas_constant * temperature.to(unit.kelvin) * uncertainty / ki
+        ).to(unit.kilocalorie_per_mole)
     else:
         dDG = 0 * unit.kilocalorie_per_mole
 
@@ -80,33 +87,35 @@ def test_roundtrip_charge_transformation(tmp_path):
     state_a_solvent = ChemicalSystem({"ligand": guest_1_comp, "solvent": solvent_comp})
     state_b_solvent = ChemicalSystem({"ligand": guest_2_comp, "solvent": solvent_comp})
 
-    mapping_dict = {11: 11,
-                    12: 12,
-                    13: 13,
-                    14: 14,
-                    15: 15,
-                    16: 16,
-                    17: 17,
-                    18: 18,
-                    19: 19,
-                    20: 20,
-                    21: 21,
-                    22: 22,
-                    23: 23,
-                    24: 24,
-                    25: 25,
-                    26: 26,
-                    0: 0,
-                    1: 2,
-                    2: 3,
-                    3: 4,
-                    4: 5,
-                    5: 6,
-                    6: 7,
-                    7: 8,
-                    8: 9,
-                    9: 10,
-                    10: 1}
+    mapping_dict = {
+        11: 11,
+        12: 12,
+        13: 13,
+        14: 14,
+        15: 15,
+        16: 16,
+        17: 17,
+        18: 18,
+        19: 19,
+        20: 20,
+        21: 21,
+        22: 22,
+        23: 23,
+        24: 24,
+        25: 25,
+        26: 26,
+        0: 0,
+        1: 2,
+        2: 3,
+        3: 4,
+        4: 5,
+        5: 6,
+        6: 7,
+        7: 8,
+        8: 9,
+        9: 10,
+        10: 1,
+    }
 
     mapping_obj = LigandAtomMapping(
         componentA=guest_1_comp,
@@ -116,7 +125,9 @@ def test_roundtrip_charge_transformation(tmp_path):
     mapping_reverse_obj = LigandAtomMapping(
         componentA=guest_2_comp,
         componentB=guest_1_comp,
-        componentA_to_componentB={value: key for key,value in mapping_dict.items()},  # reverse
+        componentA_to_componentB={
+            value: key for key, value in mapping_dict.items()
+        },  # reverse
     )
 
     # Protocol settings
@@ -173,12 +184,23 @@ def test_roundtrip_charge_transformation(tmp_path):
     solvent_reverse_results = protocol.gather([solvent_reverse_dag_result])
     complex_results = protocol.gather([complex_dag_result])
     complex_reverse_results = protocol.gather([complex_reverse_dag_result])
-    forward_fe_estimate = complex_results.get_estimate() - solvent_results.get_estimate()
-    reverse_fe_estimate = complex_reverse_results.get_estimate() - solvent_reverse_results.get_estimate()
+    forward_fe_estimate = (
+        complex_results.get_estimate() - solvent_results.get_estimate()
+    )
+    reverse_fe_estimate = (
+        complex_reverse_results.get_estimate() - solvent_reverse_results.get_estimate()
+    )
     # reverse estimate should have opposite sign so they should add up to close to zero
     forward_reverse_sum = abs(forward_fe_estimate + reverse_fe_estimate)
     forward_reverse_sum_error = np.sqrt(
-        complex_results.get_uncertainty()** 2 + solvent_results.get_uncertainty()** 2 +
-        complex_reverse_results.get_uncertainty()** 2 + solvent_reverse_results.get_uncertainty()** 2)
-    print(f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_error}")  # debug control print
-    assert forward_reverse_sum < 6 * forward_reverse_sum_error, (f"DDG ({forward_reverse_sum}) is greater than 6 * dDDG ({6 * forward_reverse_sum_error})")
+        complex_results.get_uncertainty() ** 2
+        + solvent_results.get_uncertainty() ** 2
+        + complex_reverse_results.get_uncertainty() ** 2
+        + solvent_reverse_results.get_uncertainty() ** 2
+    )
+    print(
+        f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_error}"
+    )  # debug control print
+    assert (
+        forward_reverse_sum < 6 * forward_reverse_sum_error
+    ), f"DDG ({forward_reverse_sum}) is greater than 6 * dDDG ({6 * forward_reverse_sum_error})"
