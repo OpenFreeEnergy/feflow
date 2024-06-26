@@ -63,8 +63,9 @@ where = ["."]
 # Ref https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
 [tool.setuptools.package-data]
 feflow = [
-    "py.typed"
+    "py.typed",
 ]
+"feflow.data.host-guest" = ["*.json"]
 
 [tool.versioningit]
 default-version = "0.1.0+unknown"
