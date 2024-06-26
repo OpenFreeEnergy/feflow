@@ -5,6 +5,8 @@ This includes systems such as host-guest systems convergence for charge
 transformations for both A->B and B->A, among others.
 """
 
+import json
+import pytest
 from openff.units import unit
 
 
@@ -54,14 +56,15 @@ def ki_to_dg(
     return DG, dDG
 
 
+@pytest.mark.slow
 def test_roundtrip_charge_transformation(tmp_path):
     """
     Run NonEquilibrium Cycling protocol on host-guest charge-changing transformation
     (CB7:A1->A2 and CB7:A2->A1), making sure free energies are equal and opposite, for
     the round trip.
     """
+    from importlib.resources import files
     import numpy as np
-    from rdkit import Chem
     from gufe import (
         SmallMoleculeComponent,
         SolventComponent,
@@ -71,12 +74,13 @@ def test_roundtrip_charge_transformation(tmp_path):
     from gufe.protocols import execute_DAG
     from feflow.protocols import NonEquilibriumCyclingProtocol
 
-    base_data_dir = "/home/user/workdir/repos/perses/perses/data/host-guest/"
-    receptor = Chem.MolFromMol2File(f"{base_data_dir}/cb7.sybyl.mol2", removeHs=False)
-    receptor_comp = SmallMoleculeComponent.from_rdkit(receptor)
-    guest_1 = Chem.MolFromMol2File(f"{base_data_dir}/a1.sybyl.mol2", removeHs=False)
-    guest_1_comp = SmallMoleculeComponent.from_rdkit(guest_1)
-    guest_2_comp = SmallMoleculeComponent.from_sdf_file(f"{base_data_dir}/a2.sybyl.sdf")
+    data_basepath = files("feflow.data.host-guest")
+    with open(data_basepath.joinpath("cb7_comp.json")) as receptor_file:
+        receptor_comp = SmallMoleculeComponent.from_dict(json.load(receptor_file))
+    with open(data_basepath.joinpath("a1_comp.json")) as guest1_file:
+        guest_1_comp = SmallMoleculeComponent.from_dict(json.load(guest1_file))
+    with open(data_basepath.joinpath("a2_comp.json")) as guest2_file:
+        guest_2_comp = SmallMoleculeComponent.from_dict(json.load(guest2_file))
     solvent_comp = SolventComponent(positive_ion="Na", negative_ion="Cl")
     state_a_complex = ChemicalSystem(
         {"receptor": receptor_comp, "ligand": guest_1_comp, "solvent": solvent_comp}
@@ -131,14 +135,10 @@ def test_roundtrip_charge_transformation(tmp_path):
     )
 
     # Protocol settings
-    default_settings = NonEquilibriumCyclingProtocol.default_settings()
-    ## Debugging settings
-    # default_settings.integrator_settings.equilibrium_steps = 1000
-    # default_settings.integrator_settings.nonequilibrium_steps = 1000
-    # default_settings.work_save_frequency = 500
-    # default_settings.num_cycles = 2
-    ###
-    protocol = NonEquilibriumCyclingProtocol(default_settings)
+    settings = NonEquilibriumCyclingProtocol.default_settings()
+    # Enable charge correction
+    settings.alchemical_settings.explicit_charge_correction = True
+    protocol = NonEquilibriumCyclingProtocol(settings)
 
     # Create DAGs for all the options
     solvent_dag = protocol.create(

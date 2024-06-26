@@ -6,6 +6,31 @@ from rdkit import Chem
 from gufe.mapping import LigandAtomMapping
 
 
+def pytest_addoption(parser):
+    """
+    Enables cli argument to run specifically marked tests.
+    """
+    parser.addoption(
+        "--runslow", action="store_true", default=False, help="run slow tests"
+    )
+
+
+def pytest_configure(config):
+    """Add custom markers to config"""
+    config.addinivalue_line("markers", "slow: mark test as slow to run")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skips tests marked with slow unless flag is specified."""
+    if config.getoption("--runslow"):
+        # --runslow given in cli: do not skip slow tests
+        return
+    skip_slow = pytest.mark.skip(reason="need --runslow option to run")
+    for item in items:
+        if "slow" in item.keywords:
+            item.add_marker(skip_slow)
+
+
 @pytest.fixture(scope="session")
 def gufe_data_dir():
     path = files("gufe.tests.data")
