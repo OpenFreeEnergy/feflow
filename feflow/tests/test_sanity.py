@@ -7,53 +7,6 @@ transformations for both A->B and B->A, among others.
 
 import json
 import pytest
-from openff.units import unit
-
-
-# TODO: Use openfe analysis tools and functions instead
-def ki_to_dg(
-    ki: unit.Quantity,
-    uncertainty: unit.Quantity,
-    temperature: unit.Quantity = 298.15 * unit.kelvin,
-) -> tuple[unit.Quantity, unit.Quantity]:
-    """
-    Convenience method to convert a Ki w/ a given uncertainty to an
-    experimental estimate of the binding free energy.
-
-    Parameters
-    ----------
-    ki : unit.Quantity
-        Experimental Ki value (e.g. 5 * unit.nanomolar)
-    uncertainty : unit.Quantity
-        Experimental error. Note: returns 0 if =< 0 * unit.nanomolar.
-    temperature : unit.Quantity
-        Experimental temperature. Default: 298.15 * unit.kelvin.
-
-    Returns
-    -------
-    DG : unit.Quantity
-        Gibbs binding free energy.
-    dDG : unit.Quantity
-        Error in binding free energy.
-    """
-    import math
-
-    if ki > 1e-15 * unit.nanomolar:
-        DG = (
-            unit.molar_gas_constant
-            * temperature.to(unit.kelvin)
-            * math.log(ki / unit.molar)
-        ).to(unit.kilocalorie_per_mole)
-    else:
-        raise ValueError("negative Ki values are not supported")
-    if uncertainty > 0 * unit.molar:
-        dDG = (
-            unit.molar_gas_constant * temperature.to(unit.kelvin) * uncertainty / ki
-        ).to(unit.kilocalorie_per_mole)
-    else:
-        dDG = 0 * unit.kilocalorie_per_mole
-
-    return DG, dDG
 
 
 @pytest.mark.slow
