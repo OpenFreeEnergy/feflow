@@ -1,6 +1,6 @@
 # FEflow Data files
 
-This directory contains the data files for `feflow`. It is used both for testing, benchmarking or 
+This directory contains the data files for `feflow`. It is used both for testing, benchmarking or
 running examples that use the different routines in the package. They are left in this directory as
 a convenient way to ship them alongside the code, as long as they are not many files and the sizes
 are not more than a few MBs.
