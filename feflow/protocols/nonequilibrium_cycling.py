@@ -161,6 +161,7 @@ class SetupUnit(ProtocolUnit):
         * Here we assume the mapping is only between ``SmallMoleculeComponent``s.
         """
         # needed imports
+        import numpy as np
         import openmm
         from openff.units.openmm import ensure_quantity
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
@@ -381,9 +382,18 @@ class SetupUnit(ProtocolUnit):
             openmm.LocalEnergyMinimizer.minimize(context)
 
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
+            # need to set velocities to temperature so serialized state features velocities,
+            # which is important for usability by the Folding@Home openmm-core
+            thermodynamic_settings = settings.thermo_settings
+            temperature = to_openmm(thermodynamic_settings.temperature)
+            context.setVelocitiesToTemperature(temperature)
 
+            # state needs to include positions, forces, velocities, and energy
+            # to be usable by the Folding@Home openmm-core
+            state_ = context.getState(
+                getPositions=True, getForces=True, getVelocities=True, getEnergy=True
+            )
             system_ = context.getSystem()
-            state_ = context.getState(getPositions=True)
             integrator_ = context.getIntegrator()
 
             system_outfile = ctx.shared / "system.xml.bz2"
