@@ -100,6 +100,92 @@ class TestNonEquilibriumCycling:
         assert isinstance(finals[0], ProtocolUnitResult)
         assert finals[0].name == "result"
 
+    @pytest.mark.parametrize(
+        "protocol",
+        [
+            "protocol_short",
+            "protocol_short_multiple_cycles",
+        ],
+    )
+    def test_pdr_extend(
+        self,
+        protocol,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+        tmpdir,
+        request,
+    ):
+        protocol = request.getfixturevalue(protocol)
+        dag = protocol.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation",
+            mapping=mapping_benzene_toluene,
+        )
+
+        with tmpdir.as_cwd():
+
+            base_path = Path("original")
+
+            shared = base_path / "shared"
+            shared.mkdir(parents=True)
+
+            scratch = base_path / "scratch"
+            scratch.mkdir(parents=True)
+
+            pdr: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        setup = pdr.protocol_units[0]
+        r_setup = pdr.protocol_unit_results[0]
+
+        assert setup.inputs["extends_data"] == {}
+
+        end_states = {}
+        for simulation, r_simulation in zip(
+            pdr.protocol_units[1:-1], pdr.protocol_unit_results[1:-1]
+        ):
+            assert isinstance(r_simulation.outputs["system"], str)
+            assert isinstance(r_simulation.outputs["state"], str)
+            assert isinstance(r_simulation.outputs["integrator"], str)
+
+            end_states[simulation.name] = r_simulation.outputs["state"]
+
+        dag = protocol.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation, but extended",
+            mapping=mapping_benzene_toluene,
+            extends=ProtocolDAGResult.from_dict(pdr.to_dict()),
+        )
+
+        with tmpdir.as_cwd():
+
+            base_path = Path("extended")
+
+            shared = base_path / "shared"
+            shared.mkdir(parents=True)
+
+            scratch = base_path / "scratch"
+            scratch.mkdir(parents=True)
+            pdr: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        r_setup = pdr.protocol_unit_results[0]
+
+        assert r_setup.inputs["extends_data"] != {}
+
+        for cycle in range(protocol.settings.num_cycles):
+            cycle = str(cycle)
+            assert isinstance(r_setup.inputs["extends_data"]["systems"][cycle], str)
+            assert isinstance(r_setup.inputs["extends_data"]["states"][cycle], str)
+            assert isinstance(r_setup.inputs["extends_data"]["integrators"][cycle], str)
+
+            assert r_setup.inputs["extends_data"]["states"][cycle] == end_states[cycle]
+
     # TODO: We probably need to find failure test cases as control
     # def test_dag_execute_failure(self, protocol_dag_broken):
     #     protocol, dag, dagfailure = protocol_dag_broken
