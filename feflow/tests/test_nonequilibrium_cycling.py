@@ -7,6 +7,18 @@ from feflow.protocols import NonEquilibriumCyclingProtocol
 from gufe.protocols.protocoldag import ProtocolDAGResult, execute_DAG
 from gufe.protocols.protocolunit import ProtocolUnitResult
 
+def partial_charges_config():
+    partial_charges_testing_matrix = {
+            "am1bcc": ["ambertools", "openeye"],
+            "am1bccelf10": ["openeye"],
+            "nagl": ["ambertools", "openeye", "rdkit"],
+            "espaloma": ["ambertools", "rdkit"]
+    }
+    # Navigate dictionary and yield method, backend pair
+    for key, value in partial_charges_testing_matrix.items():
+        for val in value:
+            yield key, val
+
 
 class TestNonEquilibriumCycling:
     @pytest.fixture
@@ -285,3 +297,68 @@ class TestNonEquilibriumCycling:
 
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
     # TODO: Potentially setup (not run) a protein-ligand system
+
+    @pytest.mark.parametrize("method, backend", partial_charges_config())
+    def test_partial_charge_assignation(self, short_settings, benzene_vacuum_system, toluene_vacuum_system, mapping_benzene_toluene, method, backend, tmpdir):
+        """
+        Test the different options for method and backend for partial charge assignation produces
+        successful protocol runs.
+        """
+        # Deep copy of settings to modify
+        local_settings = short_settings.copy(deep=True)
+        local_settings.partial_charge_settings.partial_charge_method = method
+        local_settings.partial_charge_settings.off_toolkit_backend = backend
+
+        protocol = NonEquilibriumCyclingProtocol(settings=local_settings)
+
+        dag = protocol.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation",
+            mapping=mapping_benzene_toluene,
+        )
+
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            dagresult: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        assert dagresult.ok()
+
+    @pytest.mark.parametrize("method, backend", [("am1bcc", "rdkit"), ("am1bccelf10", "ambertools")])
+    def test_failing_partial_charge_assign(self, short_settings, benzene_vacuum_system, toluene_vacuum_system, mapping_benzene_toluene, method, backend, tmpdir):
+        """
+        Test that incompatible method and backend combinations for partial charge assignation.
+        We expect a ``ValueError`` exception to be raised in these cases.
+        """
+        # Deep copy of settings to modify
+        local_settings = short_settings.copy(deep=True)
+        local_settings.partial_charge_settings.partial_charge_method = method
+        local_settings.partial_charge_settings.off_toolkit_backend = backend
+
+        protocol = NonEquilibriumCyclingProtocol(settings=local_settings)
+
+        dag = protocol.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation",
+            mapping=mapping_benzene_toluene,
+        )
+
+        with tmpdir.as_cwd():
+            with pytest.raises(ValueError):
+                shared = Path("shared")
+                shared.mkdir()
+
+                scratch = Path("scratch")
+                scratch.mkdir()
+
+                execute_DAG(
+                    dag, shared_basedir=shared, scratch_basedir=scratch
+                )
