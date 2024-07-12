@@ -7,12 +7,13 @@ from feflow.protocols import NonEquilibriumCyclingProtocol
 from gufe.protocols.protocoldag import ProtocolDAGResult, execute_DAG
 from gufe.protocols.protocolunit import ProtocolUnitResult
 
+
 def partial_charges_config():
     partial_charges_testing_matrix = {
-            "am1bcc": ["ambertools", "openeye"],
-            "am1bccelf10": ["openeye"],
-            "nagl": ["ambertools", "openeye", "rdkit"],
-            "espaloma": ["ambertools", "rdkit"]
+        "am1bcc": ["ambertools", "openeye"],
+        "am1bccelf10": ["openeye"],
+        "nagl": ["ambertools", "openeye", "rdkit"],
+        "espaloma": ["ambertools", "rdkit"],
     }
     # Navigate dictionary and yield method, backend pair
     for key, value in partial_charges_testing_matrix.items():
@@ -299,7 +300,16 @@ class TestNonEquilibriumCycling:
     # TODO: Potentially setup (not run) a protein-ligand system
 
     @pytest.mark.parametrize("method, backend", partial_charges_config())
-    def test_partial_charge_assignation(self, short_settings, benzene_vacuum_system, toluene_vacuum_system, mapping_benzene_toluene, method, backend, tmpdir):
+    def test_partial_charge_assignation(
+        self,
+        short_settings,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+        method,
+        backend,
+        tmpdir,
+    ):
         """
         Test the different options for method and backend for partial charge assignation produces
         successful protocol runs.
@@ -331,8 +341,19 @@ class TestNonEquilibriumCycling:
 
         assert dagresult.ok()
 
-    @pytest.mark.parametrize("method, backend", [("am1bcc", "rdkit"), ("am1bccelf10", "ambertools")])
-    def test_failing_partial_charge_assign(self, short_settings, benzene_vacuum_system, toluene_vacuum_system, mapping_benzene_toluene, method, backend, tmpdir):
+    @pytest.mark.parametrize(
+        "method, backend", [("am1bcc", "rdkit"), ("am1bccelf10", "ambertools")]
+    )
+    def test_failing_partial_charge_assign(
+        self,
+        short_settings,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+        method,
+        backend,
+        tmpdir,
+    ):
         """
         Test that incompatible method and backend combinations for partial charge assignation.
         We expect a ``ValueError`` exception to be raised in these cases.
@@ -359,6 +380,4 @@ class TestNonEquilibriumCycling:
                 scratch = Path("scratch")
                 scratch.mkdir()
 
-                execute_DAG(
-                    dag, shared_basedir=shared, scratch_basedir=scratch
-                )
+                execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
