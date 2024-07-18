@@ -6,6 +6,7 @@ from itertools import chain
 
 import datetime
 import logging
+import pickle
 import time
 
 from gufe.settings import Settings
@@ -154,14 +155,14 @@ class SetupUnit(ProtocolUnit):
         -------
         dict : dict[str, str]
             Dictionary with paths to work arrays, both forward and reverse, and
-            trajectory coordinates for systems A and B.
+            trajectory coordinates for systems A and B. As well as path for the
+            pickled HTF object, mostly for debugging purposes.
 
         Notes
         -----
         * Here we assume the mapping is only between ``SmallMoleculeComponent``s.
         """
         # needed imports
-        import numpy as np
         import openmm
         from openff.units.openmm import ensure_quantity
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
@@ -396,10 +397,14 @@ class SetupUnit(ProtocolUnit):
             system_ = context.getSystem()
             integrator_ = context.getIntegrator()
 
+            htf_outfile = ctx.shared / "hybrid_topology_factory.pickle"
             system_outfile = ctx.shared / "system.xml.bz2"
             state_outfile = ctx.shared / "state.xml.bz2"
             integrator_outfile = ctx.shared / "integrator.xml.bz2"
 
+            # Serialize HTF, system, state and integrator
+            with open(htf_outfile, "wb") as htf_file:
+                pickle.dump(hybrid_factory, htf_file)
             serialize(system_, system_outfile)
             serialize(state_, state_outfile)
             serialize(integrator_, integrator_outfile)
@@ -415,6 +420,7 @@ class SetupUnit(ProtocolUnit):
             "phase": phase,
             "initial_atom_indices": hybrid_factory.initial_atom_indices,
             "final_atom_indices": hybrid_factory.final_atom_indices,
+            "topology_path": htf_outfile,
         }
 
 
