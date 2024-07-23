@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 
 import pymbar.utils
@@ -381,3 +382,67 @@ class TestNonEquilibriumCycling:
                 scratch.mkdir()
 
                 execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
+
+
+class TestSetupUnit:
+    def test_setup_user_charges(self, benzene_modifications, mapping_benzene_toluene, tmpdir):
+        """
+        Tests that the charges assigned to the topology are not changed along the way, respecting
+        charges given by the users.
+
+        This test inspects the results of the SetupUnit in the protocol.
+
+        It setups a benzene to toluene transformation by first manually assigning partial charges
+        to the ligands before creating the chemical systems, and checking that the generated charges
+        are as expected after setting up the simulation.
+        """
+        import numpy as np
+        from openff.toolkit import Molecule
+        from openff.units import unit
+        from gufe import ChemicalSystem, Context
+        from gufe.components import SmallMoleculeComponent
+        from feflow.protocols.nonequilibrium_cycling import SetupUnit
+
+        def _assign_random_partial_charges(offmol: Molecule):
+            """
+            Assign random partial charges to given molecule such that the sum of the partial charges
+            equals to the net formal charge of the molecule. This is done by generating random
+            numbers up to n_atoms - 1 and determining the last one such that it complies with the
+            formal charge restriction.
+            """
+            total_charge = offmol.total_charge.m  # magnitude of formal charge
+            partial_charges = np.random.uniform(low=-1, high=1, size=offmol.n_atoms-1)
+            charge_diff = total_charge - np.sum(partial_charges)
+            partial_charges = np.append(partial_charges, charge_diff)
+            offmol.partial_charges = partial_charges * unit.elementary_charge
+            return partial_charges
+
+        benzene = Molecule.from_rdkit(benzene_modifications["benzene"])
+        toluene = Molecule.from_rdkit(benzene_modifications["toluene"])
+        # Manually assign partial charges
+        benzene_partial_charges = _assign_random_partial_charges(benzene)
+        toluene_partial_charges = _assign_random_partial_charges(toluene)
+
+        small_comp_a = SmallMoleculeComponent.from_openff(benzene)
+        small_comp_b = SmallMoleculeComponent.from_openff(toluene)
+        state_a = ChemicalSystem({"ligand": small_comp_a})
+        state_b = ChemicalSystem({"ligand": small_comp_b})
+
+        settings = NonEquilibriumCyclingProtocol.default_settings()
+
+        setup = SetupUnit(
+            state_a=state_a,
+            state_b=state_b,
+            mapping=mapping_benzene_toluene,
+            settings=settings,
+            name="setup_user_charges",
+        )
+
+        # Run unit and extract results
+        context = Context(scratch=tmpdir, shared=tmpdir)
+        # TODO: How to actually execute the setup unit?
+        setup.execute(context)
+        with open(setup.outputs["topology_path"], "rb") as in_file:
+            htf = pickle.load(in_file)
+
+        hybrid_system = htf.hybrid_system
