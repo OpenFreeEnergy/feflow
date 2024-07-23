@@ -385,7 +385,9 @@ class TestNonEquilibriumCycling:
 
 
 class TestSetupUnit:
-    def test_setup_user_charges(self, benzene_modifications, mapping_benzene_toluene, tmpdir):
+    def test_setup_user_charges(
+        self, benzene_modifications, mapping_benzene_toluene, tmpdir
+    ):
         """
         Tests that the charges assigned to the topology are not changed along the way, respecting
         charges given by the users.
@@ -411,7 +413,7 @@ class TestSetupUnit:
             formal charge restriction.
             """
             total_charge = offmol.total_charge.m  # magnitude of formal charge
-            partial_charges = np.random.uniform(low=-1, high=1, size=offmol.n_atoms-1)
+            partial_charges = np.random.uniform(low=-1, high=1, size=offmol.n_atoms - 1)
             charge_diff = total_charge - np.sum(partial_charges)
             partial_charges = np.append(partial_charges, charge_diff)
             offmol.partial_charges = partial_charges * unit.elementary_charge
