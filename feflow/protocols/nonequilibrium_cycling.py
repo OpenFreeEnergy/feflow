@@ -1008,11 +1008,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         )
 
         simulations = [
-            self._simulation_unit(
-                protocol=self,
-                setup=setup,
-                name=f"{replicate}"
-            )
+            self._simulation_unit(protocol=self, setup=setup, name=f"{replicate}")
             for replicate in range(num_cycles)
         ]
 
