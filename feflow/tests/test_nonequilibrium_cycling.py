@@ -464,13 +464,13 @@ class TestSetupUnit:
     ):
         """
         Tests that the charges assigned to the topology are not changed along the way, respecting
-            charges given by the users.
+        charges given by the users.
 
-            This test inspects the results of the SetupUnit in the protocol.
+        This test inspects the results of the SetupUnit in the protocol.
 
-            It setups a benzene to toluene transformation by first manually assigning partial charges
-            to the ligands before creating the chemical systems, and checking that the generated charges
-            are as expected after setting up the simulation.
+        It setups a benzene to toluene transformation by first manually assigning partial charges
+        to the ligands before creating the chemical systems, and checking that the generated charges
+        are as expected after setting up the simulation.
         """
         import numpy as np
         from openff.toolkit import Molecule
