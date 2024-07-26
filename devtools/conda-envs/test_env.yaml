@@ -1,4 +1,4 @@
-  name: feflow-test
+name: feflow-test
 channels:
   - conda-forge
   - openeye
