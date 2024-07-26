@@ -29,6 +29,7 @@ from openff.toolkit import Molecule as OFFMolecule
 from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
+from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
 
 # Specific instance of logger for this module
@@ -134,22 +135,23 @@ class SetupUnit(ProtocolUnit):
                 nagl_model=charge_settings.nagl_model,
             )
 
-    def _execute(self, ctx, *, state_a, state_b, mapping, settings, **inputs):
+    def _execute(self, ctx, *, protocol, state_a, state_b, mapping, **inputs):
         """
         Execute the setup part of the nonequilibrium switching protocol.
 
         Parameters
         ----------
-        ctx: gufe.protocols.protocolunit.Context
+        ctx : gufe.protocols.protocolunit.Context
             The gufe context for the unit.
+        protocol : gufe.protocols.Protocol
+            The Protocol used to create this Unit. Contains key information
+            such as the settings.
         state_a : gufe.ChemicalSystem
             The initial chemical system.
         state_b : gufe.ChemicalSystem
             The objective chemical system.
         mapping : gufe.mapping.LigandAtomMapping
             A dict featuring mappings between the two chemical systems.
-        settings : gufe.settings.model.Settings
-            The full settings for the protocol.
 
         Returns
         -------
@@ -188,6 +190,8 @@ class SetupUnit(ProtocolUnit):
         ligand_b = ligand_mapping.componentB
 
         # Get all the relevant settings
+        settings: NonEquilibriumCyclingSettings = protocol.settings
+        # Get settings for system generator
         forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
         integrator_settings = settings.integrator_settings
@@ -471,7 +475,7 @@ class CycleUnit(ProtocolUnit):
 
         return initial_positions, final_positions
 
-    def _execute(self, ctx, *, setup, settings, **inputs):
+    def _execute(self, ctx, *, protocol, setup, **inputs):
         """
         Execute the simulation part of the Nonequilibrium switching protocol using GUFE objects.
 
@@ -479,10 +483,11 @@ class CycleUnit(ProtocolUnit):
         ----------
         ctx : gufe.protocols.protocolunit.Context
             The gufe context for the unit.
-
-        setup :
-        settings : gufe.settings.model.Settings
-            The full settings for the protocol.
+        protocol : gufe.protocols.Protocol
+            The Protocol used to create this Unit. Contains key information
+            such as the settings.
+        setup : gufe.protocols.ProtocolUnit
+            The SetupUnit
 
         Returns
         -------
@@ -515,6 +520,9 @@ class CycleUnit(ProtocolUnit):
         # Get atom indices for either end of the hybrid topology
         initial_atom_indices = setup.outputs["initial_atom_indices"]
         final_atom_indices = setup.outputs["final_atom_indices"]
+
+        # Extract settings from the Protocol
+        settings = protocol.settings
 
         # Set up context
         platform = get_openmm_platform(settings.engine_settings.compute_platform)
@@ -988,17 +996,15 @@ class NonEquilibriumCyclingProtocol(Protocol):
         num_cycles = self.settings.num_cycles
 
         setup = SetupUnit(
+            protocol=self,
             state_a=stateA,
             state_b=stateB,
             mapping=mapping,
-            settings=self.settings,
             name="setup",
         )
 
         simulations = [
-            self._simulation_unit(
-                setup=setup, settings=self.settings, name=f"{replicate}"
-            )
+            self._simulation_unit(protocol=self, setup=setup, name=f"{replicate}")
             for replicate in range(num_cycles)
         ]
 
