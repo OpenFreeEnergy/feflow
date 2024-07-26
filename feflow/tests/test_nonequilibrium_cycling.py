@@ -516,12 +516,13 @@ class TestSetupUnit:
         state_b = ChemicalSystem({"ligand": small_comp_b})
 
         settings = NonEquilibriumCyclingProtocol.default_settings()
+        protocol = NonEquilibriumCyclingProtocol(settings=settings)
 
         setup = SetupUnit(
             state_a=state_a,
             state_b=state_b,
             mapping=mapping,
-            settings=settings,
+            protocol=protocol,
             name="setup_user_charges",
         )
 
