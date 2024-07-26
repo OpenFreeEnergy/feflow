@@ -191,11 +191,6 @@ class SetupUnit(ProtocolUnit):
 
         # Get all the relevant settings
         settings: NonEquilibriumCyclingSettings = protocol.settings
-
-        # Get solvent components
-        solvent_a = state_a.components.get("solvent")
-        # solvent_b = state_b.components.get("solvent")  # Should not be needed
-
         # Get settings for system generator
         forcefield_settings = settings.forcefield_settings
         thermodynamic_settings = settings.thermo_settings
