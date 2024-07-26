@@ -221,6 +221,7 @@ class SetupUnit(ProtocolUnit):
         common_small_mols = {}
         for comp in state_a.components.values():
             # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
+            # NOTE: This relies on gufe key for "equality", important to keep in mind
             if (
                 isinstance(comp, SmallMoleculeComponent)
                 and comp not in all_alchemical_mols
