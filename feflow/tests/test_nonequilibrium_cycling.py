@@ -1,3 +1,4 @@
+import pickle
 from pathlib import Path
 
 import pymbar.utils
@@ -6,7 +7,93 @@ import pytest
 from feflow.protocols import NonEquilibriumCyclingProtocol
 from gufe.protocols.protocoldag import ProtocolDAGResult, execute_DAG
 from gufe.protocols.protocolunit import ProtocolUnitResult
-from gufe.protocols.protocolunit import ProtocolUnitFailure
+
+
+def partial_charges_config():
+    partial_charges_testing_matrix = {
+        "am1bcc": ["ambertools", "openeye"],
+        "am1bccelf10": ["openeye"],
+        # "nagl": ["ambertools", "openeye", "rdkit"],  # TODO: Add NAGL when there are production models
+        "espaloma": ["ambertools", "rdkit"],
+    }
+    # Navigate dictionary and yield method, backend pair
+    for key, value in partial_charges_testing_matrix.items():
+        for val in value:
+            yield key, val
+
+
+def _check_htf_charges(hybrid_topology_factory, charges_state_a, charges_state_b):
+    """
+    Utility function that verifies particle charges and their offsets in the hybrid system.
+
+    This function ensures that the particle charges and their parameter offsets in the hybrid
+    system match the expected values from benzene and toluene random charges.
+
+    The logic is as follows:
+        HTF creates two sets of nonbonded forces, a standard one (for the
+        PME) and a custom one (for sterics).
+        Here we specifically check charges, so we only concentrate on the
+        standard NonbondedForce.
+        The way the NonbondedForce is constructed is as follows:
+        - unique old atoms:
+         * The particle charge is set to the input molA particle charge
+         * The chargeScale offset is set to the negative value of the molA
+           particle charge (such that by scaling you effectively zero out
+           the charge.
+        - unique new atoms:
+         * The particle charge is set to zero (doesn't exist in the starting
+           end state).
+         * The chargeScale offset is set to the value of the molB particle
+           charge (such that by scaling you effectively go from 0 to molB
+           charge).
+        - core atoms:
+         * The particle charge is set to the input molA particle charge
+           (i.e. we start from a system that has molA charges).
+         * The particle charge offset is set to the difference between
+           the molB particle charge and the molA particle charge (i.e.
+           we scale by that difference to get to the value of the molB
+           particle charge).
+    """
+    import numpy as np
+    from openmm import NonbondedForce
+    from openff.units import unit, ensure_quantity
+
+    # get the standard nonbonded force
+    htf = hybrid_topology_factory
+    hybrid_system = htf.hybrid_system
+    nonbond = [f for f in hybrid_system.getForces() if isinstance(f, NonbondedForce)]
+    assert len(nonbond) == 1
+
+    # get the particle parameter offsets
+    c_offsets = {}
+    for i in range(nonbond[0].getNumParticleParameterOffsets()):
+        offset = nonbond[0].getParticleParameterOffset(i)
+        c_offsets[offset[1]] = ensure_quantity(offset[2], "openff")
+
+    for i in range(hybrid_system.getNumParticles()):
+        c, s, e = nonbond[0].getParticleParameters(i)
+        # get the particle charge (c)
+        c = ensure_quantity(c, "openff")
+        # particle charge (c) is equal to molA particle charge
+        # offset (c_offsets) is equal to -(molA particle charge)
+        if i in htf._atom_classes["unique_old_atoms"]:
+            idx = htf._hybrid_to_old_map[i]
+            np.testing.assert_allclose(c, charges_state_a[idx])
+            np.testing.assert_allclose(c_offsets[i], -charges_state_a[idx])
+        # particle charge (c) is equal to 0
+        # offset (c_offsets) is equal to molB particle charge
+        elif i in htf._atom_classes["unique_new_atoms"]:
+            idx = htf._hybrid_to_new_map[i]
+            np.testing.assert_allclose(c, 0 * unit.elementary_charge)
+            np.testing.assert_allclose(c_offsets[i], charges_state_b[idx])
+        # particle charge (c) is equal to molA particle charge
+        # offset (c_offsets) is equal to difference between molB and molA
+        elif i in htf._atom_classes["core_atoms"]:
+            old_i = htf._hybrid_to_old_map[i]
+            new_i = htf._hybrid_to_new_map[i]
+            c_exp = charges_state_b[new_i] - charges_state_a[old_i]
+            np.testing.assert_allclose(c, charges_state_a[old_i])
+            np.testing.assert_allclose(c_offsets[i], c_exp)
 
 
 class TestNonEquilibriumCycling:
@@ -286,3 +373,167 @@ class TestNonEquilibriumCycling:
 
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
     # TODO: Potentially setup (not run) a protein-ligand system
+
+    @pytest.mark.parametrize("method, backend", partial_charges_config())
+    def test_partial_charge_assignation(
+        self,
+        short_settings,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+        method,
+        backend,
+        tmpdir,
+    ):
+        """
+        Test the different options for method and backend for partial charge assignation produces
+        successful protocol runs.
+        """
+        # Deep copy of settings to modify
+        local_settings = short_settings.copy(deep=True)
+        local_settings.partial_charge_settings.partial_charge_method = method
+        local_settings.partial_charge_settings.off_toolkit_backend = backend
+
+        protocol = NonEquilibriumCyclingProtocol(settings=local_settings)
+
+        dag = protocol.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation",
+            mapping=mapping_benzene_toluene,
+        )
+
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            dagresult: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        assert dagresult.ok()
+
+    @pytest.mark.parametrize(
+        "method, backend", [("am1bcc", "rdkit"), ("am1bccelf10", "ambertools")]
+    )
+    def test_failing_partial_charge_assign(
+        self,
+        short_settings,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+        method,
+        backend,
+        tmpdir,
+    ):
+        """
+        Test that incompatible method and backend combinations for partial charge assignation.
+        We expect a ``ValueError`` exception to be raised in these cases.
+        """
+        # Deep copy of settings to modify
+        local_settings = short_settings.copy(deep=True)
+        local_settings.partial_charge_settings.partial_charge_method = method
+        local_settings.partial_charge_settings.off_toolkit_backend = backend
+
+        protocol = NonEquilibriumCyclingProtocol(settings=local_settings)
+
+        dag = protocol.create(
+            stateA=benzene_vacuum_system,
+            stateB=toluene_vacuum_system,
+            name="Short vacuum transformation",
+            mapping=mapping_benzene_toluene,
+        )
+
+        with tmpdir.as_cwd():
+            with pytest.raises(ValueError):
+                shared = Path("shared")
+                shared.mkdir()
+
+                scratch = Path("scratch")
+                scratch.mkdir()
+
+                execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
+
+
+class TestSetupUnit:
+    def test_setup_user_charges(
+        self, benzene_modifications, mapping_benzene_toluene, tmpdir
+    ):
+        """
+        Tests that the charges assigned to the topology are not changed along the way, respecting
+        charges given by the users.
+
+        This test inspects the results of the SetupUnit in the protocol.
+
+        It setups a benzene to toluene transformation by first manually assigning partial charges
+        to the ligands before creating the chemical systems, and checking that the generated charges
+        are as expected after setting up the simulation.
+        """
+        import numpy as np
+        from openff.toolkit import Molecule
+        from openff.units import unit
+        from gufe import ChemicalSystem, Context, LigandAtomMapping
+        from gufe.components import SmallMoleculeComponent
+        from feflow.protocols.nonequilibrium_cycling import SetupUnit
+
+        def _assign_random_partial_charges(offmol: Molecule, seed: int = 42):
+            """
+            Assign random partial charges to given molecule such that the sum of the partial charges
+            equals to the net formal charge of the molecule. This is done by generating random
+            numbers up to n_atoms - 1 and determining the last one such that it complies with the
+            formal charge restriction.
+            """
+            rng = np.random.default_rng(seed)  # Local seeded RNG
+            total_charge = offmol.total_charge.m  # magnitude of formal charge
+            partial_charges = rng.uniform(low=-0.1, high=0.1, size=offmol.n_atoms - 1)
+            charge_diff = total_charge - np.sum(partial_charges)
+            partial_charges = np.append(partial_charges, charge_diff)
+            offmol.partial_charges = partial_charges * unit.elementary_charge
+            return partial_charges
+
+        benzene = Molecule.from_rdkit(benzene_modifications["benzene"])
+        toluene = Molecule.from_rdkit(benzene_modifications["toluene"])
+        # Forcing assignment of partial charges
+        benzene_orig_charges = _assign_random_partial_charges(benzene)
+        toluene_orig_charges = _assign_random_partial_charges(toluene)
+
+        small_comp_a = SmallMoleculeComponent.from_openff(benzene)
+        small_comp_b = SmallMoleculeComponent.from_openff(toluene)
+
+        # IMPORTANT: We need to regenerate mapping because the underlying components changed
+        # when we added the charges.
+        mapping = LigandAtomMapping(
+            componentA=small_comp_a,
+            componentB=small_comp_b,
+            componentA_to_componentB=mapping_benzene_toluene.componentA_to_componentB,
+            annotations=mapping_benzene_toluene.annotations,
+        )
+
+        state_a = ChemicalSystem({"ligand": small_comp_a})
+        state_b = ChemicalSystem({"ligand": small_comp_b})
+
+        settings = NonEquilibriumCyclingProtocol.default_settings()
+
+        setup = SetupUnit(
+            state_a=state_a,
+            state_b=state_b,
+            mapping=mapping,
+            settings=settings,
+            name="setup_user_charges",
+        )
+
+        # Run unit and extract results
+        scratch_path = Path(tmpdir / "scratch")
+        shared_path = Path(tmpdir / "shared")
+        scratch_path.mkdir()
+        shared_path.mkdir()
+        context = Context(scratch=scratch_path, shared=shared_path)
+        setup_result = setup.execute(context=context, **setup.inputs)
+        with open(setup_result.outputs["topology_path"], "rb") as in_file:
+            htf = pickle.load(in_file)
+
+        # Finally check that the charges are as expected
+        _check_htf_charges(htf, benzene_orig_charges, toluene_orig_charges)
