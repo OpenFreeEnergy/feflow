@@ -913,14 +913,25 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self,
         stateA: ChemicalSystem,
         stateB: ChemicalSystem,
-        mapping: Optional[dict[str, ComponentMapping]] = None,
+        mapping: Optional[ComponentMapping],
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
-        # Handle parameters
-        if mapping is None:
-            raise ValueError("`mapping` is required for this Protocol")
+        from feflow.utils import system_validation
+        # TODO: enable extending https://github.com/choderalab/feflow/pull/44
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
+
+        # TODO: Validate mapping -- comps gufe keys are the same
+        system_validation.validate_mappings(stateA, stateB, mapping)
+
+        # Validate alchemical components
+        alchem_comps = system_validation.get_alchemical_components(stateA, stateB)
+        system_validation.validate_alchemical_components(alchem_comps, mapping)
+
+        # Validate protein and solvent components
+        system_validation.validate_protein(stateA)
+        nonbonded = self.settings.forcefield_settings.nonbonded_method
+        system_validation.validate_solvent(stateA, nonbonded)
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
