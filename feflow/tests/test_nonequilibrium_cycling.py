@@ -61,35 +61,34 @@ def _check_htf_charges(hybrid_topology_factory, charges_state_a, charges_state_b
     # get the standard nonbonded force
     htf = hybrid_topology_factory
     hybrid_system = htf.hybrid_system
-    nonbond = [f for f in hybrid_system.getForces()
-               if isinstance(f, NonbondedForce)]
+    nonbond = [f for f in hybrid_system.getForces() if isinstance(f, NonbondedForce)]
     assert len(nonbond) == 1
 
     # get the particle parameter offsets
     c_offsets = {}
     for i in range(nonbond[0].getNumParticleParameterOffsets()):
         offset = nonbond[0].getParticleParameterOffset(i)
-        c_offsets[offset[1]] = ensure_quantity(offset[2], 'openff')
+        c_offsets[offset[1]] = ensure_quantity(offset[2], "openff")
 
     for i in range(hybrid_system.getNumParticles()):
         c, s, e = nonbond[0].getParticleParameters(i)
         # get the particle charge (c)
-        c = ensure_quantity(c, 'openff')
+        c = ensure_quantity(c, "openff")
         # particle charge (c) is equal to molA particle charge
         # offset (c_offsets) is equal to -(molA particle charge)
-        if i in htf._atom_classes['unique_old_atoms']:
+        if i in htf._atom_classes["unique_old_atoms"]:
             idx = htf._hybrid_to_old_map[i]
             np.testing.assert_allclose(c, charges_state_a[idx])
             np.testing.assert_allclose(c_offsets[i], -charges_state_a[idx])
         # particle charge (c) is equal to 0
         # offset (c_offsets) is equal to molB particle charge
-        elif i in htf._atom_classes['unique_new_atoms']:
+        elif i in htf._atom_classes["unique_new_atoms"]:
             idx = htf._hybrid_to_new_map[i]
             np.testing.assert_allclose(c, 0 * unit.elementary_charge)
             np.testing.assert_allclose(c_offsets[i], charges_state_b[idx])
         # particle charge (c) is equal to molA particle charge
         # offset (c_offsets) is equal to difference between molB and molA
-        elif i in htf._atom_classes['core_atoms']:
+        elif i in htf._atom_classes["core_atoms"]:
             old_i = htf._hybrid_to_old_map[i]
             new_i = htf._hybrid_to_new_map[i]
             c_exp = charges_state_b[new_i] - charges_state_a[old_i]
@@ -464,14 +463,14 @@ class TestSetupUnit:
         self, benzene_modifications, mapping_benzene_toluene, tmpdir
     ):
         """
-    Tests that the charges assigned to the topology are not changed along the way, respecting
-        charges given by the users.
+        Tests that the charges assigned to the topology are not changed along the way, respecting
+            charges given by the users.
 
-        This test inspects the results of the SetupUnit in the protocol.
+            This test inspects the results of the SetupUnit in the protocol.
 
-        It setups a benzene to toluene transformation by first manually assigning partial charges
-        to the ligands before creating the chemical systems, and checking that the generated charges
-        are as expected after setting up the simulation.
+            It setups a benzene to toluene transformation by first manually assigning partial charges
+            to the ligands before creating the chemical systems, and checking that the generated charges
+            are as expected after setting up the simulation.
         """
         import numpy as np
         from openff.toolkit import Molecule
@@ -506,9 +505,12 @@ class TestSetupUnit:
 
         # IMPORTANT: We need to regenerate mapping because the underlying components changed
         # when we added the charges.
-        mapping = LigandAtomMapping(componentA=small_comp_a, componentB=small_comp_b,
-                                    componentA_to_componentB=mapping_benzene_toluene.componentA_to_componentB,
-                                    annotations=mapping_benzene_toluene.annotations)
+        mapping = LigandAtomMapping(
+            componentA=small_comp_a,
+            componentB=small_comp_b,
+            componentA_to_componentB=mapping_benzene_toluene.componentA_to_componentB,
+            annotations=mapping_benzene_toluene.annotations,
+        )
 
         state_a = ChemicalSystem({"ligand": small_comp_a})
         state_b = ChemicalSystem({"ligand": small_comp_b})
@@ -524,7 +526,7 @@ class TestSetupUnit:
         )
 
         # Run unit and extract results
-        scratch_path = Path(tmpdir/"scratch")
+        scratch_path = Path(tmpdir / "scratch")
         shared_path = Path(tmpdir / "shared")
         scratch_path.mkdir()
         shared_path.mkdir()
@@ -535,4 +537,3 @@ class TestSetupUnit:
 
         # Finally check that the charges are as expected
         _check_htf_charges(htf, benzene_orig_charges, toluene_orig_charges)
-
