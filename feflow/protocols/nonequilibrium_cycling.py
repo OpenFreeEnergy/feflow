@@ -190,7 +190,7 @@ class SetupUnit(ProtocolUnit):
         ligand_b = ligand_mapping.componentB
 
         # Get all the relevant settings
-        settings: NonEquilibriumCyclingSettings = self.protocol.settings
+        settings: NonEquilibriumCyclingSettings = protocol.settings
 
         # Get solvent components
         solvent_a = state_a.components.get("solvent")
