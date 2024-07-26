@@ -917,6 +917,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
         from feflow.utils import system_validation
+
         # TODO: enable extending https://github.com/choderalab/feflow/pull/44
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
