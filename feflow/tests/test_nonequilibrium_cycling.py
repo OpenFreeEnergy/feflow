@@ -13,7 +13,7 @@ def partial_charges_config():
     partial_charges_testing_matrix = {
         "am1bcc": ["ambertools", "openeye"],
         "am1bccelf10": ["openeye"],
-        "nagl": ["ambertools", "openeye", "rdkit"],
+        # "nagl": ["ambertools", "openeye", "rdkit"],  # TODO: Add NAGL when there are production models
         "espaloma": ["ambertools", "rdkit"],
     }
     # Navigate dictionary and yield method, backend pair
