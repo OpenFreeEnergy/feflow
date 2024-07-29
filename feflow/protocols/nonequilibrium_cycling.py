@@ -33,7 +33,7 @@ from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
 
 # Specific instance of logger for this module
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SetupUnit(ProtocolUnit):
