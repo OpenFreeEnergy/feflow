@@ -26,7 +26,7 @@ Project based on the
 [2] Identifying and Overcoming the Sampling Challenges in Relative Binding Free Energy Calculations of a Model Protein:Protein Complex
 Ivy Zhang, Dominic A. Rufa, Iván Pulido, Michael M. Henry, Laura E. Rosen, Kevin Hauser, Sukrit Singh, and John D. Chodera
 Journal of Chemical Theory and Computation 2023 19 (15), 4863-4882
-DOI: 10.1021/acs.jctc.3c00333 
+DOI: 10.1021/acs.jctc.3c00333
 
 [3] Chodera, J. et al., 2023. choderalab/openmmtools: 0.23.1.
 

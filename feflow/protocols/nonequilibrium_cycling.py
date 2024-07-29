@@ -41,6 +41,7 @@ class SetupUnit(ProtocolUnit):
     Initial unit of the protocol. Sets up a Nonequilibrium cycling simulation given the chemical
     systems, mapping and settings.
     """
+
     @staticmethod
     def _check_states_compatibility(state_a, state_b):
         """
