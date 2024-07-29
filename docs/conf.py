@@ -24,10 +24,10 @@ import feflow
 
 project = "feflow"
 copyright = (
-    "2023, Iván Pulido. Project structure based on the "
+    "2023, ChoderaLab. Project structure based on the "
     "Computational Molecular Science Python Cookiecutter version 1.1"
 )
-author = "Iván Pulido"
+author = "ChoderaLab"
 
 # The short X.Y version
 version = ""

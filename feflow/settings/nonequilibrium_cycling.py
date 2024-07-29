@@ -1,8 +1,5 @@
 """
 Settings objects for the different protocols using gufe objects.
-
-This module implements the objects that will be needed to run relative binding free
-energy calculations using perses.
 """
 
 from typing import Optional
