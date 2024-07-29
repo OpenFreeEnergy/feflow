@@ -1,0 +1,31 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: FEflow
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Iván
+    family-names: Pulido Sánchez
+    orcid: 'https://orcid.org/0000-0002-7178-8136'
+  - given-names: Irfan
+    family-names: Alibay
+    orcid: 'https://orcid.org/0000-0001-5787-9130'
+  - given-names: David
+    family-names: Dotson
+    orcid: 'https://orcid.org/0000-0001-5879-2942'
+  - given-names: Richard
+    family-names: Gowers
+    orcid: 'https://orcid.org/0000-0002-3241-1846'
+  - given-names: Hannah
+    family-names: Baumann
+    orcid: 'https://orcid.org/0000-0002-1736-7744'
+  - given-names: Michael M.
+    family-names: Henry
+    orcid: 'https://orcid.org/0000-0002-3870-9993'
+repository-code: 'https://github.com/choderalab/feflow'
+version: '0.1'
+date-released: '2024-07-29'
