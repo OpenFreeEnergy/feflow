@@ -33,10 +33,15 @@ from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
 
 # Specific instance of logger for this module
-# logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class SetupUnit(ProtocolUnit):
+    """
+    Initial unit of the protocol. Sets up a Nonequilibrium cycling simulation given the chemical
+    systems, mapping and settings.
+    """
+
     @staticmethod
     def _check_states_compatibility(state_a, state_b):
         """
@@ -431,8 +436,9 @@ class SetupUnit(ProtocolUnit):
 
 class CycleUnit(ProtocolUnit):
     """
-    Monolithic unit for simulation. It runs a single NEQ cycle simulation from chemical systems
-    and stores the work computed in numpy-formatted files, to be analyzed by a result unit.
+    Monolithic unit for the cycle part of the simulation.
+    It runs a number of NEq cycles from the outputs of a setup unit and stores the work computed in
+    numpy-formatted files, to be analyzed by a result unit.
     """
 
     @staticmethod

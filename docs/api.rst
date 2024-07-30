@@ -1,7 +1,13 @@
 API Documentation
 =================
 
-.. autosummary::
-   :toctree: autosummary
+.. module:: feflow
+    :no-index:
 
-   feflow.canvas
+.. autosummary::
+    :toctree: autosummary
+    :recursive:
+
+    feflow.protocols
+    feflow.settings
+    feflow.utils
