@@ -1,0 +1,7 @@
+$PROJECT = $GITHUB_REPO = 'feflow'
+$GITHUB_ORG = 'choderalab'
+
+$ACTIVITIES = ['changelog']
+
+$CHANGELOG_FILENAME = 'docs/CHANGELOG.rst'
+$CHANGELOG_TEMPLATE = 'TEMPLATE.rst'

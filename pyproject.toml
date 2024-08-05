@@ -55,7 +55,8 @@ zip-safe = false
 # (instead of using 'find'). With 'find', the 'tests' subpackage is discovered
 # recursively because of its __init__.py file, but the data subdirectory is excluded
 # with include-package-data = false and namespaces = false.
-include-package-data = false
+include-package-data = true
+
 [tool.setuptools.packages.find]
 namespaces = false
 where = ["."]
@@ -63,8 +64,9 @@ where = ["."]
 # Ref https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
 [tool.setuptools.package-data]
 feflow = [
-    "py.typed"
+    "py.typed",
 ]
+#"feflow.data.host-guest" = ["*.json"]
 
 [tool.versioningit]
 default-version = "0.1.0+unknown"

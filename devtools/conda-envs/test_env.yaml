@@ -9,12 +9,15 @@ dependencies:
   - openfe >=0.15  # TODO: Remove once we don't depend on openfe
   - openff-units
   - openmm
+  - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
   - pymbar <4
   - pydantic=1  # TODO: Modify when we support pydantic 2
   - python
 
-    # Testing
+    # Testing (optional deps)
+  - espaloma_charge  # To us Espaloma FF in tests
   - openeye-toolkits
+  - openff-nagl  # To use OpenFF's NAGL forcefield in tests
   - openmoltools  # TODO: Remove once we refactor tests
   - perses  # TODO: Remove once we don't depend on perses for tests
   - pytest
