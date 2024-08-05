@@ -65,6 +65,24 @@ def toluene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["toluene"])
 
 
+@pytest.fixture(scope="session")
+def ty2_protein():
+    filepath = files("feflow.tests.data").joinpath("tyk2_example.pdb")
+    return gufe.ProteinComponent.from_pdb_file(str(filepath))
+
+
+@pytest.fixture(scope="session")
+def tyk2_ligand_ejm_54():
+    filepath = files("feflow.tests.data").joinpath("tyk2_lig_ejm_54.sdf")
+    return gufe.SmallMoleculeComponent.from_pdb_file(str(filepath))
+
+
+@pytest.fixture(scope="session")
+def tyk2_ligand_ejm_46():
+    filepath = files("feflow.tests.data").joinpath("tyk2_lig_ejm_46.sdf")
+    return gufe.SmallMoleculeComponent.from_pdb_file(str(filepath))
+
+
 # Systems fixtures
 
 
@@ -103,6 +121,7 @@ def short_settings():
     settings.integrator_settings.nonequilibrium_steps = 250
     settings.work_save_frequency = 50
     settings.traj_save_frequency = 250
+    settings.num_cycles = 1
 
     return settings
 
@@ -218,3 +237,11 @@ def broken_mapping(benzene, toluene):
         componentA_to_componentB=broken_mapping,
     )
     return broken_mapping_obj
+
+
+@pytest.fixture
+def mapping_tyk2_54_to_46(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46):
+    """
+    Mapping object from ligand ejm_54 to ejm_46 for the Tyk2 dataset.
+    """
+    return NotImplementedError

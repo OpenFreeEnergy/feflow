@@ -374,6 +374,13 @@ class TestNonEquilibriumCycling:
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
     # TODO: Potentially setup (not run) a protein-ligand system
 
+    def test_tyk2_complex       (self, protocol_short, tyk2_protein, tyk2_ligand_ejm_54, tyk2_ligand_ejm_46, mapping_tyk2_54_to_46 , tmpdir):
+        """
+        Run the protocol with single transformation between ligands ejm_54 and ejm_46
+        from the tyk2 dataset.
+        """
+        return NotImplementedError
+
     @pytest.mark.parametrize("method, backend", partial_charges_config())
     def test_partial_charge_assignation(
         self,
