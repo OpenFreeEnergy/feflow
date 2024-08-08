@@ -10,7 +10,7 @@ from feflow.settings import (
 )
 
 from gufe.settings import Settings
-from pydantic import root_validator
+from pydantic import root_validator, Field
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
@@ -81,6 +81,15 @@ class NonEquilibriumCyclingSettings(Settings):
     atom_selection_expression: str = "not water"  # TODO: no longer used
 
     num_cycles: int = 100  # Number of cycles to run
+
+    # control where to perform energy minimization; used in particular on
+    # Folding@Home to defer energy minimization so it is performed on volunteer
+    # hosts
+    defer_minimization: bool = Field(
+        False,
+        description="If ``True``, perform energy minimization in CycleUnit; if ``False``, perform it in SetupUnit."
+    )
+
 
     @root_validator
     def save_frequencies_consistency(cls, values):
