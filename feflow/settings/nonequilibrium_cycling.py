@@ -87,9 +87,8 @@ class NonEquilibriumCyclingSettings(Settings):
     # hosts
     defer_minimization: bool = Field(
         False,
-        description="If ``True``, perform energy minimization in CycleUnit; if ``False``, perform it in SetupUnit."
+        description="If ``True``, perform energy minimization in CycleUnit; if ``False``, perform it in SetupUnit.",
     )
-
 
     @root_validator
     def save_frequencies_consistency(cls, values):

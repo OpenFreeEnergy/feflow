@@ -507,8 +507,6 @@ class CycleUnit(ProtocolUnit):
         import openmm.unit as openmm_unit
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
 
-
-
         # Setting up logging to file in shared filesystem
         file_logger = logging.getLogger("neq-cycling")
         output_log_path = ctx.shared / "perses-neq-cycling.log"
