@@ -6,10 +6,7 @@ would be shared between different integrators, and subclasses of it
 for the specific integrator settings.
 """
 
-try:
-    from pydantic.v1 import validator
-except ImportError:
-    from pydantic import validator  # type: ignore[assignment]
+from pydantic.v1 import validator
 
 from openff.units import unit
 from openff.models.types import FloatQuantity
