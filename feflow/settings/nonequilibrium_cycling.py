@@ -10,7 +10,7 @@ from feflow.settings import (
 )
 
 from gufe.settings import Settings
-from pydantic import root_validator, Field
+from pydantic.v1 import root_validator, Field
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
