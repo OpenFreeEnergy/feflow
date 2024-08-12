@@ -82,14 +82,6 @@ class NonEquilibriumCyclingSettings(Settings):
 
     num_cycles: int = 100  # Number of cycles to run
 
-    # control where to perform energy minimization; used in particular on
-    # Folding@Home to defer energy minimization so it is performed on volunteer
-    # hosts
-    defer_minimization: bool = Field(
-        False,
-        description="If ``True``, perform energy minimization in CycleUnit; if ``False``, perform it in SetupUnit.",
-    )
-
     @root_validator
     def save_frequencies_consistency(cls, values):
         """Checks trajectory save frequency is a multiple of work save frequency, for convenience"""
