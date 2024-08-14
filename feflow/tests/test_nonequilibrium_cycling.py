@@ -372,8 +372,8 @@ class TestNonEquilibriumCycling:
             pass
 
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
-    # TODO: Potentially setup (not run) a protein-ligand system
 
+    @pytest.mark.slow
     def test_tyk2_complex(
         self,
         protocol_short,
