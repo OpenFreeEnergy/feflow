@@ -2551,8 +2551,7 @@ class HybridTopologyFactory:
         The positions are assigned by first copying all the mapped positions
         from the old system in, then copying the
         mapped positions from the new system. This means that there is an
-        assumption that the positions common to old and new are the same
-        (which is the case for perses as-is).
+        assumption that the positions common to old and new are the same.
 
         Returns
         -------

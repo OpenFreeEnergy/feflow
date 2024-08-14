@@ -450,7 +450,7 @@ class CycleUnit(ProtocolUnit):
         ----------
         context: openmm.Context
             Current simulation context where from extract positions.
-        hybrid_topology_factory: perses.annihilation.relative.HybridTopologyFactory
+        hybrid_topology_factory: HybridTopologyFactory
             Hybrid topology factory where to extract positions and mapping information
 
         Returns
@@ -508,7 +508,7 @@ class CycleUnit(ProtocolUnit):
 
         # Setting up logging to file in shared filesystem
         file_logger = logging.getLogger("neq-cycling")
-        output_log_path = ctx.shared / "perses-neq-cycling.log"
+        output_log_path = ctx.shared / "feflow-neq-cycling.log"
         file_handler = logging.FileHandler(output_log_path, mode="w")
         file_handler.setLevel(logging.DEBUG)  # TODO: Set to INFO in production
         log_formatter = logging.Formatter(
