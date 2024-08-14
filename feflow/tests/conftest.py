@@ -50,7 +50,7 @@ def benzene_modifications(gufe_data_dir):
 # Components fixtures
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def solvent_comp():
     yield gufe.SolventComponent(positive_ion="Na", negative_ion="Cl")
 
@@ -66,8 +66,8 @@ def toluene(benzene_modifications):
 
 
 @pytest.fixture(scope="session")
-def ty2_protein():
-    filepath = files("feflow.tests.data").joinpath("tyk2_example.pdb")
+def tyk2_protein():
+    filepath = files("feflow.tests.data").joinpath("tyk2_protein.pdb")
     return gufe.ProteinComponent.from_pdb_file(str(filepath))
 
 
@@ -114,7 +114,7 @@ def tyk2_lig_ejm_46_complex(tyk2_protein, tyk2_ligand_ejm_46, solvent_comp):
 
 
 @pytest.fixture
-def tyk2_lig_ejm_54_complex(tyk2_protein, tyk2_ligand_ejm_54):
+def tyk2_lig_ejm_54_complex(tyk2_protein, tyk2_ligand_ejm_54, solvent_comp):
     return gufe.ChemicalSystem(
         {"protein": tyk2_protein, "ligand": tyk2_ligand_ejm_54, "solvent": solvent_comp}
     )
