@@ -374,7 +374,14 @@ class TestNonEquilibriumCycling:
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
     # TODO: Potentially setup (not run) a protein-ligand system
 
-    def test_tyk2_complex(self, protocol_short, tyk2_lig_ejm_54_complex, tyk2_lig_ejm_46_complex, mapping_tyk2_54_to_46, tmpdir):
+    def test_tyk2_complex(
+        self,
+        protocol_short,
+        tyk2_lig_ejm_54_complex,
+        tyk2_lig_ejm_46_complex,
+        mapping_tyk2_54_to_46,
+        tmpdir,
+    ):
         """
         Run the protocol with single transformation between ligands ejm_54 and ejm_46
         from the tyk2 dataset.
@@ -393,7 +400,9 @@ class TestNonEquilibriumCycling:
             scratch.mkdir()
 
             dagresult = execute_DAG(
-                dag, shared_basedir=shared, scratch_basedir=scratch,
+                dag,
+                shared_basedir=shared,
+                scratch_basedir=scratch,
             )
 
         # Check that the dag was executed correctly

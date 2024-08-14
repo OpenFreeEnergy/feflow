@@ -105,22 +105,19 @@ def toluene_vacuum_system(toluene):
 def toluene_solvent_system(toluene, solvent_comp):
     return gufe.ChemicalSystem({"ligand": toluene, "solvent": solvent_comp})
 
+
 @pytest.fixture
 def tyk2_lig_ejm_46_complex(tyk2_protein, tyk2_ligand_ejm_46, solvent_comp):
-    return gufe.ChemicalSystem({
-        "protein": tyk2_protein,
-        "ligand": tyk2_ligand_ejm_46,
-        "solvent": solvent_comp
-    })
+    return gufe.ChemicalSystem(
+        {"protein": tyk2_protein, "ligand": tyk2_ligand_ejm_46, "solvent": solvent_comp}
+    )
 
 
 @pytest.fixture
 def tyk2_lig_ejm_54_complex(tyk2_protein, tyk2_ligand_ejm_54):
-    return gufe.ChemicalSystem({
-        "protein": tyk2_protein,
-        "ligand": tyk2_ligand_ejm_54,
-        "solvent": solvent_comp
-    })
+    return gufe.ChemicalSystem(
+        {"protein": tyk2_protein, "ligand": tyk2_ligand_ejm_54, "solvent": solvent_comp}
+    )
 
 
 # Settings fixtures
@@ -266,6 +263,8 @@ def mapping_tyk2_54_to_46(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46):
     from kartograf import KartografAtomMapper
 
     atom_mapper = KartografAtomMapper()
-    mapping_obj = next(atom_mapper.suggest_mappings(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46))
+    mapping_obj = next(
+        atom_mapper.suggest_mappings(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46)
+    )
 
     return mapping_obj
