@@ -374,12 +374,30 @@ class TestNonEquilibriumCycling:
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
     # TODO: Potentially setup (not run) a protein-ligand system
 
-    def test_tyk2_complex       (self, protocol_short, tyk2_protein, tyk2_ligand_ejm_54, tyk2_ligand_ejm_46, mapping_tyk2_54_to_46 , tmpdir):
+    def test_tyk2_complex(self, protocol_short, tyk2_lig_ejm_54_complex, tyk2_lig_ejm_46_complex, mapping_tyk2_54_to_46, tmpdir):
         """
         Run the protocol with single transformation between ligands ejm_54 and ejm_46
         from the tyk2 dataset.
         """
-        return NotImplementedError
+        dag = protocol_short.create(
+            stateA=tyk2_lig_ejm_54_complex,
+            stateB=tyk2_lig_ejm_46_complex,
+            name="Short protein-ligand complex transformation",
+            mapping=mapping_tyk2_54_to_46,
+        )
+
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            dagresult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch,
+            )
+
+        # Check that the dag was executed correctly
+        assert dagresult.ok(), f"DAG was not executed correctly."
 
     @pytest.mark.parametrize("method, backend", partial_charges_config())
     def test_partial_charge_assignation(

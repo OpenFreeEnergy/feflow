@@ -74,13 +74,13 @@ def ty2_protein():
 @pytest.fixture(scope="session")
 def tyk2_ligand_ejm_54():
     filepath = files("feflow.tests.data").joinpath("tyk2_lig_ejm_54.sdf")
-    return gufe.SmallMoleculeComponent.from_pdb_file(str(filepath))
+    return gufe.SmallMoleculeComponent.from_sdf_file(str(filepath))
 
 
 @pytest.fixture(scope="session")
 def tyk2_ligand_ejm_46():
     filepath = files("feflow.tests.data").joinpath("tyk2_lig_ejm_46.sdf")
-    return gufe.SmallMoleculeComponent.from_pdb_file(str(filepath))
+    return gufe.SmallMoleculeComponent.from_sdf_file(str(filepath))
 
 
 # Systems fixtures
@@ -104,6 +104,23 @@ def toluene_vacuum_system(toluene):
 @pytest.fixture
 def toluene_solvent_system(toluene, solvent_comp):
     return gufe.ChemicalSystem({"ligand": toluene, "solvent": solvent_comp})
+
+@pytest.fixture
+def tyk2_lig_ejm_46_complex(tyk2_protein, tyk2_ligand_ejm_46, solvent_comp):
+    return gufe.ChemicalSystem({
+        "protein": tyk2_protein,
+        "ligand": tyk2_ligand_ejm_46,
+        "solvent": solvent_comp
+    })
+
+
+@pytest.fixture
+def tyk2_lig_ejm_54_complex(tyk2_protein, tyk2_ligand_ejm_54):
+    return gufe.ChemicalSystem({
+        "protein": tyk2_protein,
+        "ligand": tyk2_ligand_ejm_54,
+        "solvent": solvent_comp
+    })
 
 
 # Settings fixtures
@@ -243,5 +260,12 @@ def broken_mapping(benzene, toluene):
 def mapping_tyk2_54_to_46(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46):
     """
     Mapping object from ligand ejm_54 to ejm_46 for the Tyk2 dataset.
+
+    It generates the mapping on runtime using the Kartograf mapper.
     """
-    return NotImplementedError
+    from kartograf import KartografAtomMapper
+
+    atom_mapper = KartografAtomMapper()
+    mapping_obj = next(atom_mapper.suggest_mappings(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46))
+
+    return mapping_obj
