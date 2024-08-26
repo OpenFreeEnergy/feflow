@@ -232,7 +232,6 @@ class TestNonEquilibriumCycling:
     #             )
 
     @pytest.mark.gpu_ci
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "protocol",
         [
@@ -296,7 +295,6 @@ class TestNonEquilibriumCycling:
         # print(f"Free energy = {fe_estimate} +/- {fe_error}") # DEBUG
 
     @pytest.mark.gpu_ci
-    @pytest.mark.slow
     @pytest.mark.parametrize(
         "protocol",
         [
