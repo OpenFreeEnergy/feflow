@@ -22,7 +22,7 @@ jobs:
         with:
           provider: "aws"
           action: "start"
-          aws_image_id: ami-053912f3a44543f8c 
+          aws_image_id: ami-053912f3a44543f8c
           aws_instance_type: g4dn.xlarge
           aws_region_name: us-east-1
           aws_home_dir: /home/ubuntu
@@ -31,7 +31,7 @@ jobs:
 
   self-hosted-test:
     runs-on: self-hosted
-    timeout-minutes: 720  # 12 hours  
+    timeout-minutes: 720  # 12 hours
     defaults:
       run:
         shell: bash -leo pipefail {0}
