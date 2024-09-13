@@ -386,7 +386,6 @@ class SetupUnit(ProtocolUnit):
         with open(htf_outfile, "wb") as htf_file:
             pickle.dump(hybrid_factory, htf_file)
 
-
         return {
             "system": system_outfile,
             "positions": positions_outfile,
@@ -398,7 +397,7 @@ class SetupUnit(ProtocolUnit):
 
 
 class IntegratorSetupUnit(ProtocolUnit):
-    def _execute(ctx: Context, setup, **inputs) -> Dict[str, Any]:
+    def _execute(ctx: Context, setup, **inputs) -> dict[str, Any]:
         integrator_settings = settings.integrator_settings
         integrator = PeriodicNonequilibriumIntegrator(
             alchemical_functions=settings.lambda_functions,
