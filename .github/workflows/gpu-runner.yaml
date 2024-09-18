@@ -1,6 +1,8 @@
 name: Self-Hosted Runner
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly at 00:00 on Sundays
 
 jobs:
   start-aws-runner:
@@ -14,8 +16,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::009563297724:role/gha-runner-omsf
-          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::010438489691:role/GHARunnerAWS
+          aws-region: us-east-2
       - name: Create cloud runner
         id: aws-start
         uses: omsf-eco-infra/gha-runner@v0.2.0
@@ -24,7 +26,7 @@ jobs:
           action: "start"
           aws_image_id: ami-053912f3a44543f8c
           aws_instance_type: g4dn.xlarge
-          aws_region_name: us-east-1
+          aws_region_name: us-east-2
           aws_home_dir: /home/ubuntu
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
@@ -97,14 +99,14 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::009563297724:role/gha-runner-omsf
-          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::010438489691:role/GHARunnerAWS
+          aws-region: us-east-2
       - name: Stop instances
         uses: omsf-eco-infra/gha-runner@v0.2.0
         with:
           provider: "aws"
           action: "stop"
           instance_mapping: ${{ needs.start-aws-runner.outputs.mapping }}
-          aws_region_name: us-east-1
+          aws_region_name: us-east-2
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
