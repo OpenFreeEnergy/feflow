@@ -2551,8 +2551,7 @@ class HybridTopologyFactory:
         The positions are assigned by first copying all the mapped positions
         from the old system in, then copying the
         mapped positions from the new system. This means that there is an
-        assumption that the positions common to old and new are the same
-        (which is the case for perses as-is).
+        assumption that the positions common to old and new are the same.
 
         Returns
         -------
@@ -2729,14 +2728,15 @@ class HybridTopologyFactory:
             hybrid_atom = hybrid_top.addAtom(at.name, at.element, hybrid_residue, at.id)
 
         # Next we deal with bonds
+        hybrid_top_atom_list = list(hybrid_top.atoms())
         # First we add in all the old topology bonds
         for bond in self._old_topology.bonds():
             at1 = self.old_to_hybrid_atom_map[bond.atom1.index]
             at2 = self.old_to_hybrid_atom_map[bond.atom2.index]
 
             hybrid_top.addBond(
-                list(hybrid_top.atoms())[at1],
-                list(hybrid_top.atoms())[at2],
+                hybrid_top_atom_list[at1],
+                hybrid_top_atom_list[at2],
                 bond.type,
                 bond.order,
             )
@@ -2750,8 +2750,8 @@ class HybridTopologyFactory:
                 at2 in self._atom_classes["unique_new_atoms"]
             ):
                 hybrid_top.addBond(
-                    list(hybrid_top.atoms())[at1],
-                    list(hybrid_top.atoms())[at2],
+                    hybrid_top_atom_list[at1],
+                    hybrid_top_atom_list[at2],
                     bond.type,
                     bond.order,
                 )

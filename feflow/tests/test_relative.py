@@ -1177,7 +1177,7 @@ def run_unsampled_endstate_energies(use_point_energies=True, use_md_energies=Fal
 
 
 @pytest.mark.gpu_needed
-@pytest.mark.skip(reason="Skip expensive. Needs GPU.")
+@pytest.mark.slow
 def test_unsampled_endstate_energies_GPU():
     """
     Uses run_unsampled_endstate_energies() to run energy validation for the unsampled endstates generated for
