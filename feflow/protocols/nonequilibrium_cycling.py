@@ -1,6 +1,6 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, Any, Union
 from collections.abc import Iterable
 from itertools import chain
 
@@ -988,7 +988,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self,
         stateA: ChemicalSystem,
         stateB: ChemicalSystem,
-        mapping: Optional[dict[str, ComponentMapping]] = None,
+        mapping: Optional[Union[ComponentMapping, list[ComponentMapping]]] = None,
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
         # Handle parameters
@@ -996,6 +996,8 @@ class NonEquilibriumCyclingProtocol(Protocol):
             raise ValueError("`mapping` is required for this Protocol")
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
+
+        mapping = mapping[0] if isinstance(mapping, list) else mapping  # type: ignore
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
