@@ -991,12 +991,21 @@ class NonEquilibriumCyclingProtocol(Protocol):
         mapping: Optional[Union[ComponentMapping, list[ComponentMapping]]] = None,
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
+        from openfe.protocols.openmm_rfe.equil_rfe_methods import (
+            _validate_alchemical_components,
+        )
+        from openfe.protocols.openmm_utils import system_validation
+
         # Handle parameters
         if mapping is None:
             raise ValueError("`mapping` is required for this Protocol")
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
 
+        # Get alchemical components & validate them + mapping
+        alchem_comps = system_validation.get_alchemical_components(stateA, stateB)
+        # raise an error if we have more than one mapping
+        _validate_alchemical_components(alchem_comps, mapping)
         mapping = mapping[0] if isinstance(mapping, list) else mapping  # type: ignore
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects

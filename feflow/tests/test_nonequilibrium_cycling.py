@@ -491,6 +491,27 @@ class TestNonEquilibriumCycling:
 
                 execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
 
+    def test_error_with_multiple_mappings(
+        self,
+        protocol_short,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+    ):
+        """
+        Make sure that when a list of mappings is passed that an error is raised.
+        """
+
+        with pytest.raises(
+            ValueError, match="A single LigandAtomMapping is expected for this Protocol"
+        ):
+            _ = protocol_short.create(
+                stateA=benzene_vacuum_system,
+                stateB=toluene_vacuum_system,
+                name="Test protocol",
+                mapping=[mapping_benzene_toluene, mapping_benzene_toluene],
+            )
+
 
 class TestSetupUnit:
     def test_setup_user_charges(
