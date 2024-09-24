@@ -23,7 +23,7 @@ defaults:
 jobs:
   tests:
     runs-on: ${{ matrix.os }}-latest
-    name: "💻-${{matrix.os }} 🐍-${{ matrix.python-version }}"
+    name: "💻-${{matrix.os }} 🐍-${{ matrix.python-version }} OpenFE RC"
     strategy:
       fail-fast: false
       matrix:
