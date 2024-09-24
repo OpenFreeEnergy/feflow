@@ -303,7 +303,13 @@ class TestNonEquilibriumCycling:
         ],
     )
     def test_create_execute_gather_toluene_to_toluene(
-        self, protocol, toluene_vacuum_system, mapping_toluene_toluene, tmpdir, request
+        self,
+        protocol,
+        toluene_vacuum_system,
+        mapping_toluene_toluene,
+        tmpdir,
+        request,
+        toluene,
     ):
         """
         Perform 20 independent simulations of the NEQ cycling protocol for the toluene to toluene
@@ -324,10 +330,16 @@ class TestNonEquilibriumCycling:
         import numpy as np
 
         protocol = request.getfixturevalue(protocol)
-
+        # rename the components
+        toluene_state_a = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_a")}
+        )
+        toluene_state_b = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_b")}
+        )
         dag = protocol.create(
-            stateA=toluene_vacuum_system,
-            stateB=toluene_vacuum_system,
+            stateA=toluene_state_a,
+            stateB=toluene_state_b,
             name="Toluene vacuum transformation",
             mapping=mapping_toluene_toluene,
         )

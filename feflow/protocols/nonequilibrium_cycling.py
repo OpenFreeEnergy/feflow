@@ -996,12 +996,10 @@ class NonEquilibriumCyclingProtocol(Protocol):
         )
         from openfe.protocols.openmm_utils import system_validation
 
-        # Handle parameters
-        if mapping is None:
-            raise ValueError("`mapping` is required for this Protocol")
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
 
+        # Do manual validation until it is part of the protocol
         # Get alchemical components & validate them + mapping
         alchem_comps = system_validation.get_alchemical_components(stateA, stateB)
         # raise an error if we have more than one mapping
