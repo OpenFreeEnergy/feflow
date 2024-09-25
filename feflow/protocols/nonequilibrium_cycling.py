@@ -1,6 +1,6 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, Any, Union
 from collections.abc import Iterable
 from itertools import chain
 
@@ -988,14 +988,23 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self,
         stateA: ChemicalSystem,
         stateB: ChemicalSystem,
-        mapping: Optional[dict[str, ComponentMapping]] = None,
+        mapping: Optional[Union[ComponentMapping, list[ComponentMapping]]] = None,
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
-        # Handle parameters
-        if mapping is None:
-            raise ValueError("`mapping` is required for this Protocol")
+        from openfe.protocols.openmm_rfe.equil_rfe_methods import (
+            _validate_alchemical_components,
+        )
+        from openfe.protocols.openmm_utils import system_validation
+
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
+
+        # Do manual validation until it is part of the protocol
+        # Get alchemical components & validate them + mapping
+        alchem_comps = system_validation.get_alchemical_components(stateA, stateB)
+        # raise an error if we have more than one mapping
+        _validate_alchemical_components(alchem_comps, mapping)
+        mapping = mapping[0] if isinstance(mapping, list) else mapping  # type: ignore
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects

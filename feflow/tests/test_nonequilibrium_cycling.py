@@ -307,7 +307,13 @@ class TestNonEquilibriumCycling:
         ],
     )
     def test_create_execute_gather_toluene_to_toluene(
-        self, protocol, toluene_vacuum_system, mapping_toluene_toluene, tmpdir, request
+        self,
+        protocol,
+        toluene_vacuum_system,
+        mapping_toluene_toluene,
+        tmpdir,
+        request,
+        toluene,
     ):
         """
         Perform 20 independent simulations of the NEQ cycling protocol for the toluene to toluene
@@ -328,10 +334,16 @@ class TestNonEquilibriumCycling:
         import numpy as np
 
         protocol = request.getfixturevalue(protocol)
-
+        # rename the components
+        toluene_state_a = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_a")}
+        )
+        toluene_state_b = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_b")}
+        )
         dag = protocol.create(
-            stateA=toluene_vacuum_system,
-            stateB=toluene_vacuum_system,
+            stateA=toluene_state_a,
+            stateB=toluene_state_b,
             name="Toluene vacuum transformation",
             mapping=mapping_toluene_toluene,
         )
@@ -494,6 +506,27 @@ class TestNonEquilibriumCycling:
                 scratch.mkdir()
 
                 execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
+
+    def test_error_with_multiple_mappings(
+        self,
+        protocol_short,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+    ):
+        """
+        Make sure that when a list of mappings is passed that an error is raised.
+        """
+
+        with pytest.raises(
+            ValueError, match="A single LigandAtomMapping is expected for this Protocol"
+        ):
+            _ = protocol_short.create(
+                stateA=benzene_vacuum_system,
+                stateB=toluene_vacuum_system,
+                name="Test protocol",
+                mapping=[mapping_benzene_toluene, mapping_benzene_toluene],
+            )
 
 
 class TestSetupUnit:

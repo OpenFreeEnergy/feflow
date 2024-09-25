@@ -221,8 +221,8 @@ def mapping_toluene_toluene(toluene):
         i: i for i in range(len(toluene.to_rdkit().GetAtoms()))
     }
     mapping_obj = LigandAtomMapping(
-        componentA=toluene,
-        componentB=toluene,
+        componentA=toluene.copy_with_replacements(name="toluene_a"),
+        componentB=toluene.copy_with_replacements(name="toluene_b"),
         componentA_to_componentB=mapping_toluene_to_toluene,
     )
     return mapping_obj
