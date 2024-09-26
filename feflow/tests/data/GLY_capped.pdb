@@ -1,0 +1,36 @@
+REMARK   1 CREATED WITH OPENMM 8.1.1, 2024-09-26
+HETATM    1  H1  ACE A   1       1.328   2.173   0.000  1.00  0.00           H  
+HETATM    2  CH3 ACE A   1       2.006   1.318   0.000  1.00  0.00           C  
+HETATM    3  H2  ACE A   1       2.634   1.352   0.890  1.00  0.00           H  
+HETATM    4  H3  ACE A   1       2.634   1.352  -0.890  1.00  0.00           H  
+HETATM    5  C   ACE A   1       1.229   0.000   0.000  1.00  0.00           C  
+HETATM    6  O   ACE A   1       0.000   0.000   0.000  1.00  0.00           O  
+ATOM      7  N   GLY A   2       1.954  -1.121   0.000  1.00  0.00           N  
+ATOM      8  H   GLY A   2       3.108  -1.173  -0.285  1.00  0.00           H  
+ATOM      9  CA  GLY A   2       1.337  -2.432  -0.001  1.00  0.00           C  
+ATOM     10  HA2 GLY A   2       2.093  -3.358   0.013  1.00  0.00           H  
+ATOM     11  HA3 GLY A   2       0.710  -2.575  -1.009  1.00  0.00           H  
+ATOM     12  C   GLY A   2       0.461  -2.626   1.229  1.00  0.00           C  
+ATOM     13  O   GLY A   2      -0.621  -3.201   1.139  1.00  0.00           O  
+HETATM   14  N   NME A   3       0.933  -2.143   2.381  1.00  0.00           N  
+HETATM   15  H   NME A   3       1.829  -1.678   2.404  1.00  0.00           H  
+HETATM   16  C   NME A   3       0.194  -2.264   3.621  1.00  0.00           C  
+HETATM   17  H1  NME A   3      -0.745  -2.786   3.436  1.00  0.00           H  
+HETATM   18  H2  NME A   3       0.786  -2.827   4.344  1.00  0.00           H  
+HETATM   19  H3  NME A   3      -0.014  -1.271   4.019  1.00  0.00           H  
+TER      20      NME A   3
+CONECT    1    2
+CONECT    2    5    1    3    4
+CONECT    3    2
+CONECT    4    2
+CONECT    5    2    6    7
+CONECT    6    5
+CONECT    7    5
+CONECT   12   14
+CONECT   14   12   16   15
+CONECT   15   14
+CONECT   16   17   18   19   14
+CONECT   17   16
+CONECT   18   16
+CONECT   19   16
+END
