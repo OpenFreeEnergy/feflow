@@ -1,5 +1,6 @@
 name: feflow-test
 channels:
+  - conda-forge/label/openmm_rc
   - conda-forge
   - openeye
 dependencies:
@@ -8,7 +9,7 @@ dependencies:
   - numpy
   - openfe >=0.15  # TODO: Remove once we don't depend on openfe
   - openff-units
-  - openmm
+  - openmm ==8.2.0beta
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
   - pymbar <4
   - pydantic >=1.10.17
