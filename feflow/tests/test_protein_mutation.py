@@ -11,78 +11,79 @@ from feflow.protocols import ProteinMutationProtocol
 
 
 # Fixtures
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ala_capped():
     """ProteinComponent for Alanine residue capped by ACE and NME."""
-    input_pdb = str(files("feflow.tests.data").joinpath("ALA_capped.pdb"))
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("ALA_capped.pdb"))
     protein_comp = ProteinComponent.from_pdb_file(input_pdb)
     return protein_comp
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def gly_capped():
     """ProteinComponent for Glycine residue capped by ACE and NME"""
-    input_pdb = str(files("feflow.tests.data").joinpath("GLY_capped.pdb"))
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("GLY_capped.pdb"))
     protein_comp = ProteinComponent.from_pdb_file(input_pdb)
     return protein_comp
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def asp_capped():
     """ProteinComponent for Aspartic Acid residue capped by ACE and NME.
     This is meant to be used for testing charge transformations."""
-    input_pdb = str(files("feflow.tests.data").joinpath("ASP_capped.pdb"))
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("ASP_capped.pdb"))
     protein_comp = ProteinComponent.from_pdb_file(input_pdb)
     return protein_comp
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def leu_capped():
     """ProteinComponent for Leucine residue capped by ACE and NME.
     This is meant to be used for testing charge transformations."""
-    input_pdb = str(files("feflow.tests.data").joinpath("LEU_capped.pdb"))
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("LEU_capped.pdb"))
     protein_comp = ProteinComponent.from_pdb_file(input_pdb)
     return protein_comp
 
-@pytest.fixture(scope="module")
+
+@pytest.fixture(scope="session")
 def ala_capped_system(ala_capped, solvent_comp):
     """Solvated capped Alanine ChemicalSystem"""
     return ChemicalSystem({"protein": ala_capped, "solvent": solvent_comp})
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def gly_capped_system(gly_capped, solvent_comp):
     """Solvated capped Alanine ChemicalSystem"""
     return ChemicalSystem({"protein": gly_capped, "solvent": solvent_comp})
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def asp_capped_system(asp_capped, solvent_comp):
     """Solvated capped Aspartic acid ChemicalSystem"""
     return ChemicalSystem({"protein": asp_capped, "solvent": solvent_comp})
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def leu_capped_system(leu_capped, solvent_comp):
     """Solvated capped Leucine ChemicalSystem"""
     return ChemicalSystem({"protein": leu_capped, "solvent": solvent_comp})
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def ala_to_gly_mapping(ala_capped, gly_capped):
     """Mapping from ALA to GLY (capped)"""
     from gufe import LigandAtomMapping
-    input_file = str(files("feflow.tests.data").joinpath("ala_to_gly_mapping.json"))
+    input_file = str(files("feflow.tests.data.capped_AAs").joinpath("ala_to_gly_mapping.json"))
     with open(input_file) as in_file:
         mapping = LigandAtomMapping.from_dict(json.load(in_file))
     return mapping
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="session")
 def asp_to_leu_mapping(asp_capped, leu_capped):
     """Mapping from ASP to LEU (capped). Charge transformation."""
     from gufe import LigandAtomMapping
-    input_file = str(files("feflow.tests.data").joinpath("asp_to_leu_mapping.json"))
+    input_file = str(files("feflow.tests.data.capped_AAs").joinpath("asp_to_leu_mapping.json"))
     with open(input_file) as in_file:
         mapping = LigandAtomMapping.from_dict(json.load(in_file))
     return mapping
