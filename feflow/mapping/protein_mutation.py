@@ -1,6 +1,7 @@
 """
 Module with mapping objects that are useful for the protein mutation protocol.
 """
+
 import re
 from gufe import ProteinComponent
 from gufe.mapping import AtomMapping
@@ -17,17 +18,18 @@ class ProteinMutationMapping(AtomMapping):
     :class:`.ProteinComponent` which stores the mapping as a dict of
     integers.
     """
+
     componentA: ProteinComponent
     componentB: ProteinComponent
     _mutation_spec: re.Match[regex_mut_str]
     _compA_to_compB: dict[int, int]
 
     def __init__(
-            self,
-            componentA: ProteinComponent,
-            componentB: ProteinComponent,
-            componentA_to_componentB: dict[int, int],
-            mutation_spec: re.Match[regex_mut_str],
+        self,
+        componentA: ProteinComponent,
+        componentB: ProteinComponent,
+        componentA_to_componentB: dict[int, int],
+        mutation_spec: re.Match[regex_mut_str],
     ):
         """
         Parameters
@@ -50,11 +52,13 @@ class ProteinMutationMapping(AtomMapping):
         nB = self.componentB.to_openmm_topology().getNumAtoms()
         for i, j in componentA_to_componentB.items():
             if not (0 <= i < nA):
-                raise ValueError(f"Got invalid index for ComponentA ({i}); "
-                                 f"must be 0 <= n < {nA}")
+                raise ValueError(
+                    f"Got invalid index for ComponentA ({i}); " f"must be 0 <= n < {nA}"
+                )
             if not (0 <= j < nB):
-                raise ValueError(f"Got invalid index for ComponentB ({i}); "
-                                 f"must be 0 <= n < {nB}")
+                raise ValueError(
+                    f"Got invalid index for ComponentB ({i}); " f"must be 0 <= n < {nB}"
+                )
 
         self._compA_to_compB = componentA_to_componentB
         self._mutation_spec = mutation_spec
@@ -69,13 +73,19 @@ class ProteinMutationMapping(AtomMapping):
 
     @property
     def componentA_unique(self):
-        return (i for i in range(self.componentA.to_openmm_topology().getNumAtoms())
-                if i not in self._compA_to_compB)
+        return (
+            i
+            for i in range(self.componentA.to_openmm_topology().getNumAtoms())
+            if i not in self._compA_to_compB
+        )
 
     @property
     def componentB_unique(self):
-        return (i for i in range(self.componentB.to_openmm_topology().getNumAtoms())
-                if i not in self._compA_to_compB.values())
+        return (
+            i
+            for i in range(self.componentB.to_openmm_topology().getNumAtoms())
+            if i not in self._compA_to_compB.values()
+        )
 
     @property
     def mutation_spec(self):

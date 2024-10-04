@@ -73,7 +73,10 @@ def leu_capped_system(leu_capped, solvent_comp):
 def ala_to_gly_mapping(ala_capped, gly_capped):
     """Mapping from ALA to GLY (capped)"""
     from gufe import LigandAtomMapping
-    input_file = str(files("feflow.tests.data.capped_AAs").joinpath("ala_to_gly_mapping.json"))
+
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("ala_to_gly_mapping.json")
+    )
     with open(input_file) as in_file:
         mapping = LigandAtomMapping.from_dict(json.load(in_file))
     return mapping
@@ -83,7 +86,10 @@ def ala_to_gly_mapping(ala_capped, gly_capped):
 def asp_to_leu_mapping(asp_capped, leu_capped):
     """Mapping from ASP to LEU (capped). Charge transformation."""
     from gufe import LigandAtomMapping
-    input_file = str(files("feflow.tests.data.capped_AAs").joinpath("asp_to_leu_mapping.json"))
+
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("asp_to_leu_mapping.json")
+    )
     with open(input_file) as in_file:
         mapping = LigandAtomMapping.from_dict(json.load(in_file))
     return mapping
@@ -109,12 +115,12 @@ class TestProtocolMutation:
 
     @pytest.fixture(scope="class")
     def protocol_ala_to_gly_result(
-            self,
-            protocol_short,
-            ala_capped_system,
-            gly_capped_system,
-            ala_to_gly_mapping,
-            tmpdir,
+        self,
+        protocol_short,
+        ala_capped_system,
+        gly_capped_system,
+        ala_to_gly_mapping,
+        tmpdir,
     ):
         dag = protocol_short.create(
             stateA=ala_capped_system,
@@ -138,12 +144,12 @@ class TestProtocolMutation:
 
     @pytest.fixture(scope="class")
     def protocol_asp_to_leu_result(
-            self,
-            protocol_short,
-            asp_capped_system,
-            leu_capped_system,
-            asp_to_leu_mapping,
-            tmpdir,
+        self,
+        protocol_short,
+        asp_capped_system,
+        leu_capped_system,
+        asp_to_leu_mapping,
+        tmpdir,
     ):
         dag = protocol_short.create(
             stateA=ala_capped_system,

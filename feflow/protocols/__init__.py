@@ -8,5 +8,3 @@ from .nonequilibrium_cycling import (
     NonEquilibriumCyclingProtocolResult,
 )
 from .protein_mutation import ProteinMutationProtocol
-
-
