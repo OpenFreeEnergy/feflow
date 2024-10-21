@@ -50,7 +50,7 @@ def benzene_modifications(gufe_data_dir):
 # Components fixtures
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def solvent_comp():
     yield gufe.SolventComponent(positive_ion="Na", negative_ion="Cl")
 
