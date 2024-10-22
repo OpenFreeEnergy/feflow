@@ -5,7 +5,7 @@ from importlib.resources import files
 from pathlib import Path
 
 import pytest
-from gufe import ProteinComponent, ChemicalSystem, ProtocolDAGResult
+from gufe import ProteinComponent, ChemicalSystem, ProtocolDAGResult, LigandAtomMapping
 from gufe.protocols.protocoldag import execute_DAG
 from feflow.protocols import ProteinMutationProtocol
 
@@ -70,15 +70,21 @@ def leu_capped_system(leu_capped, solvent_comp):
 
 
 @pytest.fixture(scope="session")
-def ala_to_gly_mapping(ala_capped, gly_capped):
+def ala_to_gly_mapping():
     """Mapping from ALA to GLY (capped)"""
-    from gufe import LigandAtomMapping
-
     input_file = str(
         files("feflow.tests.data.capped_AAs").joinpath("ala_to_gly_mapping.json")
     )
     with open(input_file) as in_file:
         mapping = LigandAtomMapping.from_dict(json.load(in_file))
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def gly_to_ala_mapping(ala_capped, gly_capped, ala_to_gly_mapping):
+    """GLY to ALA mapping. Inverts the ala_to_gly_mapping fixture."""
+    gly_to_ala_map = ala_to_gly_mapping.componentB_to_componentA
+    mapping = LigandAtomMapping(componentA=gly_capped, componentB=ala_capped, componentA_to_componentB=gly_to_ala_map)
     return mapping
 
 
@@ -100,8 +106,8 @@ class TestProtocolMutation:
     def short_settings_protein_mutation(self):
         settings = ProteinMutationProtocol.default_settings()
 
-        settings.integrator_settings.equlibrium_steps = 1000
-        settings.integrator_settings.nonequlibrium_steps = 1000
+        settings.integrator_settings.equilibrium_steps = 1000
+        settings.integrator_settings.nonequilibrium_steps = 1000
         settings.work_save_frequency = 50
         settings.traj_save_frequency = 250
         settings.num_cycles = 5
@@ -122,6 +128,7 @@ class TestProtocolMutation:
         ala_to_gly_mapping,
         tmpdir,
     ):
+        """Short protocol execution for capped ALA to GLY mutation"""
         dag = protocol_short.create(
             stateA=ala_capped_system,
             stateB=gly_capped_system,
@@ -151,6 +158,7 @@ class TestProtocolMutation:
         asp_to_leu_mapping,
         tmpdir,
     ):
+        """Short protocol execution for charge-changing mutation of capped ASP to LEU."""
         dag = protocol_short.create(
             stateA=ala_capped_system,
             stateB=gly_capped_system,
@@ -192,3 +200,75 @@ class TestProtocolMutation:
         # the FinishUnit will always be the last to execute
         finishresult = dagresult.protocol_unit_results[-1]
         assert finishresult.name == "result"
+
+    @pytest.mark.slow
+    def ala_gly_convergence(self, ala_capped_system, gly_capped_system, ala_to_gly_mapping, gly_to_ala_mapping):
+        """Convergence test for ALA to GLY forward and reverse neutral protein mutation protocol
+        execution with default (production-ready) settings. Runs ALA to GLY and compares the
+        FE estimate with running GLY to ALA."""
+        import numpy as np
+
+        settings = ProteinMutationProtocol.default_settings()
+        protocol = ProteinMutationProtocol(settings=settings)
+
+        # Create forward and backward DAGs
+        forward_dag = protocol.create(
+            stateA=ala_capped_system,
+            stateB=gly_capped_system,
+            name="Short vacuum transformation",
+            mapping=ala_to_gly_mapping,
+        )
+        reverse_dag = protocol.create(
+            stateA=gly_capped_system,
+            stateB=ala_capped_system,
+            name="Short vacuum transformation",
+            mapping=gly_to_ala_mapping,
+        )
+
+        # Execute DAGs
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            forward_dagresult: ProtocolDAGResult = execute_DAG(
+                forward_dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+            reverse_dagresult: ProtocolDAGResult = execute_DAG(
+                reverse_dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        # Verify DAGs were executed correctly
+        assert forward_dagresult.ok()
+        assert reverse_dagresult.ok()
+
+        # Get FE estimate
+        forward_fe = forward_dagresult.get_estimate()
+        forward_error = forward_dagresult.get_uncertainty()
+        reverse_fe = reverse_dagresult.get_estimate()
+        reverse_error = reverse_dagresult.get_uncertainty()
+
+        # they should add up to close to zero
+        forward_reverse_sum = abs(forward_fe + reverse_fe)
+        forward_reverse_sum_err = np.sqrt(
+            forward_error ** 2 + reverse_error ** 2)
+        print(f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_err}")  # DEBUG
+        assert forward_reverse_sum < 6 * forward_reverse_sum_err, (
+            f"DDG ({forward_reverse_sum}) is greater than "
+            f"6 * dDDG ({6 * forward_reverse_sum_err})")
+
+    @pytest.mark.slow
+    def test_charge_changing_convergence(self):
+        """
+        Test for charge changing transformation for the protein mutation protocol.
+
+        We perform two forward and reverse and check the mutual convergence.
+            Positive: ARG -> ALA -> ARG
+            Negative: LYS -> ALA -> LYS
+
+        The need to do it this way is because since we are introducing counterions the energies for
+        each will not match, therefore to cancel this contribution we compare between both positive
+        and negative full cycles.
+        """
