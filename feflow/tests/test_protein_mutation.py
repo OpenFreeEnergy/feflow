@@ -115,8 +115,11 @@ def ala_to_gly_mapping():
 def gly_to_ala_mapping(ala_capped, gly_capped, ala_to_gly_mapping):
     """GLY to ALA mapping. Inverts the ala_to_gly_mapping fixture."""
     gly_to_ala_map = ala_to_gly_mapping.componentB_to_componentA
-    mapping = LigandAtomMapping(componentA=gly_capped, componentB=ala_capped,
-                                componentA_to_componentB=gly_to_ala_map)
+    mapping = LigandAtomMapping(
+        componentA=gly_capped,
+        componentB=ala_capped,
+        componentA_to_componentB=gly_to_ala_map,
+    )
     return mapping
 
 
@@ -135,8 +138,11 @@ def ala_to_arg_mapping():
 def arg_to_ala_mapping(ala_capped, arg_capped, ala_to_arg_mapping):
     """ARG to ALA mapping. Inverts the ala_to_arg_mapping fixture."""
     arg_to_ala_map = ala_to_arg_mapping.componentB_to_componentA
-    mapping = LigandAtomMapping(componentA=arg_capped, componentB=ala_capped,
-                                componentA_to_componentB=arg_to_ala_map)
+    mapping = LigandAtomMapping(
+        componentA=arg_capped,
+        componentB=ala_capped,
+        componentA_to_componentB=arg_to_ala_map,
+    )
     return mapping
 
 
@@ -155,8 +161,11 @@ def ala_to_lys_mapping():
 def lys_to_ala_mapping(ala_capped, lys_capped, ala_to_lys_mapping):
     """GLY to ALA mapping. Inverts the ala_to_gly_mapping fixture."""
     lys_to_ala_map = ala_to_lys_mapping.componentB_to_componentA
-    mapping = LigandAtomMapping(componentA=lys_capped, componentB=ala_capped,
-                                componentA_to_componentB=lys_to_ala_map)
+    mapping = LigandAtomMapping(
+        componentA=lys_capped,
+        componentB=ala_capped,
+        componentA_to_componentB=lys_to_ala_map,
+    )
     return mapping
 
 
@@ -251,7 +260,9 @@ class TestProtocolMutation:
 
         return protocol_short, dag, dagresult
 
-    def execute_forward_reverse_dag(self, component_a, component_b, system_a, system_b, mapping_obj, tmpdir):
+    def execute_forward_reverse_dag(
+        self, component_a, component_b, system_a, system_b, mapping_obj, tmpdir
+    ):
         """
         Perform a forward and reverse free energy (FE) estimation between two protein mutation systems.
 
@@ -288,8 +299,11 @@ class TestProtocolMutation:
         )
         # Reverse mapping
         arg_to_ala_dict = mapping_obj.componentB_to_componentA
-        arg_to_ala_mapping = LigandAtomMapping(componentA=component_b, componentB=component_a,
-                                               componentA_to_componentB=arg_to_ala_dict)
+        arg_to_ala_mapping = LigandAtomMapping(
+            componentA=component_b,
+            componentB=component_a,
+            componentA_to_componentB=arg_to_ala_dict,
+        )
         reverse_dag = protocol.create(
             stateA=system_b,
             stateB=system_a,
@@ -324,7 +338,7 @@ class TestProtocolMutation:
 
         # they should add up to close to zero
         forward_reverse_sum = forward_fe + reverse_fe
-        forward_reverse_sum_error = forward_error ** 2 + reverse_error ** 2
+        forward_reverse_sum_error = forward_error**2 + reverse_error**2
 
         return forward_reverse_sum, forward_reverse_sum_error
 
@@ -351,7 +365,14 @@ class TestProtocolMutation:
         assert finishresult.name == "result"
 
     @pytest.mark.slow
-    def test_ala_gly_convergence(self, ala_capped_system, gly_capped_system, ala_to_gly_mapping, gly_to_ala_mapping, tmpdir):
+    def test_ala_gly_convergence(
+        self,
+        ala_capped_system,
+        gly_capped_system,
+        ala_to_gly_mapping,
+        gly_to_ala_mapping,
+        tmpdir,
+    ):
         """Convergence test for ALA to GLY forward and reverse neutral protein mutation protocol
         execution with default (production-ready) settings. Runs ALA to GLY and compares the
         FE estimate with running GLY to ALA."""
@@ -401,14 +422,28 @@ class TestProtocolMutation:
 
         # they should add up to close to zero
         forward_reverse_sum = abs(forward_fe + reverse_fe)
-        forward_reverse_sum_err = np.sqrt(forward_error ** 2 + reverse_error ** 2)
-        print(f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_err}")  # DEBUG
+        forward_reverse_sum_err = np.sqrt(forward_error**2 + reverse_error**2)
+        print(
+            f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_err}"
+        )  # DEBUG
         assert forward_reverse_sum < 6 * forward_reverse_sum_err, (
             f"DDG ({forward_reverse_sum}) is greater than "
-            f"6 * dDDG ({6 * forward_reverse_sum_err})")
+            f"6 * dDDG ({6 * forward_reverse_sum_err})"
+        )
 
     @pytest.mark.slow
-    def test_charge_changing_convergence(self, arg_capped, ala_capped, lys_capped, ala_capped_system, arg_capped_system, lys_capped_system, arg_to_ala_mapping, lys_to_ala_mapping, tmpdir):
+    def test_charge_changing_convergence(
+        self,
+        arg_capped,
+        ala_capped,
+        lys_capped,
+        ala_capped_system,
+        arg_capped_system,
+        lys_capped_system,
+        arg_to_ala_mapping,
+        lys_to_ala_mapping,
+        tmpdir,
+    ):
         """
         Test for charge changing transformation for the protein mutation protocol.
 
@@ -421,13 +456,31 @@ class TestProtocolMutation:
         and negative full cycles.
         """
         # Create and execute DAGs
-        arg_results = self.execute_forward_reverse_dag(arg_capped, ala_capped, arg_capped_system, ala_capped_system, arg_to_ala_mapping, tmpdir)
-        lys_results = self.execute_forward_reverse_dag(lys_capped, ala_capped, lys_capped_system, ala_capped_system, lys_to_ala_mapping, tmpdir)
+        arg_results = self.execute_forward_reverse_dag(
+            arg_capped,
+            ala_capped,
+            arg_capped_system,
+            ala_capped_system,
+            arg_to_ala_mapping,
+            tmpdir,
+        )
+        lys_results = self.execute_forward_reverse_dag(
+            lys_capped,
+            ala_capped,
+            lys_capped_system,
+            ala_capped_system,
+            lys_to_ala_mapping,
+            tmpdir,
+        )
 
         # FE estimates are the first element, errors are the second element in the tuple
         arg_lys_diff = abs(arg_results[0] - lys_results[0])
         arg_lys_diff_error = np.sqrt(arg_results[1] + lys_results[1])
 
-        print(f"DDG: {arg_lys_diff}, 6*dDDG: {6 * arg_lys_diff_error}")  # debug control print
-        assert arg_lys_diff < 6 * arg_lys_diff_error, (f"DDG ({arg_lys_diff}) is greater than " 
-                                                       f"6 * dDDG ({6 * arg_lys_diff_error})")
+        print(
+            f"DDG: {arg_lys_diff}, 6*dDDG: {6 * arg_lys_diff_error}"
+        )  # debug control print
+        assert arg_lys_diff < 6 * arg_lys_diff_error, (
+            f"DDG ({arg_lys_diff}) is greater than "
+            f"6 * dDDG ({6 * arg_lys_diff_error})"
+        )
