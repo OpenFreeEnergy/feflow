@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from gufe import ProteinComponent, ChemicalSystem, ProtocolDAGResult, LigandAtomMapping
 from gufe.protocols.protocoldag import execute_DAG
+from gufe.tokenization import JSON_HANDLER
 from feflow.protocols import ProteinMutationProtocol
 
 
@@ -107,7 +108,7 @@ def ala_to_gly_mapping():
         files("feflow.tests.data.capped_AAs").joinpath("ala_to_gly_mapping.json")
     )
     with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+        mapping = LigandAtomMapping.from_dict(json.load(in_file, cls=JSON_HANDLER.decoder))
     return mapping
 
 
@@ -130,7 +131,7 @@ def ala_to_arg_mapping():
         files("feflow.tests.data.capped_AAs").joinpath("ala_to_arg_mapping.json")
     )
     with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+        mapping = LigandAtomMapping.from_dict(json.load(in_file, cls=JSON_HANDLER.decoder))
     return mapping
 
 
@@ -153,7 +154,7 @@ def ala_to_lys_mapping():
         files("feflow.tests.data.capped_AAs").joinpath("ala_to_lys_mapping.json")
     )
     with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+        mapping = LigandAtomMapping.from_dict(json.load(in_file, cls=JSON_HANDLER.decoder))
     return mapping
 
 
@@ -178,7 +179,7 @@ def asp_to_leu_mapping(asp_capped, leu_capped):
         files("feflow.tests.data.capped_AAs").joinpath("asp_to_leu_mapping.json")
     )
     with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+        mapping = LigandAtomMapping.from_dict(json.load(in_file, cls=JSON_HANDLER.decoder))
     return mapping
 
 
