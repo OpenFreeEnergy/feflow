@@ -1,0 +1,51 @@
+REMARK   1 CREATED WITH OPENMM 8.1.1, 2024-10-22
+HETATM    1  H1  ACE A   1       1.328   2.173   0.000  1.00  0.00           H  
+HETATM    2  CH3 ACE A   1       2.006   1.318   0.000  1.00  0.00           C  
+HETATM    3  H2  ACE A   1       2.634   1.352   0.890  1.00  0.00           H  
+HETATM    4  H3  ACE A   1       2.634   1.352  -0.890  1.00  0.00           H  
+HETATM    5  C   ACE A   1       1.229   0.000   0.000  1.00  0.00           C  
+HETATM    6  O   ACE A   1       0.000   0.000   0.000  1.00  0.00           O  
+ATOM      7  N   LYS A   2       1.954  -1.121   0.000  1.00  0.00           N  
+ATOM      8  H   LYS A   2       3.122  -1.025  -0.195  1.00  0.00           H  
+ATOM      9  CA  LYS A   2       1.337  -2.432  -0.001  1.00  0.00           C  
+ATOM     10  HA  LYS A   2       0.565  -2.458  -0.915  1.00  0.00           H  
+ATOM     11  CB  LYS A   2       2.391  -3.535  -0.001  1.00  0.00           C  
+ATOM     12  HB2 LYS A   2       1.702  -4.515   0.088  1.00  0.00           H  
+ATOM     13  HB3 LYS A   2       3.047  -3.497   0.998  1.00  0.00           H  
+ATOM     14  C   LYS A   2       0.461  -2.626   1.229  1.00  0.00           C  
+ATOM     15  O   LYS A   2      -0.621  -3.201   1.139  1.00  0.00           O  
+ATOM     16  CG  LYS A   2       3.224  -3.837  -1.235  1.00  0.00           C  
+ATOM     17  HG2 LYS A   2       2.315  -3.880  -2.010  1.00  0.00           H  
+ATOM     18  HG3 LYS A   2       4.035  -3.108  -1.721  1.00  0.00           H  
+ATOM     19  CD  LYS A   2       4.148  -4.963  -0.767  1.00  0.00           C  
+ATOM     20  HD2 LYS A   2       4.973  -4.351  -0.150  1.00  0.00           H  
+ATOM     21  HD3 LYS A   2       3.850  -5.847  -0.026  1.00  0.00           H  
+ATOM     22  CE  LYS A   2       4.914  -5.474  -1.977  1.00  0.00           C  
+ATOM     23  HE2 LYS A   2       5.858  -5.939  -1.402  1.00  0.00           H  
+ATOM     24  HE3 LYS A   2       5.434  -4.831  -2.835  1.00  0.00           H  
+ATOM     25  NZ  LYS A   2       4.338  -6.749  -2.436  1.00  0.00           N  
+ATOM     26  HZ1 LYS A   2       4.059  -6.551  -3.589  1.00  0.00           H  
+ATOM     27  HZ2 LYS A   2       5.104  -7.672  -2.508  1.00  0.00           H  
+ATOM     28  HZ3 LYS A   2       3.279  -7.099  -1.995  1.00  0.00           H  
+HETATM   29  N   NME A   3       0.933  -2.143   2.381  1.00  0.00           N  
+HETATM   30  H   NME A   3       1.829  -1.678   2.404  1.00  0.00           H  
+HETATM   31  C   NME A   3       0.194  -2.264   3.621  1.00  0.00           C  
+HETATM   32  H1  NME A   3      -0.745  -2.786   3.436  1.00  0.00           H  
+HETATM   33  H2  NME A   3       0.786  -2.827   4.344  1.00  0.00           H  
+HETATM   34  H3  NME A   3      -0.014  -1.271   4.019  1.00  0.00           H  
+TER      35      NME A   3
+CONECT    1    2
+CONECT    2    5    1    3    4
+CONECT    3    2
+CONECT    4    2
+CONECT    5    2    6    7
+CONECT    6    5
+CONECT    7    5
+CONECT   14   29
+CONECT   29   14   31   30
+CONECT   30   29
+CONECT   31   32   33   34   29
+CONECT   32   31
+CONECT   33   31
+CONECT   34   31
+END
