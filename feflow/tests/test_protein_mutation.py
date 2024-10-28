@@ -4,9 +4,11 @@ import json
 from importlib.resources import files
 from pathlib import Path
 
+import numpy as np
 import pytest
-from gufe import ProteinComponent, ChemicalSystem, ProtocolDAGResult
+from gufe import ProteinComponent, ChemicalSystem, ProtocolDAGResult, LigandAtomMapping
 from gufe.protocols.protocoldag import execute_DAG
+from gufe.tokenization import JSON_HANDLER
 from feflow.protocols import ProteinMutationProtocol
 
 
@@ -46,6 +48,24 @@ def leu_capped():
 
 
 @pytest.fixture(scope="session")
+def arg_capped():
+    """ProteinComponent for Arginine residue capped by ACE and NME.
+    This is meant to be used for testing charge transformations."""
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("ARG_capped.pdb"))
+    protein_comp = ProteinComponent.from_pdb_file(input_pdb)
+    return protein_comp
+
+
+@pytest.fixture(scope="session")
+def lys_capped():
+    """ProteinComponent for Lysine residue capped by ACE and NME.
+    This is meant to be used for testing charge transformations."""
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("LYS_capped.pdb"))
+    protein_comp = ProteinComponent.from_pdb_file(input_pdb)
+    return protein_comp
+
+
+@pytest.fixture(scope="session")
 def ala_capped_system(ala_capped, solvent_comp):
     """Solvated capped Alanine ChemicalSystem"""
     return ChemicalSystem({"protein": ala_capped, "solvent": solvent_comp})
@@ -70,15 +90,89 @@ def leu_capped_system(leu_capped, solvent_comp):
 
 
 @pytest.fixture(scope="session")
-def ala_to_gly_mapping(ala_capped, gly_capped):
-    """Mapping from ALA to GLY (capped)"""
-    from gufe import LigandAtomMapping
+def arg_capped_system(arg_capped, solvent_comp):
+    """Solvated capped Arginine ChemicalSystem"""
+    return ChemicalSystem({"protein": arg_capped, "solvent": solvent_comp})
 
+
+@pytest.fixture(scope="session")
+def lys_capped_system(lys_capped, solvent_comp):
+    """Solvated capped Lysine ChemicalSystem"""
+    return ChemicalSystem({"protein": lys_capped, "solvent": solvent_comp})
+
+
+@pytest.fixture(scope="session")
+def ala_to_gly_mapping():
+    """Mapping from ALA to GLY (capped)"""
     input_file = str(
         files("feflow.tests.data.capped_AAs").joinpath("ala_to_gly_mapping.json")
     )
     with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+        mapping = LigandAtomMapping.from_dict(
+            json.load(in_file, cls=JSON_HANDLER.decoder)
+        )
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def gly_to_ala_mapping(ala_capped, gly_capped, ala_to_gly_mapping):
+    """GLY to ALA mapping. Inverts the ala_to_gly_mapping fixture."""
+    gly_to_ala_map = ala_to_gly_mapping.componentB_to_componentA
+    mapping = LigandAtomMapping(
+        componentA=gly_capped,
+        componentB=ala_capped,
+        componentA_to_componentB=gly_to_ala_map,
+    )
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def ala_to_arg_mapping():
+    """Mapping from ALA to ARG (capped). Positive charge transformation."""
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("ala_to_arg_mapping.json")
+    )
+    with open(input_file) as in_file:
+        mapping = LigandAtomMapping.from_dict(
+            json.load(in_file, cls=JSON_HANDLER.decoder)
+        )
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def arg_to_ala_mapping(ala_capped, arg_capped, ala_to_arg_mapping):
+    """ARG to ALA mapping. Inverts the ala_to_arg_mapping fixture."""
+    arg_to_ala_map = ala_to_arg_mapping.componentB_to_componentA
+    mapping = LigandAtomMapping(
+        componentA=arg_capped,
+        componentB=ala_capped,
+        componentA_to_componentB=arg_to_ala_map,
+    )
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def ala_to_lys_mapping():
+    """Mapping from ALA to LYS (capped)."""
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("ala_to_lys_mapping.json")
+    )
+    with open(input_file) as in_file:
+        mapping = LigandAtomMapping.from_dict(
+            json.load(in_file, cls=JSON_HANDLER.decoder)
+        )
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def lys_to_ala_mapping(ala_capped, lys_capped, ala_to_lys_mapping):
+    """GLY to ALA mapping. Inverts the ala_to_gly_mapping fixture."""
+    lys_to_ala_map = ala_to_lys_mapping.componentB_to_componentA
+    mapping = LigandAtomMapping(
+        componentA=lys_capped,
+        componentB=ala_capped,
+        componentA_to_componentB=lys_to_ala_map,
+    )
     return mapping
 
 
@@ -91,7 +185,9 @@ def asp_to_leu_mapping(asp_capped, leu_capped):
         files("feflow.tests.data.capped_AAs").joinpath("asp_to_leu_mapping.json")
     )
     with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+        mapping = LigandAtomMapping.from_dict(
+            json.load(in_file, cls=JSON_HANDLER.decoder)
+        )
     return mapping
 
 
@@ -100,8 +196,8 @@ class TestProtocolMutation:
     def short_settings_protein_mutation(self):
         settings = ProteinMutationProtocol.default_settings()
 
-        settings.integrator_settings.equlibrium_steps = 1000
-        settings.integrator_settings.nonequlibrium_steps = 1000
+        settings.integrator_settings.equilibrium_steps = 1000
+        settings.integrator_settings.nonequilibrium_steps = 1000
         settings.work_save_frequency = 50
         settings.traj_save_frequency = 250
         settings.num_cycles = 5
@@ -122,6 +218,7 @@ class TestProtocolMutation:
         ala_to_gly_mapping,
         tmpdir,
     ):
+        """Short protocol execution for capped ALA to GLY mutation"""
         dag = protocol_short.create(
             stateA=ala_capped_system,
             stateB=gly_capped_system,
@@ -151,11 +248,12 @@ class TestProtocolMutation:
         asp_to_leu_mapping,
         tmpdir,
     ):
+        """Short protocol execution for charge-changing mutation of capped ASP to LEU."""
         dag = protocol_short.create(
-            stateA=ala_capped_system,
-            stateB=gly_capped_system,
+            stateA=asp_capped_system,
+            stateB=leu_capped_system,
             name="Short vacuum transformation",
-            mapping=ala_to_gly_mapping,
+            mapping=asp_to_leu_mapping,
         )
 
         with tmpdir.as_cwd():
@@ -170,6 +268,89 @@ class TestProtocolMutation:
             )
 
         return protocol_short, dag, dagresult
+
+    def execute_forward_reverse_dag(
+        self, component_a, component_b, system_a, system_b, mapping_obj, tmpdir
+    ):
+        """
+        Perform a forward and reverse free energy (FE) estimation between two protein mutation systems.
+
+        This function creates and executes forward and reverse directed acyclic graphs (DAGs) for
+        computing the free energy difference between two protein systems, typically involving
+        a mutation (e.g., Arginine to Alanine). It calculates the forward and reverse free energy
+        estimates, and checks that their sum is close to zero (indicating a consistent reversible
+        transformation).
+
+        Parameters
+        ----------
+        component_a: ProteinComponent
+        component_b: ProteinComponent
+        system_a: ChemicalSystem
+        system_b: ChemicalSystem
+        mapping_obj: LigandAtomMapping
+        tmpdir
+
+        Returns
+        -------
+        dict
+            A dictionary containing FE estimates and uncertainties for both forward and reverse
+            transformations:
+            `{"forward": (forward_fe, forward_error), "reverse": (reverse_fe, reverse_error)}`.
+        """
+        settings = ProteinMutationProtocol.default_settings()
+        protocol = ProteinMutationProtocol(settings=settings)
+
+        forward_dag = protocol.create(
+            stateA=system_a,
+            stateB=system_b,
+            name="Short vacuum transformation",
+            mapping=mapping_obj,
+        )
+        # Reverse mapping
+        arg_to_ala_dict = mapping_obj.componentB_to_componentA
+        arg_to_ala_mapping = LigandAtomMapping(
+            componentA=component_b,
+            componentB=component_a,
+            componentA_to_componentB=arg_to_ala_dict,
+        )
+        reverse_dag = protocol.create(
+            stateA=system_b,
+            stateB=system_a,
+            name="Short vacuum transformation",
+            mapping=arg_to_ala_mapping,
+        )
+
+        # Execute DAGs
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            forward_dagresult: ProtocolDAGResult = execute_DAG(
+                forward_dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+            reverse_dagresult: ProtocolDAGResult = execute_DAG(
+                reverse_dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        # Verify DAGs were executed correctly
+        assert forward_dagresult.ok()
+        assert reverse_dagresult.ok()
+
+        # Get FE estimate
+        forward_fe = forward_dagresult.get_estimate()
+        forward_error = forward_dagresult.get_uncertainty()
+        reverse_fe = reverse_dagresult.get_estimate()
+        reverse_error = reverse_dagresult.get_uncertainty()
+
+        data_obj = {
+            "forward": (forward_fe, forward_error),
+            "reverse": (reverse_fe, reverse_error),
+        }
+
+        return data_obj
 
     def test_ala_to_gly_execute(self, protocol_ala_to_gly_result):
         """Takes a protocol result from an executed DAG and checks the OK status
@@ -192,3 +373,106 @@ class TestProtocolMutation:
         # the FinishUnit will always be the last to execute
         finishresult = dagresult.protocol_unit_results[-1]
         assert finishresult.name == "result"
+
+    @pytest.mark.slow
+    def test_ala_gly_convergence(
+        self,
+        ala_capped,
+        gly_capped,
+        ala_capped_system,
+        gly_capped_system,
+        ala_to_gly_mapping,
+        gly_to_ala_mapping,
+        tmpdir,
+    ):
+        """Convergence test for ALA to GLY forward and reverse neutral protein mutation protocol
+        execution with default (production-ready) settings. Runs ALA to GLY and compares the
+        FE estimate with running GLY to ALA."""
+
+        results = self.execute_forward_reverse_dag(
+            ala_capped,
+            gly_capped,
+            ala_capped_system,
+            gly_capped_system,
+            ala_to_gly_mapping,
+            tmpdir,
+        )
+
+        # they should add up to close to zero
+        forward_reverse_sum = abs(results["forward"][0] + results["reverse"][0])
+        forward_reverse_sum_err = np.sqrt(
+            results["forward"][1] ** 2 + results["reverse"][1] ** 2
+        )
+        print(
+            f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_err}"
+        )  # DEBUG
+        assert forward_reverse_sum < 6 * forward_reverse_sum_err, (
+            f"DDG ({forward_reverse_sum}) is greater than "
+            f"6 * dDDG ({6 * forward_reverse_sum_err})"
+        )
+
+    @pytest.mark.slow
+    def test_charge_changing_convergence(
+        self,
+        arg_capped,
+        ala_capped,
+        lys_capped,
+        ala_capped_system,
+        arg_capped_system,
+        lys_capped_system,
+        arg_to_ala_mapping,
+        lys_to_ala_mapping,
+        tmpdir,
+    ):
+        """
+        Test for charge changing transformation for the protein mutation protocol.
+
+        We perform two forward and reverse and check the mutual convergence.
+            Positive: ARG -> ALA -> ARG
+            Negative: LYS -> ALA -> LYS
+
+        The need to do it this way is because since we are introducing counterions the energies for
+        each will not match, therefore to cancel this contribution we compare between both positive
+        and negative full cycles.
+        """
+        # Create and execute DAGs
+        arg_results = self.execute_forward_reverse_dag(
+            arg_capped,
+            ala_capped,
+            arg_capped_system,
+            ala_capped_system,
+            arg_to_ala_mapping,
+            tmpdir,
+        )
+        lys_results = self.execute_forward_reverse_dag(
+            lys_capped,
+            ala_capped,
+            lys_capped_system,
+            ala_capped_system,
+            lys_to_ala_mapping,
+            tmpdir,
+        )
+
+        # they should add up to close to zero
+        arg_forward_reverse_sum = arg_results["forward"][0] + arg_results["reverse"][0]
+        arg_forward_reverse_sum_error = (
+            arg_results["forward"][1] ** 2 + arg_results["reverse"][1] ** 2
+        )
+        lys_forward_reverse_sum = lys_results["forward"][0] + lys_results["reverse"][0]
+        lys_forward_reverse_sum_error = (
+            lys_results["forward"][1] ** 2 + lys_results["reverse"][1] ** 2
+        )
+
+        # FE estimates are the first element, errors are the second element in the tuple
+        arg_lys_diff = abs(arg_forward_reverse_sum - lys_forward_reverse_sum)
+        arg_lys_diff_error = np.sqrt(
+            arg_forward_reverse_sum_error + lys_forward_reverse_sum_error
+        )
+
+        print(
+            f"DDG: {arg_lys_diff}, 6*dDDG: {6 * arg_lys_diff_error}"
+        )  # debug control print
+        assert arg_lys_diff < 6 * arg_lys_diff_error, (
+            f"DDG ({arg_lys_diff}) is greater than "
+            f"6 * dDDG ({6 * arg_lys_diff_error})"
+        )
