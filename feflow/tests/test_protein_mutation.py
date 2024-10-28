@@ -345,8 +345,10 @@ class TestProtocolMutation:
         reverse_fe = reverse_dagresult.get_estimate()
         reverse_error = reverse_dagresult.get_uncertainty()
 
-        data_obj = {"forward": (forward_fe, forward_error),
-                    "reverse": (reverse_fe, reverse_error)}
+        data_obj = {
+            "forward": (forward_fe, forward_error),
+            "reverse": (reverse_fe, reverse_error),
+        }
 
         return data_obj
 
@@ -398,7 +400,9 @@ class TestProtocolMutation:
 
         # they should add up to close to zero
         forward_reverse_sum = abs(results["forward"][0] + results["reverse"][0])
-        forward_reverse_sum_err = np.sqrt(results["forward"][1]**2 + results["reverse"][1]**2)
+        forward_reverse_sum_err = np.sqrt(
+            results["forward"][1] ** 2 + results["reverse"][1] ** 2
+        )
         print(
             f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_err}"
         )  # DEBUG
@@ -451,13 +455,19 @@ class TestProtocolMutation:
 
         # they should add up to close to zero
         arg_forward_reverse_sum = arg_results["forward"][0] + arg_results["reverse"][0]
-        arg_forward_reverse_sum_error = arg_results["forward"][1] ** 2 + arg_results["reverse"][1] ** 2
+        arg_forward_reverse_sum_error = (
+            arg_results["forward"][1] ** 2 + arg_results["reverse"][1] ** 2
+        )
         lys_forward_reverse_sum = lys_results["forward"][0] + lys_results["reverse"][0]
-        lys_forward_reverse_sum_error = lys_results["forward"][1] ** 2 + lys_results["reverse"][1] ** 2
+        lys_forward_reverse_sum_error = (
+            lys_results["forward"][1] ** 2 + lys_results["reverse"][1] ** 2
+        )
 
         # FE estimates are the first element, errors are the second element in the tuple
         arg_lys_diff = abs(arg_forward_reverse_sum - lys_forward_reverse_sum)
-        arg_lys_diff_error = np.sqrt(arg_forward_reverse_sum_error + lys_forward_reverse_sum_error)
+        arg_lys_diff_error = np.sqrt(
+            arg_forward_reverse_sum_error + lys_forward_reverse_sum_error
+        )
 
         print(
             f"DDG: {arg_lys_diff}, 6*dDDG: {6 * arg_lys_diff_error}"
