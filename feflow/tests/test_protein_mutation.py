@@ -365,17 +365,17 @@ class TestProtocolMutation:
             mapping=mapping_obj,
         )
         # Reverse mapping
-        arg_to_ala_dict = mapping_obj.componentB_to_componentA
-        arg_to_ala_mapping = LigandAtomMapping(
+        map_dict = mapping_obj.componentB_to_componentA
+        mapping = LigandAtomMapping(
             componentA=component_b,
             componentB=component_a,
-            componentA_to_componentB=arg_to_ala_dict,
+            componentA_to_componentB=map_dict,
         )
         reverse_dag = protocol.create(
             stateA=system_b,
             stateB=system_a,
             name="Short vacuum transformation",
-            mapping=arg_to_ala_mapping,
+            mapping=mapping,
         )
 
         # Execute DAGs
