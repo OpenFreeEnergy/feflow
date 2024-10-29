@@ -461,7 +461,7 @@ class TestProtocolMutation:
         forward_reverse_sum_err = np.sqrt(
             results["forward"][1] ** 2 + results["reverse"][1] ** 2
         )
-        
+
         print(
             f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_err}"
         )  # DEBUG
@@ -565,7 +565,9 @@ class TestProtocolMutation:
         mapping = LigandAtomMapping(
             componentA=ala_capped_system,
             componentB=pro_capped_system,
-            componentA_to_componentB={0: 0}  # Example mapping, should fail due to ring breakage
+            componentA_to_componentB={
+                0: 0
+            },  # Example mapping, should fail due to ring breakage
         )
 
         # Expect an error when trying to create the DAG with this invalid mapping
@@ -574,5 +576,5 @@ class TestProtocolMutation:
                 stateA=ala_capped_system,
                 stateB=pro_capped_system,
                 name="Invalid proline mutation",
-                mapping=mapping
+                mapping=mapping,
             )
