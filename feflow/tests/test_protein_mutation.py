@@ -66,6 +66,14 @@ def lys_capped():
 
 
 @pytest.fixture(scope="session")
+def pro_capped():
+    """ProteinComponent for Proline residue capped by ACE and NME."""
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("PRO_capped.pdb"))
+    protein_comp = ProteinComponent.from_pdb_file(input_pdb)
+    return protein_comp
+
+
+@pytest.fixture(scope="session")
 def ala_capped_system(ala_capped, solvent_comp):
     """Solvated capped Alanine ChemicalSystem"""
     return ChemicalSystem({"protein": ala_capped, "solvent": solvent_comp})
@@ -99,6 +107,12 @@ def arg_capped_system(arg_capped, solvent_comp):
 def lys_capped_system(lys_capped, solvent_comp):
     """Solvated capped Lysine ChemicalSystem"""
     return ChemicalSystem({"protein": lys_capped, "solvent": solvent_comp})
+
+
+@pytest.fixture(scope="session")
+def pro_capped_system(pro_capped, solvent_comp):
+    """Solvated capped Proline ChemicalSystem"""
+    return ChemicalSystem({"protein": pro_capped, "solvent": solvent_comp})
 
 
 @pytest.fixture(scope="session")
@@ -186,6 +200,17 @@ def asp_to_leu_mapping(asp_capped, leu_capped):
         mapping = LigandAtomMapping.from_dict(
             json.load(in_file, cls=JSON_HANDLER.decoder)
         )
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def ala_to_pro_mapping(ala_capped, pro_capped):
+    """Mapping from ALA to PRO (capped). Ring breaking challenging transformation."""
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("ala_to_pro_mapping.json")
+    )
+    with open(input_file) as in_file:
+        mapping = LigandAtomMapping.from_dict(json.load(in_file))
     return mapping
 
 
@@ -476,7 +501,7 @@ class TestProtocolMutation:
             f"6 * dDDG ({6 * arg_lys_diff_error})"
         )
 
-    def test_proline_mutation_fails(self, ala_capped_system, pro_capped_system):
+    def test_proline_mutation_fails(self, ala_capped_system, pro_capped_system, ala_to_pro_mapping):
         """Test that attempting to make a protein mutation that involves proline (or ring breaking
         transformations) is not handled and results in an error.
 
@@ -490,31 +515,19 @@ class TestProtocolMutation:
             The chemical system representing a capped alanine residue.
         pro_capped_system : ChemicalSystem
             The chemical system representing a capped proline residue.
-
-        Raises
-        ------
-        AssertionError
-            If no error is raised when attempting the mutation.
+        ala_to_pro_mapping : LigandAtomMapping
+            Mapping object representing the atom mapping from ALA to PRO.
         """
         from feflow.utils.exceptions import MethodConstraintError
 
         settings = ProteinMutationProtocol.default_settings()
         protocol = ProteinMutationProtocol(settings=settings)
 
-        # Create a mapping between alanine and proline, which should be invalid due to the proline ring
-        mapping = LigandAtomMapping(
-            componentA=ala_capped_system,
-            componentB=pro_capped_system,
-            componentA_to_componentB={
-                0: 0
-            },  # Example mapping, should fail due to ring breakage
-        )
-
-        # Expect an error when trying to create the DAG with this invalid mapping
+        # Expect an error when trying to create the DAG with this invalid transformation
         with pytest.raises(MethodConstraintError, match="proline.*not supported"):
             protocol.create(
                 stateA=ala_capped_system,
                 stateB=pro_capped_system,
                 name="Invalid proline mutation",
-                mapping=mapping,
+                mapping=ala_to_pro_mapping,
             )
