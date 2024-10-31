@@ -72,6 +72,13 @@ def pro_capped():
     protein_comp = ProteinComponent.from_pdb_file(input_pdb)
     return protein_comp
 
+@pytest.fixture(scope="session")
+def glu_capped():
+    """ProteinComponent for Glutamic Acid residue capped by ACE and NME."""
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("GLU_capped.pdb"))
+    protein_comp = ProteinComponent.from_pdb_file(input_pdb)
+    return protein_comp
+
 
 @pytest.fixture(scope="session")
 def ala_capped_system(ala_capped, solvent_comp):
@@ -113,6 +120,12 @@ def lys_capped_system(lys_capped, solvent_comp):
 def pro_capped_system(pro_capped, solvent_comp):
     """Solvated capped Proline ChemicalSystem"""
     return ChemicalSystem({"protein": pro_capped, "solvent": solvent_comp})
+
+
+@pytest.fixture(scope="session")
+def glu_capped_system(glu_capped, solvent_comp):
+    """Solvated capped Glutamic Acid ChemicalSystem"""
+    return ChemicalSystem({"protein": glu_capped, "solvent": solvent_comp})
 
 
 @pytest.fixture(scope="session")
@@ -208,6 +221,17 @@ def ala_to_pro_mapping(ala_capped, pro_capped):
     """Mapping from ALA to PRO (capped). Ring breaking challenging transformation."""
     input_file = str(
         files("feflow.tests.data.capped_AAs").joinpath("ala_to_pro_mapping.json")
+    )
+    with open(input_file) as in_file:
+        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def lys_to_glu_mapping(lys_capped, glu_capped):
+    """Mapping from LYS to GLU (capped). Double charge-changing transformation."""
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("lys_to_glu_mapping.json")
     )
     with open(input_file) as in_file:
         mapping = LigandAtomMapping.from_dict(json.load(in_file))
@@ -530,4 +554,37 @@ class TestProtocolMutation:
                 stateB=pro_capped_system,
                 name="Invalid proline mutation",
                 mapping=ala_to_pro_mapping,
+            )
+
+    def test_double_charge_fails(self, lys_capped_system, glu_capped_system, lys_to_glu_mapping):
+        """
+        Test that attempting a mutation with a double charge change between lysine and glutamate
+        systems raises a `NotSupportedError`.
+
+        This test verifies that the `ProteinMutationProtocol` correctly raises an error when trying to
+        create a directed acyclic graph (DAG) for an invalid mutation involving a double charge change.
+        The test expects the `NotSupportedError` to be raised with a message indicating that
+        double-charge transformations are not supported.
+
+        Parameters
+        ----------
+        lys_capped_system : ChemicalSystem
+            Molecular system with a capped lysine residue, representing the initial state (A).
+        glu_capped_system : ChemicalSystem
+            Molecular system with a capped glutamate residue, representing the target state (B).
+        lys_to_glu_mapping : LigandAtomMapping
+            Atom mapping defining the correspondence between atoms in the lysine and glutamate systems.
+        """
+        from feflow.utils.exceptions import NotSupportedError
+
+        settings = ProteinMutationProtocol.default_settings()
+        protocol = ProteinMutationProtocol(settings=settings)
+
+        # Expect an error when trying to create the DAG with this invalid transformation
+        with pytest.raises(NotSupportedError, match="double charge.*not supported"):
+            protocol.create(
+                stateA=lys_capped_system,
+                stateB=glu_capped_system,
+                name="Invalid proline mutation",
+                mapping=lys_to_glu_mapping,
             )
