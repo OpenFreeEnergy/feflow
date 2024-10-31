@@ -72,6 +72,7 @@ def pro_capped():
     protein_comp = ProteinComponent.from_pdb_file(input_pdb)
     return protein_comp
 
+
 @pytest.fixture(scope="session")
 def glu_capped():
     """ProteinComponent for Glutamic Acid residue capped by ACE and NME."""
@@ -525,7 +526,9 @@ class TestProtocolMutation:
             f"6 * dDDG ({6 * arg_lys_diff_error})"
         )
 
-    def test_proline_mutation_fails(self, ala_capped_system, pro_capped_system, ala_to_pro_mapping):
+    def test_proline_mutation_fails(
+        self, ala_capped_system, pro_capped_system, ala_to_pro_mapping
+    ):
         """Test that attempting to make a protein mutation that involves proline (or ring breaking
         transformations) is not handled and results in an error.
 
@@ -556,7 +559,9 @@ class TestProtocolMutation:
                 mapping=ala_to_pro_mapping,
             )
 
-    def test_double_charge_fails(self, lys_capped_system, glu_capped_system, lys_to_glu_mapping):
+    def test_double_charge_fails(
+        self, lys_capped_system, glu_capped_system, lys_to_glu_mapping
+    ):
         """
         Test that attempting a mutation with a double charge change between lysine and glutamate
         systems raises a `NotSupportedError`.
