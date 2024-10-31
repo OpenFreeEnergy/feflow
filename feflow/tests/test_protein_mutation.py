@@ -177,68 +177,8 @@ def lys_to_ala_mapping(ala_capped, lys_capped, ala_to_lys_mapping):
 
 
 @pytest.fixture(scope="session")
-def gly_to_ala_mapping(ala_capped, gly_capped, ala_to_gly_mapping):
-    """GLY to ALA mapping. Inverts the ala_to_gly_mapping fixture."""
-    gly_to_ala_map = ala_to_gly_mapping.componentB_to_componentA
-    mapping = LigandAtomMapping(
-        componentA=gly_capped,
-        componentB=ala_capped,
-        componentA_to_componentB=gly_to_ala_map,
-    )
-    return mapping
-
-
-@pytest.fixture(scope="session")
-def ala_to_arg_mapping():
-    """Mapping from ALA to ARG (capped). Positive charge transformation."""
-    input_file = str(
-        files("feflow.tests.data.capped_AAs").joinpath("ala_to_arg_mapping.json")
-    )
-    with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
-    return mapping
-
-
-@pytest.fixture(scope="session")
-def arg_to_ala_mapping(ala_capped, arg_capped, ala_to_arg_mapping):
-    """ARG to ALA mapping. Inverts the ala_to_arg_mapping fixture."""
-    arg_to_ala_map = ala_to_arg_mapping.componentB_to_componentA
-    mapping = LigandAtomMapping(
-        componentA=arg_capped,
-        componentB=ala_capped,
-        componentA_to_componentB=arg_to_ala_map,
-    )
-    return mapping
-
-
-@pytest.fixture(scope="session")
-def ala_to_lys_mapping():
-    """Mapping from ALA to LYS (capped)."""
-    input_file = str(
-        files("feflow.tests.data.capped_AAs").joinpath("ala_to_lys_mapping.json")
-    )
-    with open(input_file) as in_file:
-        mapping = LigandAtomMapping.from_dict(json.load(in_file))
-    return mapping
-
-
-@pytest.fixture(scope="session")
-def lys_to_ala_mapping(ala_capped, lys_capped, ala_to_lys_mapping):
-    """GLY to ALA mapping. Inverts the ala_to_gly_mapping fixture."""
-    lys_to_ala_map = ala_to_lys_mapping.componentB_to_componentA
-    mapping = LigandAtomMapping(
-        componentA=lys_capped,
-        componentB=ala_capped,
-        componentA_to_componentB=lys_to_ala_map,
-    )
-    return mapping
-
-
-@pytest.fixture(scope="session")
 def asp_to_leu_mapping(asp_capped, leu_capped):
     """Mapping from ASP to LEU (capped). Charge transformation."""
-    from gufe import LigandAtomMapping
-
     input_file = str(
         files("feflow.tests.data.capped_AAs").joinpath("asp_to_leu_mapping.json")
     )
