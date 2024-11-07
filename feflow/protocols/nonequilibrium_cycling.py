@@ -187,13 +187,20 @@ class SetupUnit(ProtocolUnit):
         )  # infer phase from systems and components
 
         # Get receptor components from systems if found (None otherwise)
+        # TODO: test that this work with components from protein mutations, including protein protein interactions.
         solvent_comp, receptor_comp, small_mols_a = get_components(state_a)
 
         # Get ligand/small-mol components
+        # TODO: Is it be possible to infer the alchemical component from mapping? We would only
+        #  provide a mapping for components that are going through alchemical transformations.
+        #  Mapping wouldn't be a LigandAtomMapping but rather a ProteinMapping of some sort.
+        #  Right now we are assuming that the ligand is the alchemical component, but we don't have to
+        #  hardcode that.
         ligand_mapping = mapping
         ligand_a = ligand_mapping.componentA
         ligand_b = ligand_mapping.componentB
 
+        # TODO: Do we need to change something in the settings? Does the Protein mutation protocol require specific settings?
         # Get all the relevant settings
         settings: NonEquilibriumCyclingSettings = protocol.settings
         # Get settings for system generator
@@ -210,6 +217,7 @@ class SetupUnit(ProtocolUnit):
         else:
             ffcache = None
 
+
         system_generator = system_creation.get_system_generator(
             forcefield_settings=forcefield_settings,
             thermo_settings=thermodynamic_settings,
@@ -222,6 +230,7 @@ class SetupUnit(ProtocolUnit):
         self.logger.info("Parameterizing molecules")
         # The following creates a dictionary with all the small molecules in the states, with the structure:
         #    Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
+        # TODO: This should rely again on getting the alchemical components from the mapping
         # Alchemical small mols
         alchemical_small_mols_a = {ligand_a: ligand_a.to_openff()}
         alchemical_small_mols_b = {ligand_b: ligand_b.to_openff()}
@@ -237,6 +246,7 @@ class SetupUnit(ProtocolUnit):
             ):
                 common_small_mols[comp] = comp.to_openff()
 
+        # TODO: We should parametrize all the small mols anyway. Shouldn't change in protein mutation.
         # Assign partial charges to all small mols
         all_openff_mols = list(
             chain(all_alchemical_mols.values(), common_small_mols.values())
@@ -253,6 +263,9 @@ class SetupUnit(ProtocolUnit):
                 off_mol.to_topology().to_openmm(), molecules=[off_mol]
             )
 
+        # TODO: get_omm_modeller would need to be adapted to deal with protein mutation cases. ex. protein-protein.
+        #  Protein comps no longer optional, but others could be. How to generalize this?
+        #  Refactor function to handle multiple protein components, similarly to what we do with small mols.
         # c. get OpenMM Modeller + a dictionary of resids for each component
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_comp,
@@ -267,6 +280,8 @@ class SetupUnit(ProtocolUnit):
         state_a_topology = state_a_modeller.getTopology()
         state_a_positions = to_openmm(from_openmm(state_a_modeller.getPositions()))
 
+        # TODO: system_generator and openmmforcefields don't really know how to deal with empty lists, but they use None.
+        #  We would need to refactor accordingly, maybe we need yet another helper function here. Refactoring omm forcefields is unlikely.
         # e. create the stateA System
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
@@ -275,6 +290,12 @@ class SetupUnit(ProtocolUnit):
             ),
         )
 
+        # TODO: Here we would need to exclude the resids of the topology that contains the alchemical component
+        #  How do we know that? Is a map between topology objects and components needed?
+        #  Assumptions here:
+        #    * Components in A have the same positions of components in B EXCEPT for the alchemical residue
+        #    * Only the alchemical component is changed, all the other components are shared.
+        #  Specifically, we need a way to get a map from component to resids, that way we get the resids that we want to exclude easily.
         # 2. Get stateB system
         # a. get the topology
         (
@@ -294,6 +315,7 @@ class SetupUnit(ProtocolUnit):
         )
 
         #  c. Define correspondence mappings between the two systems
+        # TODO: According to docs this should already work. Double check.
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
             mapping.componentA_to_componentB,
             state_a_system,
@@ -306,6 +328,7 @@ class SetupUnit(ProtocolUnit):
             fix_constraints=True,
         )
 
+        # TODO: This should also be working as is. Maybe review docstring in openfe function.
         # Handle charge corrections/transformations
         # Get the change difference between the end states
         # and check if the charge correction used is appropriate
@@ -316,6 +339,7 @@ class SetupUnit(ProtocolUnit):
             solvent_comp,
         )
 
+        # TODO: Should also already work as is...
         if alchemical_settings.explicit_charge_correction:
             alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(
                 state_a_topology,
@@ -332,6 +356,7 @@ class SetupUnit(ProtocolUnit):
                 solvent_comp,
             )
 
+        # TODO: According to docs this should work as well.
         #  d. Finally get the positions
         state_b_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
             ligand_mappings,
@@ -349,6 +374,8 @@ class SetupUnit(ProtocolUnit):
             softcore_LJ_v2 = True
         elif alchemical_settings.softcore_LJ.lower() == "beutler":
             softcore_LJ_v2 = False
+        # TODO: We need to test HTF for protein mutation cases, probably.
+        #  What are ways to quickly check an HTF is correct?
         # Now we can create the HTF from the previous objects
         hybrid_factory = HybridTopologyFactory(
             state_a_system,
