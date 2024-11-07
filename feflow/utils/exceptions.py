@@ -8,10 +8,9 @@ class ProtocolError(Exception):
 
 
 class MethodLimitationtError(ProtocolError):
-    """Custom exception to be raised when a fundamental limitation in the methodology is
-    that does not support."""
+    """Custom exception raised when a fundamental limitation in the methodology prevents support
+    for the requested operation."""
 
 
-class NotSupportedError(ProtocolError):
-    """Custom exception to be raised when a specific scenario or case is not supported by the
-    protocol."""
+class ProtocolSupportError(ProtocolError):
+    """Custom exception raised when the tooling does not support a specific scenario or use case."""
