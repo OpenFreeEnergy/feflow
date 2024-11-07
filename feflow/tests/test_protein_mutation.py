@@ -66,6 +66,22 @@ def lys_capped():
 
 
 @pytest.fixture(scope="session")
+def pro_capped():
+    """ProteinComponent for Proline residue capped by ACE and NME."""
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("PRO_capped.pdb"))
+    protein_comp = ProteinComponent.from_pdb_file(input_pdb)
+    return protein_comp
+
+
+@pytest.fixture(scope="session")
+def glu_capped():
+    """ProteinComponent for Glutamic Acid residue capped by ACE and NME."""
+    input_pdb = str(files("feflow.tests.data.capped_AAs").joinpath("GLU_capped.pdb"))
+    protein_comp = ProteinComponent.from_pdb_file(input_pdb)
+    return protein_comp
+
+
+@pytest.fixture(scope="session")
 def ala_capped_system(ala_capped, solvent_comp):
     """Solvated capped Alanine ChemicalSystem"""
     return ChemicalSystem({"protein": ala_capped, "solvent": solvent_comp})
@@ -99,6 +115,18 @@ def arg_capped_system(arg_capped, solvent_comp):
 def lys_capped_system(lys_capped, solvent_comp):
     """Solvated capped Lysine ChemicalSystem"""
     return ChemicalSystem({"protein": lys_capped, "solvent": solvent_comp})
+
+
+@pytest.fixture(scope="session")
+def pro_capped_system(pro_capped, solvent_comp):
+    """Solvated capped Proline ChemicalSystem"""
+    return ChemicalSystem({"protein": pro_capped, "solvent": solvent_comp})
+
+
+@pytest.fixture(scope="session")
+def glu_capped_system(glu_capped, solvent_comp):
+    """Solvated capped Glutamic Acid ChemicalSystem"""
+    return ChemicalSystem({"protein": glu_capped, "solvent": solvent_comp})
 
 
 @pytest.fixture(scope="session")
@@ -179,8 +207,6 @@ def lys_to_ala_mapping(ala_capped, lys_capped, ala_to_lys_mapping):
 @pytest.fixture(scope="session")
 def asp_to_leu_mapping(asp_capped, leu_capped):
     """Mapping from ASP to LEU (capped). Charge transformation."""
-    from gufe import LigandAtomMapping
-
     input_file = str(
         files("feflow.tests.data.capped_AAs").joinpath("asp_to_leu_mapping.json")
     )
@@ -188,6 +214,28 @@ def asp_to_leu_mapping(asp_capped, leu_capped):
         mapping = LigandAtomMapping.from_dict(
             json.load(in_file, cls=JSON_HANDLER.decoder)
         )
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def ala_to_pro_mapping(ala_capped, pro_capped):
+    """Mapping from ALA to PRO (capped). Ring breaking challenging transformation."""
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("ala_to_pro_mapping.json")
+    )
+    with open(input_file) as in_file:
+        mapping = LigandAtomMapping.from_dict(json.load(in_file))
+    return mapping
+
+
+@pytest.fixture(scope="session")
+def lys_to_glu_mapping(lys_capped, glu_capped):
+    """Mapping from LYS to GLU (capped). Double charge-changing transformation."""
+    input_file = str(
+        files("feflow.tests.data.capped_AAs").joinpath("lys_to_glu_mapping.json")
+    )
+    with open(input_file) as in_file:
+        mapping = LigandAtomMapping.from_dict(json.load(in_file))
     return mapping
 
 
@@ -307,17 +355,17 @@ class TestProtocolMutation:
             mapping=mapping_obj,
         )
         # Reverse mapping
-        arg_to_ala_dict = mapping_obj.componentB_to_componentA
-        arg_to_ala_mapping = LigandAtomMapping(
+        map_dict = mapping_obj.componentB_to_componentA
+        mapping = LigandAtomMapping(
             componentA=component_b,
             componentB=component_a,
-            componentA_to_componentB=arg_to_ala_dict,
+            componentA_to_componentB=map_dict,
         )
         reverse_dag = protocol.create(
             stateA=system_b,
             stateB=system_a,
             name="Short vacuum transformation",
-            mapping=arg_to_ala_mapping,
+            mapping=mapping,
         )
 
         # Execute DAGs
@@ -403,6 +451,7 @@ class TestProtocolMutation:
         forward_reverse_sum_err = np.sqrt(
             results["forward"][1] ** 2 + results["reverse"][1] ** 2
         )
+
         print(
             f"DDG: {forward_reverse_sum}, 6*dDDG: {6 * forward_reverse_sum_err}"
         )  # DEBUG
@@ -476,3 +525,71 @@ class TestProtocolMutation:
             f"DDG ({arg_lys_diff}) is greater than "
             f"6 * dDDG ({6 * arg_lys_diff_error})"
         )
+
+    def test_proline_mutation_fails(
+        self, ala_capped_system, pro_capped_system, ala_to_pro_mapping
+    ):
+        """Test that attempting to make a protein mutation that involves proline (or ring breaking
+        transformations) is not handled and results in an error.
+
+        This test ensures that the mutation protocol correctly identifies mutations involving
+        proline, which is typically a ring-breaking transformation that is not supported, and
+        raises an appropriate error.
+
+        Parameters
+        ----------
+        ala_capped_system : ChemicalSystem
+            The chemical system representing a capped alanine residue.
+        pro_capped_system : ChemicalSystem
+            The chemical system representing a capped proline residue.
+        ala_to_pro_mapping : LigandAtomMapping
+            Mapping object representing the atom mapping from ALA to PRO.
+        """
+        from feflow.utils.exceptions import MethodConstraintError
+
+        settings = ProteinMutationProtocol.default_settings()
+        protocol = ProteinMutationProtocol(settings=settings)
+
+        # Expect an error when trying to create the DAG with this invalid transformation
+        with pytest.raises(MethodConstraintError, match="proline.*not supported"):
+            protocol.create(
+                stateA=ala_capped_system,
+                stateB=pro_capped_system,
+                name="Invalid proline mutation",
+                mapping=ala_to_pro_mapping,
+            )
+
+    def test_double_charge_fails(
+        self, lys_capped_system, glu_capped_system, lys_to_glu_mapping
+    ):
+        """
+        Test that attempting a mutation with a double charge change between lysine and glutamate
+        systems raises a `NotSupportedError`.
+
+        This test verifies that the `ProteinMutationProtocol` correctly raises an error when trying to
+        create a directed acyclic graph (DAG) for an invalid mutation involving a double charge change.
+        The test expects the `NotSupportedError` to be raised with a message indicating that
+        double-charge transformations are not supported.
+
+        Parameters
+        ----------
+        lys_capped_system : ChemicalSystem
+            Molecular system with a capped lysine residue, representing the initial state (A).
+        glu_capped_system : ChemicalSystem
+            Molecular system with a capped glutamate residue, representing the target state (B).
+        lys_to_glu_mapping : LigandAtomMapping
+            Atom mapping defining the correspondence between atoms in the lysine and glutamate systems.
+        """
+        from feflow.utils.exceptions import NotSupportedError
+
+        settings = ProteinMutationProtocol.default_settings()
+        protocol = ProteinMutationProtocol(settings=settings)
+
+        # Expect an error when trying to create the DAG with this invalid transformation
+        with pytest.raises(NotSupportedError, match="double charge.*not supported"):
+            protocol.create(
+                stateA=lys_capped_system,
+                stateB=glu_capped_system,
+                name="Invalid proline mutation",
+                mapping=lys_to_glu_mapping,
+            )
