@@ -9,6 +9,8 @@ import logging
 import pickle
 import time
 
+import numpy as np
+from gufe import Context
 from gufe.settings import Settings
 from gufe.chemicalsystem import ChemicalSystem
 from gufe.mapping import ComponentMapping
@@ -370,8 +372,32 @@ class SetupUnit(ProtocolUnit):
         system = hybrid_factory.hybrid_system
         positions = hybrid_factory.hybrid_positions
 
-        # Set up integrator
-        temperature = to_openmm(thermodynamic_settings.temperature)
+        # serialize system
+        system_outfile = ctx.shared / "system.xml.bz2"
+        serialize(system, system_outfile)
+
+        # Serialize positions
+        positions_outfile = ctx.shared / "positions.npy"
+        np.save(positions_outfile, positions)
+
+        # Serialize HTF
+        htf_outfile = ctx.shared / "hybrid_topology_factory.pickle"
+        # Serialize HTF, system, state and integrator
+        with open(htf_outfile, "wb") as htf_file:
+            pickle.dump(hybrid_factory, htf_file)
+
+        return {
+            "system": system_outfile,
+            "positions": positions_outfile,
+            "phase": phase,
+            "initial_atom_indices": hybrid_factory.initial_atom_indices,
+            "final_atom_indices": hybrid_factory.final_atom_indices,
+            "topology_path": htf_outfile,
+        }
+
+
+class IntegratorSetupUnit(ProtocolUnit):
+    def _execute(ctx: Context, setup, **inputs) -> dict[str, Any]:
         integrator_settings = settings.integrator_settings
         integrator = PeriodicNonequilibriumIntegrator(
             alchemical_functions=settings.lambda_functions,
@@ -382,11 +408,14 @@ class SetupUnit(ProtocolUnit):
             temperature=temperature,
         )
 
+        # TODO: Make sure we load the outputs from setup unit to meet the needs of this unit
+
         # Set up context
         platform = get_openmm_platform(settings.engine_settings.compute_platform)
         context = openmm.Context(system, integrator, platform)
         context.setPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
         context.setPositions(positions)
+        serialize(integrator_, integrator_outfile)
 
         try:
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
@@ -404,30 +433,18 @@ class SetupUnit(ProtocolUnit):
             system_ = context.getSystem()
             integrator_ = context.getIntegrator()
 
-            htf_outfile = ctx.shared / "hybrid_topology_factory.pickle"
-            system_outfile = ctx.shared / "system.xml.bz2"
             state_outfile = ctx.shared / "state.xml.bz2"
             integrator_outfile = ctx.shared / "integrator.xml.bz2"
 
-            # Serialize HTF, system, state and integrator
-            with open(htf_outfile, "wb") as htf_file:
-                pickle.dump(hybrid_factory, htf_file)
             serialize(system_, system_outfile)
             serialize(state_, state_outfile)
-            serialize(integrator_, integrator_outfile)
 
         finally:
             # Explicit cleanup for GPU resources
-            del context, integrator
+            del context
 
         return {
-            "system": system_outfile,
-            "state": state_outfile,
             "integrator": integrator_outfile,
-            "phase": phase,
-            "initial_atom_indices": hybrid_factory.initial_atom_indices,
-            "final_atom_indices": hybrid_factory.final_atom_indices,
-            "topology_path": htf_outfile,
         }
 
 
