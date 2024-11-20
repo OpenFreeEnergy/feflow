@@ -290,12 +290,6 @@ class SetupUnit(ProtocolUnit):
             ),
         )
 
-        # TODO: Here we would need to exclude the resids of the topology that contains the alchemical component
-        #  How do we know that? Is a map between topology objects and components needed?
-        #  Assumptions here:
-        #    * Components in A have the same positions of components in B EXCEPT for the alchemical residue
-        #    * Only the alchemical component is changed, all the other components are shared.
-        #  Specifically, we need a way to get a map from component to resids, that way we get the resids that we want to exclude easily.
         # 2. Get stateB system
         # a. get the topology
         (
