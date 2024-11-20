@@ -545,13 +545,13 @@ class TestProtocolMutation:
         ala_to_pro_mapping : LigandAtomMapping
             Mapping object representing the atom mapping from ALA to PRO.
         """
-        from feflow.utils.exceptions import MethodConstraintError
+        from feflow.utils.exceptions import MethodLimitationtError
 
         settings = ProteinMutationProtocol.default_settings()
         protocol = ProteinMutationProtocol(settings=settings)
 
         # Expect an error when trying to create the DAG with this invalid transformation
-        with pytest.raises(MethodConstraintError, match="proline.*not supported"):
+        with pytest.raises(MethodLimitationtError, match="proline.*not supported"):
             protocol.create(
                 stateA=ala_capped_system,
                 stateB=pro_capped_system,
@@ -580,13 +580,13 @@ class TestProtocolMutation:
         lys_to_glu_mapping : LigandAtomMapping
             Atom mapping defining the correspondence between atoms in the lysine and glutamate systems.
         """
-        from feflow.utils.exceptions import NotSupportedError
+        from feflow.utils.exceptions import ProtocolSupportError
 
         settings = ProteinMutationProtocol.default_settings()
         protocol = ProteinMutationProtocol(settings=settings)
 
         # Expect an error when trying to create the DAG with this invalid transformation
-        with pytest.raises(NotSupportedError, match="double charge.*not supported"):
+        with pytest.raises(ProtocolSupportError, match="double charge.*not supported"):
             protocol.create(
                 stateA=lys_capped_system,
                 stateB=glu_capped_system,
