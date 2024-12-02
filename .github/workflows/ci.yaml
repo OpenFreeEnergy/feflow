@@ -85,9 +85,9 @@ jobs:
               pytest -n auto -v --cov=feflow --cov-report=xml --durations=10
 
       - name: codecov
-        if: ${{ github.repository == 'choderalab/feflow'
+        if: ${{ github.repository == 'OpenFreeEnergy/feflow'
                 && github.event_name == 'pull_request' }}
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           file: coverage.xml

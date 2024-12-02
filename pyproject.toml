@@ -10,7 +10,8 @@ description = "Recipes and protocols for molecular free energy calculations usin
 dynamic = ["version"]
 readme = "README.md"
 authors = [
-    { name = "ChoderaLab", email = "ivan.pulido@choderalab.org" }
+    { name = "ChoderaLab", email = "ivan.pulido@choderalab.org" },
+    { name = "The Open Free Energy Development Team"}
 ]
 license = { text = "MIT" }
 # See https://pypi.org/classifiers/
