@@ -4,6 +4,14 @@ feflow Change Log
 
 .. current developments
 
+v0.1.1
+====================
+
+- Support for ``pydantic`` >=1.10.17, allowing ``pydantic`` 2 to coexist in the same environment (`PR #58 <https://github.com/OpenFreeEnergy/feflow/pull/58>`_).
+- Minimization is now performed in the ``CycleUnit`` instead of the ``SetupUnit`` (`PR #60 <https://github.com/OpenFreeEnergy/feflow/pull/60>`_).
+- Added protein-ligand complex testing (`PR #61 <https://github.com/OpenFreeEnergy/feflow/pull/61>`_).
+- Added GPU Continuous Integration (CI) (`PR #64 <https://github.com/OpenFreeEnergy/feflow/pull/64>`_).
+
 v0.1
 ====================
 
