@@ -404,7 +404,9 @@ class SetupUnit(ProtocolUnit):
         context.setPositions(positions)
 
         try:
-            self.logger.info("Serializing HybridTopologyFactory, OpenMM system, state, and integrator")
+            self.logger.info(
+                "Serializing HybridTopologyFactory, OpenMM system, state, and integrator"
+            )
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
             # need to set velocities to temperature so serialized state features velocities,
             # which is important for usability by the Folding@Home openmm-core
