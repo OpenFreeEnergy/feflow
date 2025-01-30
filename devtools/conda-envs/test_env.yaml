@@ -17,6 +17,9 @@ dependencies:
     # openfe branch with protein mutation support (TEMPORARY)
   - pip:
       - "git+https://github.com/OpenFreeEnergy/openfe.git@protein-mutation-support"
+    # Dependencies for openfe branch (temporary)
+  - lomap2
+  - kartograf
 
     # Testing (optional deps)
   - espaloma_charge  # To us Espaloma FF in tests
