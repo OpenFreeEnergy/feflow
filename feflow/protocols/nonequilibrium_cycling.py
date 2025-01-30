@@ -32,8 +32,11 @@ from openff.units.openmm import to_openmm, from_openmm
 
 from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
-from ..utils.misc import generate_omm_top_from_component, get_residue_index_from_atom_index, \
-    get_positions_from_component
+from ..utils.misc import (
+    generate_omm_top_from_component,
+    get_residue_index_from_atom_index,
+    get_positions_from_component,
+)
 
 # Specific instance of logger for this module
 logger = logging.getLogger(__name__)
@@ -178,10 +181,15 @@ class SetupUnit(ProtocolUnit):
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
-        from openfe.protocols.openmm_utils.system_validation import get_alchemical_components
+        from openfe.protocols.openmm_utils.system_validation import (
+            get_alchemical_components,
+        )
         from feflow.utils.hybrid_topology import HybridTopologyFactory
         from feflow.utils.charge import get_alchemical_charge_difference
-        from feflow.utils.misc import get_typed_components, register_ff_parameters_template
+        from feflow.utils.misc import (
+            get_typed_components,
+            register_ff_parameters_template,
+        )
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
@@ -233,7 +241,9 @@ class SetupUnit(ProtocolUnit):
 
         # Generate and register FF parameters in the system generator template
         all_openff_mols = [comp.to_openff() for comp in all_small_mols]
-        register_ff_parameters_template(system_generator, charge_settings, all_openff_mols)
+        register_ff_parameters_template(
+            system_generator, charge_settings, all_openff_mols
+        )
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
         state_a_modeller, _ = system_creation.get_omm_modeller(
@@ -253,19 +263,27 @@ class SetupUnit(ProtocolUnit):
         # Note: If there are no small mols ommffs requires a None
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=[mol.to_openff() for mol in
-                       state_a_small_mols] if state_a_small_mols else None,
+            molecules=(
+                [mol.to_openff() for mol in state_a_small_mols]
+                if state_a_small_mols
+                else None
+            ),
         )
 
         # 2. Get stateB system
         # a. Generate topology reusing state A topology as possible
         # Note: We are only dealing with single alchemical components
-        state_b_alchem_top = generate_omm_top_from_component(alchemical_comps["stateB"][0])
+        state_b_alchem_top = generate_omm_top_from_component(
+            alchemical_comps["stateB"][0]
+        )
         state_b_alchem_pos = get_positions_from_component(alchemical_comps["stateB"][0])
         # We get the residue index from the mapping unique atom indices
         # NOTE: We assume single residue/point/component mutation here
-        state_a_alchem_resindex = [get_residue_index_from_atom_index(state_a_topology,
-                                                                    next(mapping.componentA_unique))]
+        state_a_alchem_resindex = [
+            get_residue_index_from_atom_index(
+                state_a_topology, next(mapping.componentA_unique)
+            )
+        ]
         (
             state_b_topology,
             state_b_alchem_resids,

@@ -7,8 +7,9 @@ import gufe
 
 
 # TODO: should this be a method for the gufe.ChemicalSystem class?
-def get_typed_components(system: gufe.ChemicalSystem, comptype: Type[gufe.Component]) -> set[
-    gufe.Component]:
+def get_typed_components(
+    system: gufe.ChemicalSystem, comptype: type[gufe.Component]
+) -> set[gufe.Component]:
     """
     Retrieve all components of a specific type from a `gufe.ChemicalSystem`.
 
@@ -31,10 +32,11 @@ def get_typed_components(system: gufe.ChemicalSystem, comptype: Type[gufe.Compon
 
     """
     if not issubclass(comptype, gufe.Component):
-        raise TypeError(f"`comptype` must be a subclass of `gufe.Component`. Got: {comptype}")
+        raise TypeError(
+            f"`comptype` must be a subclass of `gufe.Component`. Got: {comptype}"
+        )
 
-    ret_comps = {comp for comp in system.values()
-                 if isinstance(comp, comptype)}
+    ret_comps = {comp for comp in system.values() if isinstance(comp, comptype)}
 
     return ret_comps
 
@@ -98,13 +100,13 @@ def register_ff_parameters_template(system_generator, charge_settings, openff_mo
         # Force the creation of parameters
         # This is necessary because we need to have the FF templates
         # registered ahead of solvating the system.
-        system_generator.create_system(
-            mol.to_topology().to_openmm(), molecules=[mol]
-        )
+        system_generator.create_system(mol.to_topology().to_openmm(), molecules=[mol])
 
 
 # TODO: Maybe this needs to be in another module with a more telling name. Also, overkill?
-def generate_omm_top_from_component(comp: gufe.SmallMoleculeComponent | gufe.ProteinComponent):
+def generate_omm_top_from_component(
+    comp: gufe.SmallMoleculeComponent | gufe.ProteinComponent,
+):
     """
     Generate an OpenMM `Topology` object from a given `SmallMoleculeComponent` or
     `ProteinComponent`.
@@ -139,7 +141,9 @@ def generate_omm_top_from_component(comp: gufe.SmallMoleculeComponent | gufe.Pro
     return topology
 
 
-def get_positions_from_component(comp: gufe.SmallMoleculeComponent | gufe.ProteinComponent):
+def get_positions_from_component(
+    comp: gufe.SmallMoleculeComponent | gufe.ProteinComponent,
+):
     """
     Retrieve the positions of atoms in a component as an OpenMM Quantity.
 
