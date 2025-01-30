@@ -247,7 +247,7 @@ class TestHTFVirtualSites:
 
         # Create state A model & get relevant OpenMM objects
         benz_model, comp_resids = system_creation.get_omm_modeller(
-            protein_comp=None,
+            protein_comps=None,
             solvent_comp=SolventComponent(),
             small_mols={benzene: benz_off},
             omm_forcefield=tip4p_system_generator.forcefield,

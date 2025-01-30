@@ -9,6 +9,7 @@ import logging
 import pickle
 import time
 
+from gufe import SolventComponent, ProteinComponent
 from gufe.settings import Settings
 from gufe.chemicalsystem import ChemicalSystem
 from gufe.mapping import ComponentMapping
@@ -31,6 +32,8 @@ from openff.units.openmm import to_openmm, from_openmm
 
 from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
+from ..utils.misc import generate_omm_top_from_component, get_residue_index_from_atom_index, \
+    get_positions_from_component
 
 # Specific instance of logger for this module
 logger = logging.getLogger(__name__)
@@ -175,9 +178,10 @@ class SetupUnit(ProtocolUnit):
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
-        from openfe.protocols.openmm_utils.system_validation import get_components
+        from openfe.protocols.openmm_utils.system_validation import get_alchemical_components
         from feflow.utils.hybrid_topology import HybridTopologyFactory
         from feflow.utils.charge import get_alchemical_charge_difference
+        from feflow.utils.misc import get_typed_components, register_ff_parameters_template
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
@@ -187,18 +191,12 @@ class SetupUnit(ProtocolUnit):
         )  # infer phase from systems and components
 
         # Get receptor components from systems if found (None otherwise)
-        # TODO: test that this work with components from protein mutations, including protein protein interactions.
-        solvent_comp, receptor_comp, small_mols_a = get_components(state_a)
+        solvent_comp_a = get_typed_components(state_a, SolventComponent)
+        protein_comps_a = get_typed_components(state_a, ProteinComponent)
+        small_mols_a = get_typed_components(state_a, SmallMoleculeComponent)
 
-        # Get ligand/small-mol components
-        # TODO: Is it be possible to infer the alchemical component from mapping? We would only
-        #  provide a mapping for components that are going through alchemical transformations.
-        #  Mapping wouldn't be a LigandAtomMapping but rather a ProteinMapping of some sort.
-        #  Right now we are assuming that the ligand is the alchemical component, but we don't have to
-        #  hardcode that.
-        ligand_mapping = mapping
-        ligand_a = ligand_mapping.componentA
-        ligand_b = ligand_mapping.componentB
+        # Get alchemical components
+        alchemical_comps = get_alchemical_components(state_a, state_b)
 
         # TODO: Do we need to change something in the settings? Does the Protein mutation protocol require specific settings?
         # Get all the relevant settings
@@ -217,60 +215,31 @@ class SetupUnit(ProtocolUnit):
         else:
             ffcache = None
 
-
         system_generator = system_creation.get_system_generator(
             forcefield_settings=forcefield_settings,
             thermo_settings=thermodynamic_settings,
             integrator_settings=integrator_settings,
             cache=ffcache,
-            has_solvent=solvent_comp is not None,
+            has_solvent=bool(solvent_comp_a),
         )
 
         # Parameterizing small molecules
         self.logger.info("Parameterizing molecules")
-        # The following creates a dictionary with all the small molecules in the states, with the structure:
-        #    Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
-        # TODO: This should rely again on getting the alchemical components from the mapping
-        # Alchemical small mols
-        alchemical_small_mols_a = {ligand_a: ligand_a.to_openff()}
-        alchemical_small_mols_b = {ligand_b: ligand_b.to_openff()}
-        all_alchemical_mols = alchemical_small_mols_a | alchemical_small_mols_b
-        # non-alchemical common small mols
-        common_small_mols = {}
-        for comp in state_a.components.values():
-            # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
-            # NOTE: This relies on gufe key for "equality", important to keep in mind
-            if (
-                isinstance(comp, SmallMoleculeComponent)
-                and comp not in all_alchemical_mols
-            ):
-                common_small_mols[comp] = comp.to_openff()
+        # Get small molecules from states
+        # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
+        state_a_small_mols = get_typed_components(state_a, SmallMoleculeComponent)
+        state_b_small_mols = get_typed_components(state_b, SmallMoleculeComponent)
+        all_small_mols = state_a_small_mols | state_b_small_mols
 
-        # TODO: We should parametrize all the small mols anyway. Shouldn't change in protein mutation.
-        # Assign partial charges to all small mols
-        all_openff_mols = list(
-            chain(all_alchemical_mols.values(), common_small_mols.values())
-        )
-        self._assign_openff_partial_charges(
-            charge_settings=charge_settings, off_small_mols=all_openff_mols
-        )
+        # Generate and register FF parameters in the system generator template
+        all_openff_mols = [comp.to_openff() for comp in all_small_mols]
+        register_ff_parameters_template(system_generator, charge_settings, all_openff_mols)
 
-        # Force the creation of parameters
-        # This is necessary because we need to have the FF templates
-        # registered ahead of solvating the system.
-        for off_mol in all_openff_mols:
-            system_generator.create_system(
-                off_mol.to_topology().to_openmm(), molecules=[off_mol]
-            )
-
-        # TODO: get_omm_modeller would need to be adapted to deal with protein mutation cases. ex. protein-protein.
-        #  Protein comps no longer optional, but others could be. How to generalize this?
-        #  Refactor function to handle multiple protein components, similarly to what we do with small mols.
         # c. get OpenMM Modeller + a dictionary of resids for each component
-        state_a_modeller, comp_resids = system_creation.get_omm_modeller(
-            protein_comp=receptor_comp,
-            solvent_comp=solvent_comp,
-            small_mols=alchemical_small_mols_a | common_small_mols,
+        state_a_modeller, _ = system_creation.get_omm_modeller(
+            protein_comps=protein_comps_a,
+            solvent_comp=solvent_comp_a,
+            small_mols=small_mols_a,
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
         )
@@ -280,41 +249,44 @@ class SetupUnit(ProtocolUnit):
         state_a_topology = state_a_modeller.getTopology()
         state_a_positions = to_openmm(from_openmm(state_a_modeller.getPositions()))
 
-        # TODO: system_generator and openmmforcefields don't really know how to deal with empty lists, but they use None.
-        #  We would need to refactor accordingly, maybe we need yet another helper function here. Refactoring omm forcefields is unlikely.
         # e. create the stateA System
+        # Note: If there are no small mols ommffs requires a None
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=list(
-                chain(alchemical_small_mols_a.values(), common_small_mols.values())
-            ),
+            molecules=[mol.to_openff() for mol in
+                       state_a_small_mols] if state_a_small_mols else None,
         )
 
         # 2. Get stateB system
-        # a. get the topology
+        # a. Generate topology reusing state A topology as possible
+        # Note: We are only dealing with single alchemical components
+        state_b_alchem_top = generate_omm_top_from_component(alchemical_comps["stateB"][0])
+        state_b_alchem_pos = get_positions_from_component(alchemical_comps["stateB"][0])
+        # We get the residue index from the mapping unique atom indices
+        # NOTE: We assume single residue/point/component mutation here
+        state_a_alchem_resindex = [get_residue_index_from_atom_index(state_a_topology,
+                                                                    next(mapping.componentA_unique))]
         (
             state_b_topology,
             state_b_alchem_resids,
         ) = _rfe_utils.topologyhelpers.combined_topology(
             state_a_topology,
-            ligand_b.to_openff().to_topology().to_openmm(),
-            exclude_resids=comp_resids[ligand_a],
+            state_b_alchem_top,
+            exclude_resids=iter(state_a_alchem_resindex),
         )
 
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=list(
-                chain(alchemical_small_mols_b.values(), common_small_mols.values())
-            ),
+            molecules=[mol.to_openff() for mol in state_b_small_mols],
         )
 
-        #  c. Define correspondence mappings between the two systems
-        # TODO: According to docs this should already work. Double check.
+        # TODO: This doesn't have to be a ligand mapping. i.e. for protein mutation.
+        # c. Define correspondence mappings between the two systems
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
             mapping.componentA_to_componentB,
             state_a_system,
             state_a_topology,
-            comp_resids[ligand_a],
+            state_a_alchem_resindex,
             state_b_system,
             state_b_topology,
             state_b_alchem_resids,
@@ -322,7 +294,6 @@ class SetupUnit(ProtocolUnit):
             fix_constraints=True,
         )
 
-        # TODO: This should also be working as is. Maybe review docstring in openfe function.
         # Handle charge corrections/transformations
         # Get the change difference between the end states
         # and check if the charge correction used is appropriate
@@ -330,10 +301,10 @@ class SetupUnit(ProtocolUnit):
             mapping,
             forcefield_settings.nonbonded_method,
             alchemical_settings.explicit_charge_correction,
-            solvent_comp,
+            # TODO: I don't understand why this isn't erroring when it's vacuum leg. review
+            solvent_comp_a,  # Solvent comp in a is expected to be the same as in b
         )
 
-        # TODO: Should also already work as is...
         if alchemical_settings.explicit_charge_correction:
             alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(
                 state_a_topology,
@@ -347,19 +318,16 @@ class SetupUnit(ProtocolUnit):
                 state_b_system,
                 ligand_mappings,
                 charge_difference,
-                solvent_comp,
+                solvent_comp_a,
             )
 
-        # TODO: According to docs this should work as well.
-        #  d. Finally get the positions
+        # d. Finally get the positions
         state_b_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
             ligand_mappings,
             state_a_topology,
             state_b_topology,
             old_positions=ensure_quantity(state_a_positions, "openmm"),
-            insert_positions=ensure_quantity(
-                ligand_b.to_openff().conformers[0], "openmm"
-            ),
+            insert_positions=state_b_alchem_pos,
         )
 
         # TODO: handle the literals directly in the HTF object (issue #42)
