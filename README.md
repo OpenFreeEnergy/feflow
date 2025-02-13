@@ -19,7 +19,7 @@ Copyright (c) 2024, The Open Free Energy development team
 ### Acknowledgements
 [Choderalab -- Perses](https://github.com/choderalab/perses)
 
-[Open Free energy Consortium](https://openfree.energy/)
+[Open Free Energy Consortium](https://openfree.energy/)
 
 Project based on the
 [Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.1.
