@@ -24,7 +24,7 @@ from feflow.settings.small_molecules import OpenFFPartialChargeSettings
 
 # TODO: Remove/change when things get migrated to openmmtools or feflow
 from openfe.protocols.openmm_utils import system_creation
-from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
+from openfe.protocols.openmm_utils.omm_compute import get_openmm_platform
 
 from openff.toolkit import Molecule as OFFMolecule
 from openff.units import unit
@@ -66,10 +66,11 @@ class SetupUnit(ProtocolUnit):
                 "solvent"
             ), "Solvent parameters differ between solvent components."
         # check protein component is the same in both states if protein component is found
-        if any(["protein" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("protein") == state_b.get(
-                "protein"
-            ), "Receptors in states are not compatible."
+        # TODO: Need to change this for all the NON-alchemical components
+        # if any(["protein" in state.components for state in (state_a, state_b)]):
+        #     assert state_a.get("protein") == state_b.get(
+        #         "protein"
+        #     ), "Receptors in states are not compatible."
 
     @staticmethod
     def _detect_phase(state_a, state_b):
@@ -97,6 +98,7 @@ class SetupUnit(ProtocolUnit):
         component_keys : list[str]
             List of component keys to extract from states.
         """
+        # TODO: Rewrite this function to not depend on hardcoded keys!
         states = (state_a, state_b)
         # where to store the data to be returned
 

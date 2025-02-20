@@ -257,7 +257,7 @@ class TestProtocolMutation:
     def protocol_short(self, short_settings_protein_mutation):
         return ProteinMutationProtocol(settings=short_settings_protein_mutation)
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def protocol_ala_to_gly_result(
         self,
         protocol_short,
@@ -287,7 +287,7 @@ class TestProtocolMutation:
 
         return protocol_short, dag, dagresult
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def protocol_asp_to_leu_result(
         self,
         protocol_short,
