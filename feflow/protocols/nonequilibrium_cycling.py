@@ -23,7 +23,10 @@ from feflow.settings.small_molecules import OpenFFPartialChargeSettings
 
 # TODO: Remove/change when things get migrated to openmmtools or feflow
 from openfe.protocols.openmm_utils import system_creation
-from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
+try:  # Support openfe < 1.3.0
+    from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
+except ModuleNotFoundError:
+    from openfe.protocols.openmm_utils.omm_compute import get_openmm_platform
 
 from openff.toolkit import Molecule as OFFMolecule
 from openff.units import unit

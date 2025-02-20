@@ -6,7 +6,7 @@ dependencies:
     # Base depends
   - gufe >=0.9.5
   - numpy
-  - openfe >=0.15  # TODO: Remove once we don't depend on openfe
+  - openfe >=1.1.0  # TODO: Remove once we don't depend on openfe
   - openff-units
   - openmm
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
