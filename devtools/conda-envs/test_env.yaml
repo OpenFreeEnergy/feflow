@@ -10,7 +10,7 @@ dependencies:
   - openff-units
   - openmm
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
-  - pymbar <4
+  - pymbar >4.0
   - pydantic >=1.10.17
   - python
 
