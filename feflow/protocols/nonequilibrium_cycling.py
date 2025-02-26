@@ -73,53 +73,6 @@ class SetupUnit(ProtocolUnit):
         #     ), "Receptors in states are not compatible."
 
     @staticmethod
-    def _detect_phase(state_a, state_b):
-        """
-        Detect phase according to the components in the input chemical state.
-
-        Complex state is assumed if both states have ligands and protein components.
-
-        Solvent state is assumed
-
-        Vacuum state is assumed if only either a ligand or a protein is present
-        in each of the states.
-
-        Parameters
-        ----------
-        state_a : gufe.state.State
-            Source state for the alchemical transformation.
-        state_b : gufe.state.State
-            Destination state for the alchemical transformation.
-
-        Returns
-        -------
-        phase : str
-            Phase name. "vacuum", "solvent" or "complex".
-        component_keys : list[str]
-            List of component keys to extract from states.
-        """
-        # TODO: Rewrite this function to not depend on hardcoded keys!
-        states = (state_a, state_b)
-        # where to store the data to be returned
-
-        # Order of phases is important! We have to check complex first and solvent second.
-        key_options = {
-            "complex": ["ligand", "protein", "solvent"],
-            "solvent": ["ligand", "solvent"],
-            "vacuum": ["ligand"],
-        }
-        for phase, keys in key_options.items():
-            if all([key in state for state in states for key in keys]):
-                detected_phase = phase
-                break
-        else:
-            raise ValueError(
-                "Could not detect phase from system states. Make sure the component in both systems match."
-            )
-
-        return detected_phase
-
-    @staticmethod
     def _assign_openff_partial_charges(
         charge_settings: OpenFFPartialChargeSettings,
         off_small_mols: Iterable[OFFMolecule],
@@ -195,10 +148,6 @@ class SetupUnit(ProtocolUnit):
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
-
-        phase = self._detect_phase(
-            state_a, state_b
-        )  # infer phase from systems and components
 
         # Get receptor components from systems if found (None otherwise)
         solvent_comp_a = get_typed_components(state_a, SolventComponent)
@@ -436,7 +385,6 @@ class SetupUnit(ProtocolUnit):
             "system": system_outfile,
             "state": state_outfile,
             "integrator": integrator_outfile,
-            "phase": phase,
             "initial_atom_indices": hybrid_factory.initial_atom_indices,
             "final_atom_indices": hybrid_factory.final_atom_indices,
             "topology_path": htf_outfile,
@@ -728,9 +676,8 @@ class CycleUnit(ProtocolUnit):
             )
 
             # Serialize works
-            phase = setup.outputs["phase"]
-            forward_work_path = ctx.shared / f"forward_{phase}_{self.name}.npy"
-            reverse_work_path = ctx.shared / f"reverse_{phase}_{self.name}.npy"
+            forward_work_path = ctx.shared / f"forward_{self.name}.npy"
+            reverse_work_path = ctx.shared / f"reverse_{self.name}.npy"
             with open(forward_work_path, "wb") as out_file:
                 np.save(out_file, forward_works)
             with open(reverse_work_path, "wb") as out_file:
@@ -747,21 +694,21 @@ class CycleUnit(ProtocolUnit):
 
             # TODO: Do we need to save the trajectories?
             # Serialize trajectories
-            forward_eq_old_path = ctx.shared / f"forward_eq_old_{phase}_{self.name}.npy"
-            forward_eq_new_path = ctx.shared / f"forward_eq_new_{phase}_{self.name}.npy"
+            forward_eq_old_path = ctx.shared / f"forward_eq_old_{self.name}.npy"
+            forward_eq_new_path = ctx.shared / f"forward_eq_new_{self.name}.npy"
             forward_neq_old_path = (
-                ctx.shared / f"forward_neq_old_{phase}_{self.name}.npy"
+                ctx.shared / f"forward_neq_old_{self.name}.npy"
             )
             forward_neq_new_path = (
-                ctx.shared / f"forward_neq_new_{phase}_{self.name}.npy"
+                ctx.shared / f"forward_neq_new_{self.name}.npy"
             )
-            reverse_eq_new_path = ctx.shared / f"reverse_eq_new_{phase}_{self.name}.npy"
-            reverse_eq_old_path = ctx.shared / f"reverse_eq_old_{phase}_{self.name}.npy"
+            reverse_eq_new_path = ctx.shared / f"reverse_eq_new_{self.name}.npy"
+            reverse_eq_old_path = ctx.shared / f"reverse_eq_old_{self.name}.npy"
             reverse_neq_old_path = (
-                ctx.shared / f"reverse_neq_old_{phase}_{self.name}.npy"
+                ctx.shared / f"reverse_neq_old_{self.name}.npy"
             )
             reverse_neq_new_path = (
-                ctx.shared / f"reverse_neq_new_{phase}_{self.name}.npy"
+                ctx.shared / f"reverse_neq_new_{self.name}.npy"
             )
 
             with open(forward_eq_old_path, "wb") as out_file:
@@ -1019,7 +966,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         )
 
         simulations = [
-            self._simulation_unit(protocol=self, setup=setup, name=f"{replicate}")
+            self._simulation_unit(protocol=self, setup=setup, name=f"cycle_{replicate}")
             for replicate in range(num_cycles)
         ]
 
