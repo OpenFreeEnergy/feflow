@@ -15,7 +15,8 @@ dependencies:
   - python
 
     # Testing (optional deps)
-  - espaloma_charge  # To us Espaloma FF in tests
+  - espaloma_charge ==0.0.8  # To us Espaloma FF in tests
+  - torchdata <0.10
   - openeye-toolkits
   - openff-nagl  # To use OpenFF's NAGL forcefield in tests
   - openmoltools  # TODO: Remove once we refactor tests
