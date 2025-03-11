@@ -4,7 +4,7 @@ channels:
   - openeye
 dependencies:
     # Base depends
-  - gufe >=0.9.5
+  - gufe >=1.2.0
   - numpy
   - openfe >=1.1.0  # TODO: Remove once we don't depend on openfe
   - openff-units
@@ -15,7 +15,8 @@ dependencies:
   - python
 
     # Testing (optional deps)
-  - espaloma_charge  # To us Espaloma FF in tests
+  - espaloma_charge ==0.0.8  # To use Espaloma FF in tests
+  - torchdata <0.10
   - openeye-toolkits
   - openff-nagl  # To use OpenFF's NAGL forcefield in tests
   - openmoltools  # TODO: Remove once we refactor tests
