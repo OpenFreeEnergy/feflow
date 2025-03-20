@@ -961,6 +961,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
     """
 
     _simulation_unit = CycleUnit
+    _settings_cls = NonEquilibriumCyclingSettings
     result_cls = NonEquilibriumCyclingProtocolResult
 
     def __init__(self, settings: Settings):
