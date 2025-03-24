@@ -4,6 +4,12 @@ feflow Change Log
 
 .. current developments
 
+v0.1.2
+====================
+
+- Support for ``openfe >=1.1.0``. Importing ``openmm`` utils from the correct modules for recent ``openfe`` versions (`PR #109 <https://github.com/OpenFreeEnergy/feflow/pull/109>`_).
+- Support for recent ``pymbar`` versions (``>4.0``). Dropped support for ``pymbar`` 3 or previous versions (`PR #109 <https://github.com/OpenFreeEnergy/feflow/pull/109>`_).
+
 v0.1.1
 ====================
 
