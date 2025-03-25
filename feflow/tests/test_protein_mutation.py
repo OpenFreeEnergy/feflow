@@ -288,6 +288,45 @@ class TestProtocolMutation:
         return protocol_short, dag, dagresult
 
     @pytest.fixture
+    def protocol_gly_to_ala_result(
+            self,
+            protocol_short,
+            ala_capped,
+            gly_capped,
+            ala_capped_system,
+            gly_capped_system,
+            ala_to_gly_mapping,
+            tmpdir,
+    ):
+        """Short protocol execution for capped ALA to GLY mutation"""
+        gly_to_ala_map = ala_to_gly_mapping.componentB_to_componentA
+        mapping = LigandAtomMapping(
+            componentA=gly_capped,
+            componentB=ala_capped,
+            componentA_to_componentB=gly_to_ala_map,
+        )
+
+        dag = protocol_short.create(
+            stateA=gly_capped_system,
+            stateB=ala_capped_system,
+            name="Short vacuum transformation",
+            mapping=mapping,
+        )
+
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            dagresult: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        return protocol_short, dag, dagresult
+
+    @pytest.fixture
     def protocol_asp_to_leu_result(
         self,
         protocol_short,
@@ -404,6 +443,17 @@ class TestProtocolMutation:
         """Takes a protocol result from an executed DAG and checks the OK status
         as well as the name of the resulting unit."""
         protocol, dag, dagresult = protocol_ala_to_gly_result
+
+        assert dagresult.ok()
+
+        # the FinishUnit will always be the last to execute
+        finishresult = dagresult.protocol_unit_results[-1]
+        assert finishresult.name == "result"
+
+    def test_gly_to_ala_execute(self, protocol_gly_to_ala_result):
+        """Takes a protocol result from an executed DAG and checks the OK status
+        as well as the name of the resulting unit."""
+        protocol, dag, dagresult = protocol_gly_to_ala_result
 
         assert dagresult.ok()
 
