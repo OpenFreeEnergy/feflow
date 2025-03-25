@@ -289,14 +289,14 @@ class TestProtocolMutation:
 
     @pytest.fixture
     def protocol_gly_to_ala_result(
-            self,
-            protocol_short,
-            ala_capped,
-            gly_capped,
-            ala_capped_system,
-            gly_capped_system,
-            ala_to_gly_mapping,
-            tmpdir,
+        self,
+        protocol_short,
+        ala_capped,
+        gly_capped,
+        ala_capped_system,
+        gly_capped_system,
+        ala_to_gly_mapping,
+        tmpdir,
     ):
         """Short protocol execution for capped ALA to GLY mutation"""
         gly_to_ala_map = ala_to_gly_mapping.componentB_to_componentA

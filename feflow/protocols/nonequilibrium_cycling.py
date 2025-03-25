@@ -231,10 +231,10 @@ class SetupUnit(ProtocolUnit):
         # Get all the residues indices from alchemical chain
         # NOTE: We assume single residue/point/component mutation here
         # NOTE: This assumes chains in topology are actually connected (!)
-        state_a_alchem_resids = get_chain_residues_from_atom(topology=state_a_topology,
-                                                             atom_index=list(
-                                                                 mapping.componentA_to_componentB)[
-                                                                 0])
+        state_a_alchem_resids = get_chain_residues_from_atom(
+            topology=state_a_topology,
+            atom_index=list(mapping.componentA_to_componentB)[0],
+        )
 
         (
             state_b_topology,
@@ -697,20 +697,12 @@ class CycleUnit(ProtocolUnit):
             # Serialize trajectories
             forward_eq_old_path = ctx.shared / f"forward_eq_old_{self.name}.npy"
             forward_eq_new_path = ctx.shared / f"forward_eq_new_{self.name}.npy"
-            forward_neq_old_path = (
-                ctx.shared / f"forward_neq_old_{self.name}.npy"
-            )
-            forward_neq_new_path = (
-                ctx.shared / f"forward_neq_new_{self.name}.npy"
-            )
+            forward_neq_old_path = ctx.shared / f"forward_neq_old_{self.name}.npy"
+            forward_neq_new_path = ctx.shared / f"forward_neq_new_{self.name}.npy"
             reverse_eq_new_path = ctx.shared / f"reverse_eq_new_{self.name}.npy"
             reverse_eq_old_path = ctx.shared / f"reverse_eq_old_{self.name}.npy"
-            reverse_neq_old_path = (
-                ctx.shared / f"reverse_neq_old_{self.name}.npy"
-            )
-            reverse_neq_new_path = (
-                ctx.shared / f"reverse_neq_new_{self.name}.npy"
-            )
+            reverse_neq_old_path = ctx.shared / f"reverse_neq_old_{self.name}.npy"
+            reverse_neq_new_path = ctx.shared / f"reverse_neq_new_{self.name}.npy"
 
             with open(forward_eq_old_path, "wb") as out_file:
                 np.save(out_file, np.array(forward_eq_initial))
