@@ -3,8 +3,8 @@ Implementation of protein mutation protocol based on Nonequilibrium Cycling, usi
 MD engine.
 """
 
-from gufe.protocols import Protocol
+# TODO: WE might not need a whole new Protocol for protein mutations after all
+from feflow.protocols import NonEquilibriumCyclingProtocol
 
 
-class ProteinMutationProtocol(Protocol):
-    pass
+ProteinMutationProtocol = NonEquilibriumCyclingProtocol
