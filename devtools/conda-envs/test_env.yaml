@@ -18,6 +18,7 @@ dependencies:
   - pip:
       - "git+https://github.com/OpenFreeEnergy/openfe.git@protein-mutation-support"
     # Dependencies for openfe branch (temporary)
+  - threadpoolctl
   - lomap2
   - kartograf
 
