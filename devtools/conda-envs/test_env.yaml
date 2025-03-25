@@ -4,7 +4,7 @@ channels:
   - openeye
 dependencies:
     # Base depends
-  - gufe >=0.9.5
+#  - gufe >=0.9.5
   - numpy
 #  - openfe >=1.0  # TODO: Remove once we don't depend on openfe
   - openff-units
@@ -17,6 +17,7 @@ dependencies:
     # openfe branch with protein mutation support (TEMPORARY)
   - pip:
       - "git+https://github.com/OpenFreeEnergy/openfe.git@protein-mutation-support"
+      - "git+https://github.com/OpenFreeEnergy/gufe.git"
     # Dependencies for openfe branch (temporary)
   - threadpoolctl
   - lomap2
