@@ -4,6 +4,7 @@ Miscellaneous utility functions to extract data from gufe objects (and others)
 
 from typing import Type
 import gufe
+import openmm.app
 
 
 # TODO: should this be a method for the gufe.ChemicalSystem class?
@@ -211,6 +212,36 @@ def get_residue_index_from_atom_index(topology, atom_index):
         for atom in residue.atoms():
             if atom.index == atom_index:
                 return residue.index
+
+    # If the loop completes without finding the atom, raise the ValueError
+    raise ValueError(f"Atom index {atom_index} not found in topology.")
+
+
+def get_chain_residues_from_atom(topology: openmm.app.Topology, atom_index: int):
+    """
+    Retrieve the residue indices of all residues in the chain that contains a given atom.
+
+    Parameters
+    ----------
+    topology : openmm.app.Topology
+        The OpenMM topology containing chains, residues, and atoms.
+    atom_index : int
+        The index of the atom whose chain's residues are to be retrieved.
+
+    Returns
+    -------
+    list of int
+        A list of residue indices belonging to the chain that contains the specified atom.
+
+    Raises
+    ------
+    ValueError
+        If the specified atom index is not found in the topology.
+    """
+    for chain in topology.chains():
+        for atom in chain.atoms():
+            if atom.index == atom_index:
+                return list(residue.index for residue in chain.residues())
 
     # If the loop completes without finding the atom, raise the ValueError
     raise ValueError(f"Atom index {atom_index} not found in topology.")
