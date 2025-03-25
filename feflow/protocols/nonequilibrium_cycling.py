@@ -34,7 +34,7 @@ from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
 from ..utils.misc import (
     generate_omm_top_from_component,
-    get_residue_index_from_atom_index,
+    get_chain_residues_from_atom,
     get_positions_from_component,
 )
 
@@ -199,7 +199,7 @@ class SetupUnit(ProtocolUnit):
         # c. get OpenMM Modeller + a dictionary of resids for each component
         state_a_modeller, _ = system_creation.get_omm_modeller(
             protein_comps=protein_comps_a,
-            solvent_comp=solvent_comp_a,
+            solvent_comps=solvent_comp_a,
             small_mols=small_mols_a,
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
@@ -228,20 +228,21 @@ class SetupUnit(ProtocolUnit):
             alchemical_comps["stateB"][0]
         )
         state_b_alchem_pos = get_positions_from_component(alchemical_comps["stateB"][0])
-        # We get the residue index from the mapping unique atom indices
+        # Get all the residues indices from alchemical chain
         # NOTE: We assume single residue/point/component mutation here
-        state_a_alchem_resindex = [
-            get_residue_index_from_atom_index(
-                state_a_topology, next(mapping.componentA_unique)
-            )
-        ]
+        # NOTE: This assumes chains in topology are actually connected (!)
+        state_a_alchem_resids = get_chain_residues_from_atom(topology=state_a_topology,
+                                                             atom_index=list(
+                                                                 mapping.componentA_to_componentB)[
+                                                                 0])
+
         (
             state_b_topology,
             state_b_alchem_resids,
         ) = _rfe_utils.topologyhelpers.combined_topology(
             state_a_topology,
             state_b_alchem_top,
-            exclude_resids=iter(state_a_alchem_resindex),
+            exclude_resids=state_a_alchem_resids,
         )
 
         state_b_system = system_generator.create_system(
@@ -255,7 +256,7 @@ class SetupUnit(ProtocolUnit):
             mapping.componentA_to_componentB,
             state_a_system,
             state_a_topology,
-            state_a_alchem_resindex,
+            state_a_alchem_resids,
             state_b_system,
             state_b_topology,
             state_b_alchem_resids,
@@ -908,6 +909,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
     of the same type of components as components in stateB.
     """
 
+    _settings_cls = NonEquilibriumCyclingSettings
     _simulation_unit = CycleUnit
     result_cls = NonEquilibriumCyclingProtocolResult
 
