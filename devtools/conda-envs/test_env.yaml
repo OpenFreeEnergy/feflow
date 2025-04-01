@@ -18,10 +18,11 @@ dependencies:
   - pip:
       - "git+https://github.com/OpenFreeEnergy/openfe.git@protein-mutation-support"
       - "git+https://github.com/OpenFreeEnergy/gufe.git"
-    # Dependencies for openfe branch (temporary)
+    # Dependencies for openfe/gufe branches (temporary)
   - threadpoolctl
   - lomap2
   - kartograf
+  - openff-models
 
     # Testing (optional deps)
   - espaloma_charge  # To us Espaloma FF in tests
