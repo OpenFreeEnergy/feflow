@@ -20,7 +20,7 @@ dependencies:
       - "git+https://github.com/OpenFreeEnergy/gufe.git"
     # Dependencies for openfe/gufe branches (temporary)
   - threadpoolctl
-  - lomap2
+  - lomap2 ~=3.0
   - kartograf
   - openff-models
 
