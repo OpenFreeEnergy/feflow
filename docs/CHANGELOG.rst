@@ -4,6 +4,11 @@ feflow Change Log
 
 .. current developments
 
+v0.1.3
+====================
+
+- Support for `gufe >=1.3.0`. Defining Settings class in NonEquilibriumCyclingProtocol (`PR #115 <https://github.com/OpenFreeEnergy/feflow/pull/115>`_).
+
 v0.1.2
 ====================
 
