@@ -150,7 +150,9 @@ class SetupUnit(ProtocolUnit):
         self._check_states_compatibility(state_a, state_b)
 
         # Get receptor components from systems if found (None otherwise)
-        solvent_comps = get_typed_components(state_a, SolventComponent)  # this returns a set
+        solvent_comps = get_typed_components(
+            state_a, SolventComponent
+        )  # this returns a set
         solvent_comp_a = solvent_comps.pop()  # Get the first component
         protein_comps_a = get_typed_components(state_a, ProteinComponent)
         small_mols_a = get_typed_components(state_a, SmallMoleculeComponent)
