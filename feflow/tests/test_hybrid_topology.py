@@ -317,7 +317,7 @@ class TestHTFVirtualSites:
 
     def test_tip4p_num_waters(self, tip4p_benzene_to_toluene_htf):
         """
-        Check that the nuumber of virtual sites is equal to the number of
+        Check that the number of virtual sites is equal to the number of
         waters
         """
         htf = tip4p_benzene_to_toluene_htf

@@ -150,7 +150,8 @@ class SetupUnit(ProtocolUnit):
         self._check_states_compatibility(state_a, state_b)
 
         # Get receptor components from systems if found (None otherwise)
-        solvent_comp_a = get_typed_components(state_a, SolventComponent)
+        solvent_comps = get_typed_components(state_a, SolventComponent)  # this returns a set
+        solvent_comp_a = solvent_comps.pop()  # Get the first component
         protein_comps_a = get_typed_components(state_a, ProteinComponent)
         small_mols_a = get_typed_components(state_a, SmallMoleculeComponent)
 
@@ -271,7 +272,6 @@ class SetupUnit(ProtocolUnit):
             mapping,
             forcefield_settings.nonbonded_method,
             alchemical_settings.explicit_charge_correction,
-            # TODO: I don't understand why this isn't erroring when it's vacuum leg. review
             solvent_comp_a,  # Solvent comp in a is expected to be the same as in b
         )
 
