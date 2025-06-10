@@ -34,7 +34,7 @@ from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
 from ..utils.misc import (
     generate_omm_top_from_component,
-    get_chain_residues_from_atom,
+    get_chain_residues_from_atoms,
     get_positions_from_component,
 )
 
@@ -234,9 +234,9 @@ class SetupUnit(ProtocolUnit):
         # Get all the residues indices from alchemical chain
         # NOTE: We assume single residue/point/component mutation here
         # NOTE: This assumes chains in topology are actually connected (!)
-        state_a_alchem_resids = get_chain_residues_from_atom(
+        state_a_alchem_resids = get_chain_residues_from_atoms(
             topology=state_a_topology,
-            atom_index=list(mapping.componentA_to_componentB)[0],
+            atom_indices=list(mapping.componentA_to_componentB),
         )
 
         (

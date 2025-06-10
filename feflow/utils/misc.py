@@ -4,6 +4,7 @@ Miscellaneous utility functions to extract data from gufe objects (and others)
 
 from typing import Type
 import gufe
+import numpy as np
 import openmm.app
 
 
@@ -217,31 +218,49 @@ def get_residue_index_from_atom_index(topology, atom_index):
     raise ValueError(f"Atom index {atom_index} not found in topology.")
 
 
-def get_chain_residues_from_atom(topology: openmm.app.Topology, atom_index: int):
+def get_chain_residues_from_atoms(topology: openmm.app.Topology, atom_indices: int):
     """
-    Retrieve the residue indices of all residues in the chain that contains a given atom.
+    Extract residue indices from all chains containing specified atoms.
+
+    Given a list of atom indices, this function identifies all chains
+    that contain any of the atoms, and returns the indices of all residues
+    belonging to those chains.
 
     Parameters
     ----------
     topology : openmm.app.Topology
-        The OpenMM topology containing chains, residues, and atoms.
-    atom_index : int
-        The index of the atom whose chain's residues are to be retrieved.
+        The OpenMM Topology object containing atoms, residues, and chains.
+    atom_indices : list of int
+        A list of atom indices used to identify relevant chains.
 
     Returns
     -------
-    list of int
-        A list of residue indices belonging to the chain that contains the specified atom.
+    residue_indices : np.ndarray of int
+        Sorted array of residue indices from all chains that contain
+        any of the specified atoms.
 
     Raises
     ------
     ValueError
-        If the specified atom index is not found in the topology.
+        If no residues are found for the given atom indices.
     """
-    for chain in topology.chains():
-        for atom in chain.atoms():
-            if atom.index == atom_index:
-                return list(residue.index for residue in chain.residues())
+    # Get the chains that contain the atoms
+    chains_with_atoms = set()
+    for atom in topology.atoms():
+        if atom.index in atom_indices:
+            chains_with_atoms.add(atom.residue.chain)
 
-    # If the loop completes without finding the atom, raise the ValueError
-    raise ValueError(f"Atom index {atom_index} not found in topology.")
+    # Collect residue indices from those chains
+    residue_indices = set()
+    for chain in chains_with_atoms:
+        for residue in chain.residues():
+            residue_indices.add(residue.index)
+
+    # Sort and remove duplicates if necessary
+    residue_indices = np.array(sorted(residue_indices))
+
+    # Raise an error if none were found
+    if residue_indices.size == 0:
+        raise ValueError("No residues found: the atom indices do not belong to any known chain.")
+
+    return residue_indices
