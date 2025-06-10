@@ -261,6 +261,8 @@ def get_chain_residues_from_atoms(topology: openmm.app.Topology, atom_indices: i
 
     # Raise an error if none were found
     if residue_indices.size == 0:
-        raise ValueError("No residues found: the atom indices do not belong to any known chain.")
+        raise ValueError(
+            "No residues found: the atom indices do not belong to any known chain."
+        )
 
     return residue_indices
