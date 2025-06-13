@@ -1,8 +1,7 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, Any
 from collections.abc import Iterable
-from itertools import chain
 
 import datetime
 import logging
@@ -125,10 +124,6 @@ class SetupUnit(ProtocolUnit):
             Dictionary with paths to work arrays, both forward and reverse, and
             trajectory coordinates for systems A and B. As well as path for the
             pickled HTF object, mostly for debugging purposes.
-
-        Notes
-        -----
-        * Here we assume the mapping is only between ``SmallMoleculeComponent``s.
         """
         # needed imports
         import openmm
@@ -233,7 +228,6 @@ class SetupUnit(ProtocolUnit):
         state_b_alchem_pos = get_positions_from_component(alchemical_comps["stateB"][0])
         # Get all the residues indices from alchemical chain
         # NOTE: We assume single residue/point/component mutation here
-        # NOTE: This assumes chains in topology are actually connected (!)
         state_a_alchem_resids = get_chain_residues_from_atoms(
             topology=state_a_topology,
             atom_indices=list(mapping.componentA_to_componentB),
@@ -352,6 +346,14 @@ class SetupUnit(ProtocolUnit):
         try:
             # Minimize
             openmm.LocalEnergyMinimizer.minimize(context)
+            # Optionally store minimized topology -- Mostly for debugging purposes
+            if settings.store_minimized_pdb:
+                from openmm.app import PDBFile
+                omm_top_ = hybrid_factory.omm_hybrid_topology
+                omm_state_ = context.getState(getPositions=True)
+                omm_pos_ = omm_state_.getPositions()
+                with open(ctx.shared / "minimized_hybrid_topology.pdb", "w") as out_file:
+                    PDBFile.writeFile(omm_top_, omm_pos_, out_file)
 
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
             # need to set velocities to temperature so serialized state features velocities,
