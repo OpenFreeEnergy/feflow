@@ -247,8 +247,8 @@ class TestHTFVirtualSites:
 
         # Create state A model & get relevant OpenMM objects
         benz_model, comp_resids = system_creation.get_omm_modeller(
-            protein_comp=None,
-            solvent_comp=SolventComponent(),
+            protein_comps=None,
+            solvent_comps=SolventComponent(),
             small_mols={benzene: benz_off},
             omm_forcefield=tip4p_system_generator.forcefield,
             solvent_settings=solv_settings,
@@ -317,7 +317,7 @@ class TestHTFVirtualSites:
 
     def test_tip4p_num_waters(self, tip4p_benzene_to_toluene_htf):
         """
-        Check that the nuumber of virtual sites is equal to the number of
+        Check that the number of virtual sites is equal to the number of
         waters
         """
         htf = tip4p_benzene_to_toluene_htf
