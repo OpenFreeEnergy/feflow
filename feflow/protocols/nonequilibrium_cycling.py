@@ -148,7 +148,9 @@ class SetupUnit(ProtocolUnit):
         solvent_comps = get_typed_components(
             state_a, SolventComponent
         )  # this returns a set
-        solvent_comp_a = solvent_comps.pop() if solvent_comps else None  # Get the first component if exists
+        solvent_comp_a = (
+            solvent_comps.pop() if solvent_comps else None
+        )  # Get the first component if exists
         protein_comps_a = get_typed_components(state_a, ProteinComponent)
         small_mols_a = get_typed_components(state_a, SmallMoleculeComponent)
 
