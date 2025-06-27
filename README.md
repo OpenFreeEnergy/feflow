@@ -1,8 +1,8 @@
 FE Flow
 ==============================
 [//]: # (Badges)
-[![GitHub Actions Build Status](https://github.com/choderalab/feflow/actions/workflows/ci.yaml/badge.svg)](https://github.com/choderalab/feflow/actions/workflows/ci.yaml)
-[![codecov](https://codecov.io/gh/choderalab/feflow/branch/main/graph/badge.svg)](https://codecov.io/gh/choderalab/feflow/branch/main)
+[![GitHub Actions Build Status](https://github.com/OpenFreeEnergy/feflow/actions/workflows/ci.yaml/badge.svg)](https://github.com/OpenFreeEnergy/feflow/actions/workflows/ci.yaml)
+[![codecov](https://codecov.io/gh/OpenFreeEnergy/feflow/branch/main/graph/badge.svg)](https://codecov.io/gh/OpenFreeEnergy/feflow/branch/main)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13134624.svg)](https://doi.org/10.5281/zenodo.13134624)
 
 
@@ -13,12 +13,13 @@ Recipes, utilities, and protocols for molecular free energy calculations using t
 ### Copyright
 
 Copyright (c) 2023, ChoderaLab
+Copyright (c) 2024, The Open Free Energy development team
 
 
 ### Acknowledgements
 [Choderalab -- Perses](https://github.com/choderalab/perses)
 
-[Open Free energy Consortium](https://openfree.energy/)
+[Open Free Energy Consortium](https://openfree.energy/)
 
 Project based on the
 [Computational Molecular Science Python Cookiecutter](https://github.com/molssi/cookiecutter-cms) version 1.1.

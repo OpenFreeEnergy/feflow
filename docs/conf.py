@@ -26,8 +26,9 @@ project = "feflow"
 copyright = (
     "2023, ChoderaLab. Project structure based on the "
     "Computational Molecular Science Python Cookiecutter version 1.1"
+    "2024, The OpenFE Development Team."
 )
-author = "ChoderaLab"
+author = "ChoderaLab & The OpenFE Development Team"
 
 # The short X.Y version
 version = ""

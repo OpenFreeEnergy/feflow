@@ -1,6 +1,6 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, Any, Union
 from collections.abc import Iterable
 from itertools import chain
 
@@ -25,7 +25,11 @@ from feflow.settings.small_molecules import OpenFFPartialChargeSettings
 
 # TODO: Remove/change when things get migrated to openmmtools or feflow
 from openfe.protocols.openmm_utils import system_creation
-from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
+
+try:  # Support openfe < 1.3.0
+    from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
+except ModuleNotFoundError:
+    from openfe.protocols.openmm_utils.omm_compute import get_openmm_platform
 
 from openff.toolkit import Molecule as OFFMolecule
 from openff.units import unit
@@ -881,7 +885,9 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
 
         forward_work: npt.NDArray[float] = np.array(forward_work)
         reverse_work: npt.NDArray[float] = np.array(reverse_work)
-        free_energy, error = pymbar.bar.BAR(forward_work, reverse_work)
+        fe_bar = pymbar.bar(forward_work, reverse_work)
+        free_energy = fe_bar["Delta_f"]
+        error = fe_bar["dDelta_f"]
 
         return (
             free_energy * unit.k * self.data["temperature"] * unit.avogadro_constant
@@ -955,7 +961,9 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
             indices = np.random.choice(
                 np.arange(traj_size), size=[traj_size], replace=True
             )
-            dg, ddg = pymbar.bar.BAR(forward[indices], reverse[indices])
+            fe_bar = pymbar.bar(forward[indices], reverse[indices])
+            dg = fe_bar["Delta_f"]
+            ddg = fe_bar["dDelta_f"]
             all_dgs[i] = dg
 
         return all_dgs
@@ -970,6 +978,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
     """
 
     _simulation_unit = CycleUnit
+    _settings_cls = NonEquilibriumCyclingSettings
     result_cls = NonEquilibriumCyclingProtocolResult
 
     def __init__(self, settings: Settings):
@@ -1005,14 +1014,23 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self,
         stateA: ChemicalSystem,
         stateB: ChemicalSystem,
-        mapping: Optional[dict[str, ComponentMapping]] = None,
+        mapping: Optional[Union[ComponentMapping, list[ComponentMapping]]] = None,
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
-        # Handle parameters
-        if mapping is None:
-            raise ValueError("`mapping` is required for this Protocol")
+        from openfe.protocols.openmm_rfe.equil_rfe_methods import (
+            _validate_alchemical_components,
+        )
+        from openfe.protocols.openmm_utils import system_validation
+
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
+
+        # Do manual validation until it is part of the protocol
+        # Get alchemical components & validate them + mapping
+        alchem_comps = system_validation.get_alchemical_components(stateA, stateB)
+        # raise an error if we have more than one mapping
+        _validate_alchemical_components(alchem_comps, mapping)
+        mapping = mapping[0] if isinstance(mapping, list) else mapping  # type: ignore
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects

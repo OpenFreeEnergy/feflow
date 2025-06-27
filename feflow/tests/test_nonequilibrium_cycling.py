@@ -5,8 +5,12 @@ import pymbar.utils
 import pytest
 
 from feflow.protocols import NonEquilibriumCyclingProtocol
+from feflow.settings import NonEquilibriumCyclingSettings
 from gufe.protocols.protocoldag import ProtocolDAGResult, execute_DAG
 from gufe.protocols.protocolunit import ProtocolUnitResult
+from gufe.tokenization import JSON_HANDLER
+
+import json
 
 
 def partial_charges_config():
@@ -303,7 +307,13 @@ class TestNonEquilibriumCycling:
         ],
     )
     def test_create_execute_gather_toluene_to_toluene(
-        self, protocol, toluene_vacuum_system, mapping_toluene_toluene, tmpdir, request
+        self,
+        protocol,
+        toluene_vacuum_system,
+        mapping_toluene_toluene,
+        tmpdir,
+        request,
+        toluene,
     ):
         """
         Perform 20 independent simulations of the NEQ cycling protocol for the toluene to toluene
@@ -324,10 +334,16 @@ class TestNonEquilibriumCycling:
         import numpy as np
 
         protocol = request.getfixturevalue(protocol)
-
+        # rename the components
+        toluene_state_a = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_a")}
+        )
+        toluene_state_b = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_b")}
+        )
         dag = protocol.create(
-            stateA=toluene_vacuum_system,
-            stateB=toluene_vacuum_system,
+            stateA=toluene_state_a,
+            stateB=toluene_state_b,
             name="Toluene vacuum transformation",
             mapping=mapping_toluene_toluene,
         )
@@ -491,6 +507,27 @@ class TestNonEquilibriumCycling:
 
                 execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
 
+    def test_error_with_multiple_mappings(
+        self,
+        protocol_short,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+    ):
+        """
+        Make sure that when a list of mappings is passed that an error is raised.
+        """
+
+        with pytest.raises(
+            ValueError, match="A single LigandAtomMapping is expected for this Protocol"
+        ):
+            _ = protocol_short.create(
+                stateA=benzene_vacuum_system,
+                stateB=toluene_vacuum_system,
+                name="Test protocol",
+                mapping=[mapping_benzene_toluene, mapping_benzene_toluene],
+            )
+
 
 class TestSetupUnit:
     def test_setup_user_charges(
@@ -572,3 +609,16 @@ class TestSetupUnit:
 
         # Finally check that the charges are as expected
         _check_htf_charges(htf, benzene_orig_charges, toluene_orig_charges)
+
+
+def test_settings_round_trip():
+    """
+    Make sure we can round trip the settings class to and from json,
+    related to <https://github.com/OpenFreeEnergy/feflow/issues/87>.
+    """
+    neq_settings = NonEquilibriumCyclingProtocol.default_settings()
+    neq_json = json.dumps(neq_settings.dict(), cls=JSON_HANDLER.encoder)
+    neq_settings_2 = NonEquilibriumCyclingSettings.parse_obj(
+        json.loads(neq_json, cls=JSON_HANDLER.decoder)
+    )
+    assert neq_settings == neq_settings_2
