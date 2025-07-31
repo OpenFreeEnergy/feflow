@@ -975,7 +975,8 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
         end = ResultUnit(name="result", simulations=simulations)
 
-        return [*simulations, end]
+        # TODO: Why was it working without adding `setup` here?
+        return [setup, *simulations, end]
 
     def _gather(
         self, protocol_dag_results: Iterable[ProtocolDAGResult]
