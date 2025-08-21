@@ -4,6 +4,10 @@ feflow Change Log
 
 .. current developments
 
+v0.1.4
+====================
+- Dropping use of deprecated ``openff-models``. Using vendored ``gufe`` implementation instead (`PR #123 <https://github.com/OpenFreeEnergy/feflow/pull/123>`_)
+
 v0.1.3
 ====================
 
