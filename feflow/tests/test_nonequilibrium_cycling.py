@@ -141,7 +141,7 @@ class TestNonEquilibriumCycling:
         return protocol_short, dag, dagresult
 
     @pytest.fixture
-    def protocol_dag_broken(
+    def protocol_dag_invalid_mapping(
         self,
         protocol_short,
         benzene_vacuum_system,
@@ -230,6 +230,76 @@ class TestNonEquilibriumCycling:
     #                 shared_basedir=shared,
     #                 scratch_basedir=scratch,
     #             )
+
+    def test_create_with_invalid_mapping(
+            self,
+            protocol_short_multiple_cycles,
+            benzene_solvent_system,
+            toluene_solvent_system,
+            mapping_benzonitrile_styrene,
+    ):
+        """
+        Attempt creating a protocol with an invalid mapping. Components in mapping don't
+        match the components in the states/systems.
+
+        We expect it to fail with an exception.
+        """
+        protocol = protocol_short_multiple_cycles
+
+        with pytest.raises(AssertionError):
+            _ = protocol.create(
+                stateA=benzene_solvent_system,
+                stateB=toluene_solvent_system,
+                name="Short solvent transformation",
+                mapping=mapping_benzonitrile_styrene,
+            )
+
+    def test_create_with_invalid_componentA_mapping(
+            self,
+            protocol_short_multiple_cycles,
+            benzene_solvent_system,
+            styrene_solvent_system,
+            mapping_benzonitrile_styrene,
+    ):
+        """
+        Test creating a protocol with the componentA of the mapping not matching the given
+        component in stateA.
+
+        We expect it to fail with an exception.
+        """
+        protocol = protocol_short_multiple_cycles
+
+        with pytest.raises(AssertionError):
+            _ = protocol.create(
+                stateA=benzene_solvent_system,
+                stateB=styrene_solvent_system,
+                name="Short solvent transformation",
+                mapping=mapping_benzonitrile_styrene,
+            )
+
+    def test_create_with_invalid_componentB_mapping(
+            self,
+            protocol_short_multiple_cycles,
+            benzonitrile_solvent_system,
+            toluene_solvent_system,
+            mapping_benzonitrile_styrene,
+    ):
+        """
+        Test creating a protocol with the componentB of the mapping not matching the given
+        component in stateB.
+
+        We expect it to fail with an exception.
+        """
+        protocol = protocol_short_multiple_cycles
+
+        with pytest.raises(AssertionError):
+            _ = protocol.create(
+                stateA=benzonitrile_solvent_system,
+                stateB=toluene_solvent_system,
+                name="Short solvent transformation",
+                mapping=mapping_benzonitrile_styrene,
+            )
+
 
     @pytest.mark.gpu_ci
     @pytest.mark.parametrize(
