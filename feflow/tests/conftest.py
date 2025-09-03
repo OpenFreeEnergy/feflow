@@ -74,7 +74,9 @@ def benzonitrile(benzene_modifications):
 def styrene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["styrene"])
 
+
 # Systems fixtures
+
 
 @pytest.fixture
 def benzene_vacuum_system(benzene):
@@ -105,7 +107,9 @@ def benzonitrile_solvent_system(benzonitrile, solvent_comp):
 def styrene_solvent_system(styrene, solvent_comp):
     return gufe.ChemicalSystem({"ligand": styrene, "solvent": solvent_comp})
 
+
 # Settings fixtures
+
 
 @pytest.fixture
 def short_settings():
@@ -209,6 +213,7 @@ def mapping_toluene_toluene(toluene):
         componentA_to_componentB=mapping_toluene_to_toluene,
     )
     return mapping_obj
+
 
 @pytest.fixture
 def mapping_benzonitrile_styrene(benzonitrile, styrene):

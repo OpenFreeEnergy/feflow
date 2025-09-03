@@ -957,8 +957,9 @@ class NonEquilibriumCyclingProtocol(Protocol):
             raise NotImplementedError("Can't extend simulations yet")
 
         # check mapping compatibility
-        self._check_mappings_consistency(mapping=mapping, chemical_system_a=stateA,
-                                         chemical_system_b=stateB)
+        self._check_mappings_consistency(
+            mapping=mapping, chemical_system_a=stateA, chemical_system_b=stateB
+        )
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
@@ -1013,8 +1014,16 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # Check components in mapping are part of the chemical systems
         mapping_comp_a = mapping.componentA
         mapping_comp_b = mapping.componentB
-        chem_sys_a_keys = [component.key for _, component in chemical_system_a.components.items()]
-        chem_sys_b_keys = [component.key for _, component in chemical_system_b.components.items()]
+        chem_sys_a_keys = [
+            component.key for _, component in chemical_system_a.components.items()
+        ]
+        chem_sys_b_keys = [
+            component.key for _, component in chemical_system_b.components.items()
+        ]
         # TODO: We could probably raise a custom Exception here, instead of an AssertionError
-        assert mapping_comp_a.key in chem_sys_a_keys, "Component A in mapping not found in chemical system A."
-        assert mapping_comp_b.key in chem_sys_b_keys, "Component B in mapping not found in chemical system B."
+        assert (
+            mapping_comp_a.key in chem_sys_a_keys
+        ), "Component A in mapping not found in chemical system A."
+        assert (
+            mapping_comp_b.key in chem_sys_b_keys
+        ), "Component B in mapping not found in chemical system B."

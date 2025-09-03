@@ -232,11 +232,11 @@ class TestNonEquilibriumCycling:
     #             )
 
     def test_create_with_invalid_mapping(
-            self,
-            protocol_short_multiple_cycles,
-            benzene_solvent_system,
-            toluene_solvent_system,
-            mapping_benzonitrile_styrene,
+        self,
+        protocol_short_multiple_cycles,
+        benzene_solvent_system,
+        toluene_solvent_system,
+        mapping_benzonitrile_styrene,
     ):
         """
         Attempt creating a protocol with an invalid mapping. Components in mapping don't
@@ -255,11 +255,11 @@ class TestNonEquilibriumCycling:
             )
 
     def test_create_with_invalid_componentA_mapping(
-            self,
-            protocol_short_multiple_cycles,
-            benzene_solvent_system,
-            styrene_solvent_system,
-            mapping_benzonitrile_styrene,
+        self,
+        protocol_short_multiple_cycles,
+        benzene_solvent_system,
+        styrene_solvent_system,
+        mapping_benzonitrile_styrene,
     ):
         """
         Test creating a protocol with the componentA of the mapping not matching the given
@@ -278,11 +278,11 @@ class TestNonEquilibriumCycling:
             )
 
     def test_create_with_invalid_componentB_mapping(
-            self,
-            protocol_short_multiple_cycles,
-            benzonitrile_solvent_system,
-            toluene_solvent_system,
-            mapping_benzonitrile_styrene,
+        self,
+        protocol_short_multiple_cycles,
+        benzonitrile_solvent_system,
+        toluene_solvent_system,
+        mapping_benzonitrile_styrene,
     ):
         """
         Test creating a protocol with the componentB of the mapping not matching the given
@@ -299,7 +299,6 @@ class TestNonEquilibriumCycling:
                 name="Short solvent transformation",
                 mapping=mapping_benzonitrile_styrene,
             )
-
 
     @pytest.mark.gpu_ci
     @pytest.mark.parametrize(
