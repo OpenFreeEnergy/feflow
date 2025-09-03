@@ -947,7 +947,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self,
         stateA: ChemicalSystem,
         stateB: ChemicalSystem,
-        mapping: Optional[dict[str, ComponentMapping]] = None,
+        mapping: Optional[ComponentMapping | dict[str, ComponentMapping]] = None,
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
         # Handle parameters
@@ -955,6 +955,10 @@ class NonEquilibriumCyclingProtocol(Protocol):
             raise ValueError("`mapping` is required for this Protocol")
         if extends:
             raise NotImplementedError("Can't extend simulations yet")
+
+        # check mapping compatibility
+        self._check_mappings_consistency(mapping=mapping, chemical_system_a=stateA,
+                                         chemical_system_b=stateB)
 
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
@@ -999,3 +1003,18 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
         # This can be populated however we want
         return outputs
+
+    # TODO: Maybe this could be a utility function. Is this something protocol-specific?
+    @staticmethod
+    def _check_mappings_consistency(mapping, chemical_system_a, chemical_system_b):
+        """
+        Method to check that the mappings objects are consistent to be used in the protocol.
+        """
+        # Check components in mapping are part of the chemical systems
+        mapping_comp_a = mapping.componentA
+        mapping_comp_b = mapping.componentB
+        chem_sys_a_keys = [component.key for _, component in chemical_system_a.components.items()]
+        chem_sys_b_keys = [component.key for _, component in chemical_system_b.components.items()]
+        # TODO: We could probably raise a custom Exception here, instead of an AssertionError
+        assert mapping_comp_a.key in chem_sys_a_keys, "Component A in mapping not found in chemical system A."
+        assert mapping_comp_b.key in chem_sys_b_keys, "Component B in mapping not found in chemical system B."
