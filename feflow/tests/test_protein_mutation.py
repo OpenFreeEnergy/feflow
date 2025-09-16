@@ -576,8 +576,8 @@ class TestProtocolMutation:
             f"6 * dDDG ({6 * arg_lys_diff_error})"
         )
 
-    # Expected to fail, since we are supporting proline mutations
-    @pytest.xfail
+
+    @pytest.xfail("Expected to fail so far, we are allowing proline mutations.")
     def test_proline_mutation_fails(
         self, ala_capped_system, pro_capped_system, ala_to_pro_mapping
     ):
