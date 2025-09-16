@@ -363,7 +363,9 @@ class TestNonEquilibriumCycling:
         assert not np.isnan(fe_error), "Free energy error estimate is NaN."
         # print(f"Free energy = {fe_estimate} +/- {fe_error}") # DEBUG
 
-    @pytest.mark.skip(reason="Ambertools failing to parameterize. Review when we have full nagl.")
+    @pytest.mark.skip(
+        reason="Ambertools failing to parameterize. Review when we have full nagl."
+    )
     @pytest.mark.gpu_ci
     @pytest.mark.parametrize(
         "protocol",
