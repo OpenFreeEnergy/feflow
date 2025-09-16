@@ -657,6 +657,4 @@ class TestProtocolMutation:
                 scratch = Path("scratch")
                 scratch.mkdir()
 
-                execute_DAG(
-                    dag, shared_basedir=shared, scratch_basedir=scratch
-                )
+                execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
