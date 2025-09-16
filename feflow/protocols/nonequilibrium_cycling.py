@@ -31,6 +31,7 @@ from openff.units.openmm import to_openmm, from_openmm
 
 from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
+from ..utils.exceptions import ProtocolSupportError
 from ..utils.misc import (
     generate_omm_top_from_component,
     get_chain_residues_from_atoms,
@@ -266,12 +267,15 @@ class SetupUnit(ProtocolUnit):
         # Handle charge corrections/transformations
         # Get the change difference between the end states
         # and check if the charge correction used is appropriate
-        charge_difference = get_alchemical_charge_difference(
-            mapping,
-            forcefield_settings.nonbonded_method,
-            alchemical_settings.explicit_charge_correction,
-            solvent_comp_a,  # Solvent comp in a is expected to be the same as in b
-        )
+        try:  # Catch unsupported charges differences and raise protocol error
+            charge_difference = get_alchemical_charge_difference(
+                mapping,
+                forcefield_settings.nonbonded_method,
+                alchemical_settings.explicit_charge_correction,
+                solvent_comp_a,  # Solvent comp in a is expected to be the same as in b
+            )
+        except ValueError as e:
+            raise ProtocolSupportError(str(e))
 
         if alchemical_settings.explicit_charge_correction:
             alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(

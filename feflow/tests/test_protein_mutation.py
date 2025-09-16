@@ -613,7 +613,7 @@ class TestProtocolMutation:
             )
 
     def test_double_charge_fails(
-        self, lys_capped_system, glu_capped_system, lys_to_glu_mapping
+        self, lys_capped_system, glu_capped_system, lys_to_glu_mapping, tmpdir
     ):
         """
         Test that attempting a mutation with a double charge change between lysine and glutamate
@@ -636,13 +636,27 @@ class TestProtocolMutation:
         from feflow.utils.exceptions import ProtocolSupportError
 
         settings = ProteinMutationProtocol.default_settings()
+        # We need to make sure we enable the alchemical charge correction
+        settings.alchemical_settings.explicit_charge_correction = True
+
         protocol = ProteinMutationProtocol(settings=settings)
 
+        dag = protocol.create(
+            stateA=lys_capped_system,
+            stateB=glu_capped_system,
+            name="Invalid proline mutation",
+            mapping=lys_to_glu_mapping,
+        )
+
         # Expect an error when trying to create the DAG with this invalid transformation
-        with pytest.raises(ProtocolSupportError, match="double charge.*not supported"):
-            protocol.create(
-                stateA=lys_capped_system,
-                stateB=glu_capped_system,
-                name="Invalid proline mutation",
-                mapping=lys_to_glu_mapping,
-            )
+        with pytest.raises(ProtocolSupportError):
+            with tmpdir.as_cwd():
+                shared = Path("shared")
+                shared.mkdir()
+
+                scratch = Path("scratch")
+                scratch.mkdir()
+
+                execute_DAG(
+                    dag, shared_basedir=shared, scratch_basedir=scratch
+                )
