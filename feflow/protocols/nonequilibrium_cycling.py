@@ -37,7 +37,7 @@ from ..utils.misc import (
     get_chain_residues_from_atoms,
     get_positions_from_component,
 )
-from ..utils.vendored import get_omm_modeller
+from ..utils.vendored import get_omm_modeller, get_system_mappings
 
 # Specific instance of logger for this module
 logger = logging.getLogger(__name__)
@@ -253,7 +253,7 @@ class SetupUnit(ProtocolUnit):
 
         # TODO: This doesn't have to be a ligand mapping. i.e. for protein mutation.
         # c. Define correspondence mappings between the two systems
-        ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
+        ligand_mappings = get_system_mappings(
             mapping.componentA_to_componentB,
             state_a_system,
             state_a_topology,
