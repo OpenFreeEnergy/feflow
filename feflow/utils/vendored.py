@@ -260,14 +260,14 @@ def _remove_constraints(
                 f" A: {i}-{j} B: {x}-{y}"
             )
 
-    old_constraints: dict[[int, int], float] = dict()
+    old_constraints: dict[[int, int], float] = {}
     for idx in range(old_system.getNumConstraints()):
         atom1, atom2, length = old_system.getConstraintParameters(idx)
 
         if atom1 in old_to_new_atom_map and atom2 in old_to_new_atom_map:
             old_constraints[atom1, atom2] = length
 
-    new_constraints = dict()
+    new_constraints = {}
     for idx in range(new_system.getNumConstraints()):
         atom1, atom2, length = new_system.getConstraintParameters(idx)
 
