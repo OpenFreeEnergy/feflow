@@ -902,8 +902,8 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
             indices = np.random.choice(
                 np.arange(traj_size), size=[traj_size], replace=True
             )
-            dg, ddg = pymbar.bar.BAR(forward[indices], reverse[indices])
-            all_dgs[i] = dg
+            pymbar_data = pymbar.bar(forward[indices], reverse[indices])
+            all_dgs[i] = pymbar_data["Delta_f"]
 
         return all_dgs
 
