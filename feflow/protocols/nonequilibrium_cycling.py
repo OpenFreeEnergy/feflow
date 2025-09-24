@@ -827,7 +827,8 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
 
         forward_work: npt.NDArray[float] = np.array(forward_work)
         reverse_work: npt.NDArray[float] = np.array(reverse_work)
-        free_energy, error = pymbar.bar.BAR(forward_work, reverse_work)
+        bar_data = pymbar.bar(forward_work, reverse_work)
+        free_energy = bar_data["Delta_f"]
 
         return (
             free_energy * unit.k * self.data["temperature"] * unit.avogadro_constant
