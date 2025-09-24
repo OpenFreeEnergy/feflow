@@ -173,6 +173,7 @@ def get_omm_modeller(
 
 
 # Vendored from OpenFreeEnergy/openfe at 2025-09-24
+# Modified: Removing restriction on resids.
 def _get_indices(topology, resids):
     """
     Get the atoms indices from an array of residue indices in an OpenMM Topology
@@ -184,10 +185,6 @@ def _get_indices(topology, resids):
     residue_name : str
         Name of the residue to get the indices for.
     """
-    # TODO: remove, this shouldn't be necessary anymore
-    if len(resids) > 1:
-        raise ValueError("multiple residues were found")
-
     # create list of openmm residues
     top_res = [r for r in topology.residues() if r.index in resids]
 
