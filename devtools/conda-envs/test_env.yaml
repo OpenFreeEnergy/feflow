@@ -4,7 +4,7 @@ channels:
   - openeye
 dependencies:
     # Base depends
-  - gufe >=1.4, <2
+  - gufe ~=1.6.0
   - numpy
   - openfe >=1.3.0   # TODO: Remove once we don't depend on openfe
   - openff-units
