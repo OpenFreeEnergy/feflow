@@ -198,8 +198,9 @@ def _get_indices(topology, resids):
 
 
 # Vendored from OpenFreeEnergy/openfe at 2025-09-24
-def _remove_constraints(old_to_new_atom_map, old_system, old_topology,
-                        new_system, new_topology):
+def _remove_constraints(
+    old_to_new_atom_map, old_system, old_topology, new_system, new_topology
+):
     """
     Adapted from Perses' Topology Proposal. Adjusts atom mapping to account for
     any bonds that are constrained but change in length.
@@ -231,10 +232,16 @@ def _remove_constraints(old_to_new_atom_map, old_system, old_topology,
     no_const_old_to_new_atom_map = deepcopy(old_to_new_atom_map)
 
     h_elem = Element.getByAtomicNumber(1)
-    old_H_atoms = {i for i, atom in enumerate(old_topology.atoms())
-                   if atom.element == h_elem and i in old_to_new_atom_map}
-    new_H_atoms = {i for i, atom in enumerate(new_topology.atoms())
-                   if atom.element == h_elem and i in old_to_new_atom_map.values()}
+    old_H_atoms = {
+        i
+        for i, atom in enumerate(old_topology.atoms())
+        if atom.element == h_elem and i in old_to_new_atom_map
+    }
+    new_H_atoms = {
+        i
+        for i, atom in enumerate(new_topology.atoms())
+        if atom.element == h_elem and i in old_to_new_atom_map.values()
+    }
 
     def pick_H(i, j, x, y) -> int:
         """Identify which atom to remove to resolve constraint violation
@@ -248,8 +255,10 @@ def _remove_constraints(old_to_new_atom_map, old_system, old_topology,
         elif j in old_H_atoms or y in new_H_atoms:
             return j
         else:
-            raise ValueError(f"Couldn't resolve constraint demapping for atoms"
-                             f" A: {i}-{j} B: {x}-{y}")
+            raise ValueError(
+                f"Couldn't resolve constraint demapping for atoms"
+                f" A: {i}-{j} B: {x}-{y}"
+            )
 
     old_constraints: dict[[int, int], float] = dict()
     for idx in range(old_system.getNumConstraints()):
@@ -262,8 +271,10 @@ def _remove_constraints(old_to_new_atom_map, old_system, old_topology,
     for idx in range(new_system.getNumConstraints()):
         atom1, atom2, length = new_system.getConstraintParameters(idx)
 
-        if (atom1 in old_to_new_atom_map.values() and
-                atom2 in old_to_new_atom_map.values()):
+        if (
+            atom1 in old_to_new_atom_map.values()
+            and atom2 in old_to_new_atom_map.values()
+        ):
             new_constraints[atom1, atom2] = length
 
     # there are two reasons constraints would invalidate a mapping entry
@@ -304,10 +315,16 @@ def _remove_constraints(old_to_new_atom_map, old_system, old_topology,
 
 
 # Vendored from OpenFreeEnergy/openfe at 2025-09-24
-def get_system_mappings(old_to_new_atom_map,
-                        old_system, old_topology, old_resids,
-                        new_system, new_topology, new_resids,
-                        fix_constraints=True):
+def get_system_mappings(
+    old_to_new_atom_map,
+    old_system,
+    old_topology,
+    old_resids,
+    new_system,
+    new_topology,
+    new_resids,
+    fix_constraints=True,
+):
     """
     From a starting alchemical map between two molecules, get the mappings
     between two alchemical end state systems.
@@ -371,7 +388,7 @@ def get_system_mappings(old_to_new_atom_map,
     # We assume that the atom indices are linear in the residue so we shift
     # by the index of the first atom in each residue
     adjusted_old_to_new_map = {}
-    for (key, value) in old_to_new_atom_map.items():
+    for key, value in old_to_new_atom_map.items():
         shift_old = old_at_indices[0] + key
         shift_new = new_at_indices[0] + value
         adjusted_old_to_new_map[shift_old] = shift_new
@@ -380,14 +397,16 @@ def get_system_mappings(old_to_new_atom_map,
     # the atoms in the two systems. For now we are only doing the alchemical
     # residues. We might want to change this as necessary in the future.
     if not fix_constraints:
-        wmsg = ("Not attempting to fix atom mapping to account for "
-                "constraints. Please note that core atoms which have "
-                "constrained bonds and changing bond lengths are not allowed.")
+        wmsg = (
+            "Not attempting to fix atom mapping to account for "
+            "constraints. Please note that core atoms which have "
+            "constrained bonds and changing bond lengths are not allowed."
+        )
         warnings.warn(wmsg)
     else:
         adjusted_old_to_new_map = _remove_constraints(
-            adjusted_old_to_new_map, old_system, old_topology,
-            new_system, new_topology)
+            adjusted_old_to_new_map, old_system, old_topology, new_system, new_topology
+        )
 
     # We return a dictionary with all the necessary mappings (as they are
     # needed downstream). These include:
@@ -435,13 +454,15 @@ def get_system_mappings(old_to_new_atom_map,
 
     # Now let's create our output dictionary
     mappings = {}
-    mappings['new_to_old_atom_map'] = new_to_old_all_map
-    mappings['old_to_new_atom_map'] = {v: k for k, v in new_to_old_all_map.items()}
-    mappings['new_to_old_core_atom_map'] = {v: k for k, v in adjusted_old_to_new_map.items()}
-    mappings['old_to_new_core_atom_map'] = adjusted_old_to_new_map
-    mappings['new_to_old_env_atom_map'] = new_to_old_env_map
-    mappings['old_to_new_env_atom_map'] = {v: k for k, v in new_to_old_env_map.items()}
-    mappings['old_mol_indices'] = old_at_indices
-    mappings['new_mol_indices'] = new_at_indices
+    mappings["new_to_old_atom_map"] = new_to_old_all_map
+    mappings["old_to_new_atom_map"] = {v: k for k, v in new_to_old_all_map.items()}
+    mappings["new_to_old_core_atom_map"] = {
+        v: k for k, v in adjusted_old_to_new_map.items()
+    }
+    mappings["old_to_new_core_atom_map"] = adjusted_old_to_new_map
+    mappings["new_to_old_env_atom_map"] = new_to_old_env_map
+    mappings["old_to_new_env_atom_map"] = {v: k for k, v in new_to_old_env_map.items()}
+    mappings["old_mol_indices"] = old_at_indices
+    mappings["new_mol_indices"] = new_at_indices
 
     return mappings
