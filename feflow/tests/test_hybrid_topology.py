@@ -230,9 +230,9 @@ class TestHTFVirtualSites:
         from gufe import SolventComponent
 
         # TODO: change imports once utils get moved
-        from openfe.protocols.openmm_utils import system_creation
         from openfe.protocols.openmm_rfe._rfe_utils import topologyhelpers
         from openfe.protocols.openmm_utils.omm_settings import OpenMMSolvationSettings
+        from feflow.utils.vendored import get_omm_modeller
 
         benz_off = benzene.to_openff()
         tol_off = toluene.to_openff()
@@ -246,7 +246,7 @@ class TestHTFVirtualSites:
             )
 
         # Create state A model & get relevant OpenMM objects
-        benz_model, comp_resids = system_creation.get_omm_modeller(
+        benz_model, comp_resids = get_omm_modeller(
             protein_comps=None,
             solvent_comps=SolventComponent(),
             small_mols={benzene: benz_off},

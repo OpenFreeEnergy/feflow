@@ -1,0 +1,169 @@
+"""
+Vendored from: https://github.com/OpenFreeEnergy/openfe/blob/main/openfe/protocols/openmm_utils/system_creation.py
+Original version: v1.2.0 (commit 48dcbb26)
+Date vendored: 2025-01-23
+License: MIT
+
+Modifications made:
+- Allowing multiple optional components (protein, smallmols or solvent)
+
+Original copyright notice:
+Copyright (c) 2025 Open Free Energy
+"""
+
+from typing import Optional, Iterable
+
+import numpy as np
+import numpy.typing as npt
+
+from gufe import Component, ProteinComponent, SmallMoleculeComponent, SolventComponent
+from gufe.settings import OpenMMSystemGeneratorFFSettings
+from openff.units.openmm import to_openmm, ensure_quantity
+from openfe.protocols.openmm_utils.system_creation import ModellerReturn
+from openfe.protocols.openmm_utils.omm_settings import OpenMMSolvationSettings
+from openmm.app import ForceField, Modeller, Topology
+
+
+def get_omm_modeller(
+    protein_comps: Optional[Iterable[ProteinComponent] | ProteinComponent],
+    solvent_comps: Optional[Iterable[SolventComponent] | SolventComponent],
+    small_mols: Optional[Iterable[SmallMoleculeComponent] | SmallMoleculeComponent],
+    omm_forcefield : ForceField,
+    solvent_settings : OpenMMSolvationSettings
+) -> ModellerReturn:
+    """
+    Generate an OpenMM Modeller class based on a potential input ProteinComponent,
+    SolventComponent, and a set of small molecules.
+
+    Parameters
+    ----------
+    protein_comps : Optional[Iterable[ProteinComponent] or ProteinComponent]
+      Protein Component, if it exists.
+    solvent_comps : Optional[Iterable[SolventComponent] or SolventComponent]
+      Solvent Component, if it exists.
+    small_mols : Optional[Iterable[SmallMoleculeComponent] or SmallMoleculeComponent]
+      Small molecules to add.
+    omm_forcefield : openmm.app.ForceField
+      ForceField object for system.
+    solvent_settings : SolvationSettings
+      Solvation settings.
+
+    Returns
+    -------
+    system_modeller : app.Modeller
+      OpenMM Modeller object generated from ProteinComponent and
+      OpenFF Molecules.
+    component_resids : dict[Component, npt.NDArray]
+      Dictionary of residue indices for each component in system.
+    """
+    component_resids = {}
+
+    def _add_small_mol(comp,
+                       mol,
+                       system_modeller: Modeller,
+                       comp_resids: dict[Component, npt.NDArray]):
+        """
+        Helper method to add OFFMol to an existing Modeller object and
+        update a dictionary tracking residue indices for each component.
+        """
+        omm_top = mol.to_topology().to_openmm()
+        system_modeller.add(
+            omm_top,
+            ensure_quantity(mol.conformers[0], 'openmm')
+        )
+
+        nres = omm_top.getNumResidues()
+        resids = [res.index for res in system_modeller.topology.residues()]
+        comp_resids[comp] = np.array(resids[-nres:])
+
+    # Create empty modeller
+    system_modeller = Modeller(Topology(), [])
+
+    # We first add all the protein components, if any
+    if protein_comps:
+        try:
+            protein_comps = iter(protein_comps)
+        except TypeError:
+            protein_comps = {protein_comps}  # make it a set/iterable with the comp
+        for protein_comp in protein_comps:
+            system_modeller.add(protein_comp.to_openmm_topology(),
+                                protein_comp.to_openmm_positions())
+            # add missing virtual particles (from crystal waters)
+            system_modeller.addExtraParticles(omm_forcefield)
+            component_resids[protein_comp] = np.array(
+              [r.index for r in system_modeller.topology.residues()]
+            )
+            # if we solvate temporarily rename water molecules to 'WAT'
+            # see openmm issue #4103
+            if solvent_comps is not None:
+                for r in system_modeller.topology.residues():
+                    if r.name == 'HOH':
+                        r.name = 'WAT'
+
+    # Now loop through small mols
+    if small_mols:
+        try:
+            small_mols = iter(small_mols)
+        except TypeError:
+            small_mols = {small_mols}  # make it a set/iterable with the comp
+        for small_mol_comp in small_mols:
+            _add_small_mol(small_mol_comp, small_mol_comp.to_openff(), system_modeller,
+                           component_resids)
+
+    # Add solvent if neeeded
+    if solvent_comps:
+        # Making it a list to make our life easier -- TODO: Maybe there's a better type for this
+        try:
+            solvent_comps = list(set(solvent_comps))  # if given iterable
+        except TypeError:
+            solvent_comps = [solvent_comps]  # if not iterable, given single obj
+        # TODO: Support multiple solvent components? Is there a use case for it?
+        # Error out when we iter(have more than one solvent component in the states/systems
+        if len(solvent_comps) > 1:
+            raise ValueError("More than one solvent component found in systems. Only one supported.")
+        solvent_comp = solvent_comps[0]  # Get the first (and only?) solvent component
+        # Do unit conversions if necessary
+        solvent_padding = None
+        box_size = None
+        box_vectors = None
+
+        if solvent_settings.solvent_padding is not None:
+            solvent_padding = to_openmm(solvent_settings.solvent_padding)
+
+        if solvent_settings.box_size is not None:
+            box_size = to_openmm(solvent_settings.box_size)
+
+        if solvent_settings.box_vectors is not None:
+            box_vectors = to_openmm(solvent_settings.box_vectors)
+
+        system_modeller.addSolvent(
+            omm_forcefield,
+            model=solvent_settings.solvent_model,
+            padding=solvent_padding,
+            positiveIon=solvent_comp.positive_ion,
+            negativeIon=solvent_comp.negative_ion,
+            ionicStrength=to_openmm(solvent_comp.ion_concentration),
+            neutralize=solvent_comp.neutralize,
+            boxSize=box_size,
+            boxVectors=box_vectors,
+            boxShape=solvent_settings.box_shape,
+            numAdded=solvent_settings.number_of_solvent_molecules,
+        )
+
+        all_resids = np.array(
+            [r.index for r in system_modeller.topology.residues()]
+        )
+
+        existing_resids = np.concatenate(
+            [resids for resids in component_resids.values()]
+        )
+
+        component_resids[solvent_comp] = np.setdiff1d(
+            all_resids, existing_resids
+        )
+        # undo rename of pre-existing waters
+        for r in system_modeller.topology.residues():
+            if r.name == 'WAT':
+                r.name = 'HOH'
+
+    return system_modeller, component_resids

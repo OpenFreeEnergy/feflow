@@ -37,6 +37,7 @@ from ..utils.misc import (
     get_chain_residues_from_atoms,
     get_positions_from_component,
 )
+from ..utils.vendored import get_omm_modeller
 
 # Specific instance of logger for this module
 logger = logging.getLogger(__name__)
@@ -198,7 +199,7 @@ class SetupUnit(ProtocolUnit):
         )
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
-        state_a_modeller, _ = system_creation.get_omm_modeller(
+        state_a_modeller, _ = get_omm_modeller(
             protein_comps=protein_comps_a,
             solvent_comps=solvent_comp_a,
             small_mols=small_mols_a,
