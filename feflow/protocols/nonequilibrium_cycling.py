@@ -328,6 +328,10 @@ class SetupUnit(ProtocolUnit):
             interpolate_old_and_new_14s=alchemical_settings.turn_off_core_unique_exceptions,
         )
         ####### END OF SETUP #########
+        # Serialize HTF, system, state and integrator
+        htf_outfile = ctx.shared / "hybrid_topology_factory.pickle"
+        with open(htf_outfile, "wb") as htf_file:
+            pickle.dump(hybrid_factory, htf_file)
 
         system = hybrid_factory.hybrid_system
         positions = hybrid_factory.hybrid_positions
@@ -380,14 +384,10 @@ class SetupUnit(ProtocolUnit):
             system_ = context.getSystem()
             integrator_ = context.getIntegrator()
 
-            htf_outfile = ctx.shared / "hybrid_topology_factory.pickle"
             system_outfile = ctx.shared / "system.xml.bz2"
             state_outfile = ctx.shared / "state.xml.bz2"
             integrator_outfile = ctx.shared / "integrator.xml.bz2"
 
-            # Serialize HTF, system, state and integrator
-            with open(htf_outfile, "wb") as htf_file:
-                pickle.dump(hybrid_factory, htf_file)
             serialize(system_, system_outfile)
             serialize(state_, state_outfile)
             serialize(integrator_, integrator_outfile)
