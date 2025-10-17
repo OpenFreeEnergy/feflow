@@ -82,6 +82,10 @@ class NonEquilibriumCyclingSettings(Settings):
 
     num_cycles: int = 100  # Number of cycles to run
 
+    # Debugging settings
+    store_minimized_pdb: bool = False
+    """Setting for storing pdb right after minimization (right before neq cycle)"""
+
     @root_validator
     def save_frequencies_consistency(cls, values):
         """Checks trajectory save frequency is a multiple of work save frequency, for convenience"""

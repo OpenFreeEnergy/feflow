@@ -9,8 +9,8 @@ for the specific integrator settings.
 from pydantic.v1 import validator
 
 from openff.units import unit
-from openff.models.types import FloatQuantity
 from gufe.settings import SettingsBaseModel
+from gufe.vendor.openff.models.types import FloatQuantity
 
 
 class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
