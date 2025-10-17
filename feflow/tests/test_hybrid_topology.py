@@ -232,7 +232,7 @@ class TestHTFVirtualSites:
         # TODO: change imports once utils get moved
         from openfe.protocols.openmm_rfe._rfe_utils import topologyhelpers
         from openfe.protocols.openmm_utils.omm_settings import OpenMMSolvationSettings
-        from feflow.utils.vendored import get_omm_modeller, get_system_mappings
+        from feflow.utils.vendored import get_omm_modeller
 
         benz_off = benzene.to_openff()
         tol_off = toluene.to_openff()
@@ -271,7 +271,7 @@ class TestHTFVirtualSites:
             tol_topology, molecules=[tol_off]
         )
 
-        ligand_mappings = get_system_mappings(
+        ligand_mappings = topologyhelpers.get_system_mappings(
             mapping_benzene_toluene.componentA_to_componentB,
             benz_system,
             benz_topology,
