@@ -14,6 +14,7 @@ from pydantic.v1 import root_validator
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
+    ThermoSettings,
 )
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
@@ -72,6 +73,9 @@ class NonEquilibriumCyclingSettings(Settings):
 
     # integrator settings
     integrator_settings: PeriodicNonequilibriumIntegratorSettings
+
+    # Thermodynamic settings
+    thermo_settings: ThermoSettings
 
     # platform and serialization
     engine_settings: OpenMMEngineSettings  # This defines platform
