@@ -15,7 +15,7 @@ from gufe.settings import SettingsBaseModel
 from gufe.settings.typing import GufeQuantity, specify_quantity_units
 
 FemtosecondQuantity: TypeAlias = Annotated[
-    GufeQuantity, specify_quantity_units("femotoseconds")
+    GufeQuantity, specify_quantity_units("femtoseconds")
 ]
 TimestepQuantity: TypeAlias = Annotated[
     GufeQuantity, specify_quantity_units("timestep")
