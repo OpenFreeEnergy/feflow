@@ -587,8 +587,8 @@ class TestSetupUnit:
         state_b = ChemicalSystem({"ligand": small_comp_b})
 
         settings = NonEquilibriumCyclingProtocol.default_settings()
-        #Make sure we use CPU platform
-        settings.engine_settings.compute_platform = 'CPU'
+        # Make sure we use CPU platform
+        settings.engine_settings.compute_platform = "CPU"
         protocol = NonEquilibriumCyclingProtocol(settings=settings)
 
         setup = SetupUnit(
