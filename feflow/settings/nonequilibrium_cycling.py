@@ -65,7 +65,7 @@ class NonEquilibriumCyclingSettings(Settings):
     """Settings for assigning partial charges to small molecules."""
 
     # Lambda settings
-    lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
+    lambda_functions: dict[str, str] = DEFAULT_ALCHEMICAL_FUNCTIONS
 
     # alchemical settings
     alchemical_settings: AlchemicalSettings = AlchemicalSettings(softcore_LJ="gapsys")
