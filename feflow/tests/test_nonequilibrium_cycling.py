@@ -617,8 +617,8 @@ def test_settings_round_trip():
     related to <https://github.com/OpenFreeEnergy/feflow/issues/87>.
     """
     neq_settings = NonEquilibriumCyclingProtocol.default_settings()
-    neq_json = json.dumps(neq_settings.dict(), cls=JSON_HANDLER.encoder)
-    neq_settings_2 = NonEquilibriumCyclingSettings.parse_obj(
+    neq_json = json.dumps(neq_settings.model_dump(), cls=JSON_HANDLER.encoder)
+    neq_settings_2 = NonEquilibriumCyclingSettings.model_validate(
         json.loads(neq_json, cls=JSON_HANDLER.decoder)
     )
     assert neq_settings == neq_settings_2
