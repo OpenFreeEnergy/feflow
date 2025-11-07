@@ -14,6 +14,7 @@ from pydantic.v1 import root_validator
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
+    ThermoSettings,
 )
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
@@ -65,13 +66,16 @@ class NonEquilibriumCyclingSettings(Settings):
     """Settings for assigning partial charges to small molecules."""
 
     # Lambda settings
-    lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
+    lambda_functions: dict[str, str] = DEFAULT_ALCHEMICAL_FUNCTIONS
 
     # alchemical settings
     alchemical_settings: AlchemicalSettings = AlchemicalSettings(softcore_LJ="gapsys")
 
     # integrator settings
     integrator_settings: PeriodicNonequilibriumIntegratorSettings
+
+    # Thermodynamic settings
+    thermo_settings: ThermoSettings
 
     # platform and serialization
     engine_settings: OpenMMEngineSettings  # This defines platform
