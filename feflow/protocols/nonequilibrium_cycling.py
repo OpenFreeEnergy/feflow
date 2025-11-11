@@ -214,6 +214,7 @@ class SetupUnit(ProtocolUnit):
         else:
             ffcache = None
 
+        self.logger.info("Creating system generator")
         system_generator = system_creation.get_system_generator(
             forcefield_settings=forcefield_settings,
             thermo_settings=thermodynamic_settings,
@@ -242,6 +243,7 @@ class SetupUnit(ProtocolUnit):
                 common_small_mols[comp] = comp.to_openff()
 
         # Assign partial charges to all small mols
+        self.logger.info("Assigning partial charges to all small molecules")
         all_openff_mols = list(
             chain(all_alchemical_mols.values(), common_small_mols.values())
         )
@@ -252,12 +254,14 @@ class SetupUnit(ProtocolUnit):
         # Force the creation of parameters
         # This is necessary because we need to have the FF templates
         # registered ahead of solvating the system.
+        self.logger.info("Creating parameterized system")
         for off_mol in all_openff_mols:
             system_generator.create_system(
                 off_mol.to_topology().to_openmm(), molecules=[off_mol]
             )
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
+        self.logger.info("Creating OpenMM modeller instance")
         state_a_modeller, comp_resids = system_creation.get_omm_modeller(
             protein_comp=receptor_comp,
             solvent_comp=solvent_comp,
@@ -268,10 +272,12 @@ class SetupUnit(ProtocolUnit):
 
         # d. get topology & positions
         # Note: roundtrip positions to remove vec3 issues
+        self.logger.info("Getting topology and positions for state A")
         state_a_topology = state_a_modeller.getTopology()
         state_a_positions = to_openmm(from_openmm(state_a_modeller.getPositions()))
 
         # e. create the stateA System
+        self.logger.info("Creating state A system")
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
             molecules=list(
@@ -281,6 +287,7 @@ class SetupUnit(ProtocolUnit):
 
         # 2. Get stateB system
         # a. get the topology
+        self.logger.info("Getting topology for state B")
         (
             state_b_topology,
             state_b_alchem_resids,
@@ -290,6 +297,7 @@ class SetupUnit(ProtocolUnit):
             exclude_resids=comp_resids[ligand_a],
         )
 
+        self.logger.info("Creating state B system")
         state_b_system = system_generator.create_system(
             state_b_topology,
             molecules=list(
@@ -298,6 +306,7 @@ class SetupUnit(ProtocolUnit):
         )
 
         #  c. Define correspondence mappings between the two systems
+        self.logger.info("Defining correspondence mappings between two systems")
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
             mapping.componentA_to_componentB,
             state_a_system,
@@ -313,6 +322,7 @@ class SetupUnit(ProtocolUnit):
         # Handle charge corrections/transformations
         # Get the change difference between the end states
         # and check if the charge correction used is appropriate
+        self.logger.info("Getting alchemical charge differences between end states")
         charge_difference = get_alchemical_charge_difference(
             mapping,
             forcefield_settings.nonbonded_method,
@@ -337,6 +347,7 @@ class SetupUnit(ProtocolUnit):
             )
 
         #  d. Finally get the positions
+        self.logger.info("Getting state B postiions")
         state_b_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
             ligand_mappings,
             state_a_topology,
@@ -353,7 +364,9 @@ class SetupUnit(ProtocolUnit):
             softcore_LJ_v2 = True
         elif alchemical_settings.softcore_LJ.lower() == "beutler":
             softcore_LJ_v2 = False
+
         # Now we can create the HTF from the previous objects
+        self.logger.info("Creating hybrid topology factory")
         hybrid_factory = HybridTopologyFactory(
             state_a_system,
             state_a_positions,
@@ -375,6 +388,7 @@ class SetupUnit(ProtocolUnit):
         positions = hybrid_factory.hybrid_positions
 
         # Set up integrator
+        self.logger.info("Setting up OpenMM integrator")
         temperature = to_openmm(thermodynamic_settings.temperature)
         integrator_settings = settings.integrator_settings
         integrator = PeriodicNonequilibriumIntegrator(
@@ -387,12 +401,16 @@ class SetupUnit(ProtocolUnit):
         )
 
         # Set up context
+        self.logger.info("Setting up OpenMM context")
         platform = get_openmm_platform(settings.engine_settings.compute_platform)
         context = openmm.Context(system, integrator, platform)
         context.setPeriodicBoxVectors(*system.getDefaultPeriodicBoxVectors())
         context.setPositions(positions)
 
         try:
+            self.logger.info(
+                "Serializing HybridTopologyFactory, OpenMM system, state, and integrator"
+            )
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
             # need to set velocities to temperature so serialized state features velocities,
             # which is important for usability by the Folding@Home openmm-core
