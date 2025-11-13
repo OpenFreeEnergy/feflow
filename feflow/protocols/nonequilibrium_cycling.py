@@ -948,17 +948,6 @@ class NonEquilibriumCyclingProtocol(Protocol):
         mapping: Optional[ComponentMapping | dict[str, ComponentMapping]] = None,
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
-        # Handle parameters
-        if mapping is None:
-            raise ValueError("`mapping` is required for this Protocol")
-        if extends:
-            raise NotImplementedError("Can't extend simulations yet")
-
-        # check mapping compatibility
-        self._check_mappings_consistency(
-            mapping=mapping, chemical_system_a=stateA, chemical_system_b=stateB
-        )
-
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
         num_cycles = self.settings.num_cycles
@@ -978,7 +967,6 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
         end = ResultUnit(name="result", simulations=simulations)
 
-        # TODO: Why was it working without adding `setup` here?
         return [setup, *simulations, end]
 
     def _gather(
@@ -1003,11 +991,13 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # This can be populated however we want
         return outputs
 
-    # TODO: Maybe this could be a utility function. Is this something protocol-specific?
     @staticmethod
     def _check_mappings_consistency(mapping, chemical_system_a, chemical_system_b):
         """
         Method to check that the mappings objects are consistent to be used in the protocol.
+        To be used when validating the protocol creation.
+
+        Note: This is though to be a protocol-specific function for now.
         """
         # Check components in mapping are part of the chemical systems
         mapping_comp_a = mapping.componentA
@@ -1025,3 +1015,39 @@ class NonEquilibriumCyclingProtocol(Protocol):
         assert (
             mapping_comp_b.key in chem_sys_b_keys
         ), "Component B in mapping not found in chemical system B."
+
+    def _validate(
+        self,
+        *,
+        stateA: ChemicalSystem,
+        stateB: ChemicalSystem,
+        mapping: ComponentMapping | list[ComponentMapping] | None,
+        extends: ProtocolDAGResult | None = None,
+    ):
+        """
+        Validate and handle input parameters for the protocol setup.
+
+        This block ensures that the required `mapping` argument is provided, prevents
+        unsupported extensions of existing simulations, and verifies that the specified
+        mappings between the initial (`stateA`) and final (`stateB`) chemical systems
+        are consistent.
+
+        Raises
+        ------
+        ValueError
+            If the `mapping` argument is not provided.
+        NotImplementedError
+            If `extends=True`, since extending simulations is not yet supported.
+        RuntimeError
+            If the mapping is found to be inconsistent with the provided chemical systems.
+        """
+        # Handle parameters
+        if mapping is None:
+            raise ValueError("`mapping` is required for this Protocol")
+        if extends:
+            raise NotImplementedError("Can't extend simulations yet")
+
+        # check mapping compatibility
+        self._check_mappings_consistency(
+            mapping=mapping, chemical_system_a=stateA, chemical_system_b=stateB
+        )
