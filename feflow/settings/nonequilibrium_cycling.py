@@ -83,7 +83,7 @@ class NonEquilibriumCyclingSettings(Settings):
     num_cycles: int = 100  # Number of cycles to run
 
     # Debugging settings
-    store_minimized_pdb: bool = False
+    store_minimized_pdb: bool = True
     """Setting for storing pdb right after minimization (right before neq cycle)"""
 
     @root_validator
