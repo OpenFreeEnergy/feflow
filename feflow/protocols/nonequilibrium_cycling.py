@@ -145,7 +145,9 @@ class SetupUnit(ProtocolUnit):
 
         # Get receptor components from systems if found (None otherwise)
         solvent_comps = state_a.get_components_of_type(SolventComponent)
-        solvent_comp_a = solvent_comps.pop() if solvent_comps else None # there must be at most one solvent comp
+        solvent_comp_a = (
+            solvent_comps.pop() if solvent_comps else None
+        )  # there must be at most one solvent comp
         protein_comps_a = state_a.get_components_of_type(ProteinComponent)
         small_mols_a = state_a.get_components_of_type(SmallMoleculeComponent)
 
@@ -951,9 +953,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
         # Validate inputs
-        self.validate(
-            stateA=stateA, stateB=stateB, mapping=mapping, extends=extends
-        )
+        self.validate(stateA=stateA, stateB=stateB, mapping=mapping, extends=extends)
 
         num_cycles = self.settings.num_cycles
 
@@ -1072,5 +1072,9 @@ class NonEquilibriumCyclingProtocol(Protocol):
         # We only support up to one solvent component in each system (0 for vacuum simulations)
         state_a_solv_comps = len(stateA.get_components_of_type(SolventComponent))
         state_b_solv_comps = len(stateB.get_components_of_type(SolventComponent))
-        assert state_a_solv_comps <= 1, f"State A has {state_a_solv_comps} components. Only 0 or 1 allowed."
-        assert state_b_solv_comps <= 1, f"State B has {state_b_solv_comps} components. Only 0 or 1 allowed."
+        assert (
+            state_a_solv_comps <= 1
+        ), f"State A has {state_a_solv_comps} components. Only 0 or 1 allowed."
+        assert (
+            state_b_solv_comps <= 1
+        ), f"State B has {state_b_solv_comps} components. Only 0 or 1 allowed."

@@ -12,7 +12,9 @@ def test_get_typed_components_vacuum(benzene_vacuum_system):
     """Test extracting typed components from a vacuum phase chemical system.
     One that only has a SmallMoleculeComponent.
     """
-    small_mol_comps = benzene_vacuum_system.get_components_of_type(SmallMoleculeComponent)
+    small_mol_comps = benzene_vacuum_system.get_components_of_type(
+        SmallMoleculeComponent
+    )
     protein_comps = benzene_vacuum_system.get_components_of_type(ProteinComponent)
     solvent_comps = benzene_vacuum_system.get_components_of_type(SolventComponent)
 
@@ -31,7 +33,9 @@ def test_get_typed_components_solvent(benzene_solvent_system):
     """Test extracting typed components from a solvent phase chemical system.
     One that has a single SmallMoleculeComponent and a single SolventComponent.
     """
-    small_mol_comps = benzene_solvent_system.get_components_of_type(SmallMoleculeComponent)
+    small_mol_comps = benzene_solvent_system.get_components_of_type(
+        SmallMoleculeComponent
+    )
     protein_comps = benzene_solvent_system.get_components_of_type(ProteinComponent)
     solvent_comps = benzene_solvent_system.get_components_of_type(SolventComponent)
 

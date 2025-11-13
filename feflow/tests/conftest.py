@@ -58,7 +58,9 @@ def solvent_comp():
 
 @pytest.fixture(scope="session")
 def solvent_comp_higher_concentration():
-    yield gufe.SolventComponent(positive_ion="Na", negative_ion="Cl", ion_concentration=0.2*unit.molar)
+    yield gufe.SolventComponent(
+        positive_ion="Na", negative_ion="Cl", ion_concentration=0.2 * unit.molar
+    )
 
 
 @pytest.fixture(scope="session")
@@ -113,9 +115,18 @@ def benzonitrile_solvent_system(benzonitrile, solvent_comp):
 def styrene_solvent_system(styrene, solvent_comp):
     return gufe.ChemicalSystem({"ligand": styrene, "solvent": solvent_comp})
 
+
 @pytest.fixture
-def toluene_double_solvent_system(toluene, solvent_comp, solvent_comp_higher_concentration):
-    return gufe.ChemicalSystem({"ligand": toluene, "solvent1": solvent_comp, "solvent2": solvent_comp_higher_concentration})
+def toluene_double_solvent_system(
+    toluene, solvent_comp, solvent_comp_higher_concentration
+):
+    return gufe.ChemicalSystem(
+        {
+            "ligand": toluene,
+            "solvent1": solvent_comp,
+            "solvent2": solvent_comp_higher_concentration,
+        }
+    )
 
 
 # Settings fixtures
