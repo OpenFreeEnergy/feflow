@@ -138,23 +138,16 @@ class SetupUnit(ProtocolUnit):
         )
         from feflow.utils.hybrid_topology import HybridTopologyFactory
         from feflow.utils.charge import get_alchemical_charge_difference
-        from feflow.utils.misc import (
-            get_typed_components,
-            register_ff_parameters_template,
-        )
+        from feflow.utils.misc import register_ff_parameters_template
 
         # Check compatibility between states (same receptor and solvent)
         self._check_states_compatibility(state_a, state_b)
 
         # Get receptor components from systems if found (None otherwise)
-        solvent_comps = get_typed_components(
-            state_a, SolventComponent
-        )  # this returns a set
-        solvent_comp_a = (
-            solvent_comps.pop() if solvent_comps else None
-        )  # Get the first component if exists
-        protein_comps_a = get_typed_components(state_a, ProteinComponent)
-        small_mols_a = get_typed_components(state_a, SmallMoleculeComponent)
+        solvent_comps = state_a.get_components_of_type(SolventComponent)
+        solvent_comp_a = solvent_comps.pop() if solvent_comps else None # there must be at most one solvent comp
+        protein_comps_a = state_a.get_components_of_type(ProteinComponent)
+        small_mols_a = state_a.get_components_of_type(SmallMoleculeComponent)
 
         # Get alchemical components
         alchemical_comps = get_alchemical_components(state_a, state_b)
@@ -187,10 +180,9 @@ class SetupUnit(ProtocolUnit):
         # Parameterizing small molecules
         self.logger.info("Parameterizing molecules")
         # Get small molecules from states
-        # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
-        state_a_small_mols = get_typed_components(state_a, SmallMoleculeComponent)
-        state_b_small_mols = get_typed_components(state_b, SmallMoleculeComponent)
-        all_small_mols = state_a_small_mols | state_b_small_mols
+        state_a_small_mols = state_a.get_components_of_type(SmallMoleculeComponent)
+        state_b_small_mols = state_b.get_components_of_type(SmallMoleculeComponent)
+        all_small_mols = set(state_a_small_mols) | set(state_b_small_mols)
 
         # Generate and register FF parameters in the system generator template
         all_openff_mols = [comp.to_openff() for comp in all_small_mols]

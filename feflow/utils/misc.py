@@ -8,41 +8,6 @@ import numpy as np
 import openmm.app
 
 
-# TODO: should this be a method for the gufe.ChemicalSystem class?
-def get_typed_components(
-    system: gufe.ChemicalSystem, comptype: type[gufe.Component]
-) -> set[gufe.Component]:
-    """
-    Retrieve all components of a specific type from a `gufe.ChemicalSystem`.
-
-    This function searches the components within the provided chemical system
-    and returns a list of all components matching the specified type.
-
-    Parameters
-    ----------
-    system : gufe.ChemicalSystem
-        The chemical system from which to extract components.
-    comptype : Type[gufe.Component]
-        The type of component to search for, such as `ProteinComponent`,
-        `SmallMoleculeComponent`, or `SolventComponent`.
-
-    Returns
-    -------
-    set[gufe.Component]
-        A set of unique components matching the specified type. If no components
-        of the given type are found, an empty set is returned.
-
-    """
-    if not issubclass(comptype, gufe.Component):
-        raise TypeError(
-            f"`comptype` must be a subclass of `gufe.Component`. Got: {comptype}"
-        )
-
-    ret_comps = {comp for comp in system.values() if isinstance(comp, comptype)}
-
-    return ret_comps
-
-
 def register_ff_parameters_template(system_generator, charge_settings, openff_mols):
     """
     Register force field parameters in the system generator using provided charge settings
