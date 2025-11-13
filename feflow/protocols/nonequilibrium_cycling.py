@@ -950,6 +950,11 @@ class NonEquilibriumCyclingProtocol(Protocol):
     ) -> list[ProtocolUnit]:
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
+        # Validate inputs
+        self.validate(
+            stateA=stateA, stateB=stateB, mapping=mapping, extends=extends
+        )
+
         num_cycles = self.settings.num_cycles
 
         setup = SetupUnit(
@@ -1028,9 +1033,10 @@ class NonEquilibriumCyclingProtocol(Protocol):
         Validate and handle input parameters for the protocol setup.
 
         This block ensures that the required `mapping` argument is provided, prevents
-        unsupported extensions of existing simulations, and verifies that the specified
+        unsupported extensions of existing simulations, verifies that the specified
         mappings between the initial (`stateA`) and final (`stateB`) chemical systems
-        are consistent.
+        are consistent, and that each chemical system contains at most one solvent
+        component.
 
         Raises
         ------
@@ -1040,6 +1046,17 @@ class NonEquilibriumCyclingProtocol(Protocol):
             If `extends=True`, since extending simulations is not yet supported.
         RuntimeError
             If the mapping is found to be inconsistent with the provided chemical systems.
+        AssertionError
+            If the provided mapping is inconsistent with the chemical systems,
+            or if either ``stateA`` or ``stateB`` contains more than one solvent
+            component.
+
+        Notes
+        -----
+        Vacuum simulations (i.e., systems with zero solvent components) are
+        allowed. The solvent restriction is enforced symmetrically on both
+        ``stateA`` and ``stateB`` to ensure compatibility with supported protocol
+        types.
         """
         # Handle parameters
         if mapping is None:
@@ -1051,3 +1068,9 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self._check_mappings_consistency(
             mapping=mapping, chemical_system_a=stateA, chemical_system_b=stateB
         )
+
+        # We only support up to one solvent component in each system (0 for vacuum simulations)
+        state_a_solv_comps = len(stateA.get_components_of_type(SolventComponent))
+        state_b_solv_comps = len(stateB.get_components_of_type(SolventComponent))
+        assert state_a_solv_comps <= 1, f"State A has {state_a_solv_comps} components. Only 0 or 1 allowed."
+        assert state_b_solv_comps <= 1, f"State B has {state_b_solv_comps} components. Only 0 or 1 allowed."

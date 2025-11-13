@@ -529,6 +529,15 @@ class TestNonEquilibriumCycling:
 
                 execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
 
+    def test_fail_with_multiple_solvent_comps(self, protocol_short, benzene_solvent_system, toluene_double_solvent_system, mapping_benzene_toluene, tmpdir):
+        with pytest.raises(AssertionError):
+            _ = protocol_short.create(
+                stateA=benzene_solvent_system,
+                stateB=toluene_double_solvent_system,
+                name="Broken double solvent transformation",
+                mapping=mapping_benzene_toluene,
+            )
+
 
 class TestSetupUnit:
     def test_setup_user_charges(
