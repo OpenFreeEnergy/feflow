@@ -3,18 +3,18 @@ Module to test utility functions in feflow.utils
 """
 
 from gufe.components import SmallMoleculeComponent, ProteinComponent, SolventComponent
-from feflow.utils.misc import get_typed_components, register_ff_parameters_template
+
+from feflow.tests.conftest import benzene_vacuum_system
+from feflow.utils.misc import register_ff_parameters_template
 
 
 def test_get_typed_components_vacuum(benzene_vacuum_system):
     """Test extracting typed components from a vacuum phase chemical system.
     One that only has a SmallMoleculeComponent.
     """
-    small_mol_comps = get_typed_components(
-        benzene_vacuum_system, SmallMoleculeComponent
-    )
-    protein_comps = get_typed_components(benzene_vacuum_system, ProteinComponent)
-    solvent_comps = get_typed_components(benzene_vacuum_system, SolventComponent)
+    small_mol_comps = benzene_vacuum_system.get_components_of_type(SmallMoleculeComponent)
+    protein_comps = benzene_vacuum_system.get_components_of_type(ProteinComponent)
+    solvent_comps = benzene_vacuum_system.get_components_of_type(SolventComponent)
 
     assert (
         len(small_mol_comps) == 1
@@ -31,11 +31,9 @@ def test_get_typed_components_solvent(benzene_solvent_system):
     """Test extracting typed components from a solvent phase chemical system.
     One that has a single SmallMoleculeComponent and a single SolventComponent.
     """
-    small_mol_comps = get_typed_components(
-        benzene_solvent_system, SmallMoleculeComponent
-    )
-    protein_comps = get_typed_components(benzene_solvent_system, ProteinComponent)
-    solvent_comps = get_typed_components(benzene_solvent_system, SolventComponent)
+    small_mol_comps = benzene_solvent_system.get_components_of_type(SmallMoleculeComponent)
+    protein_comps = benzene_solvent_system.get_components_of_type(ProteinComponent)
+    solvent_comps = benzene_solvent_system.get_components_of_type(SolventComponent)
 
     assert (
         len(small_mol_comps) == 1
