@@ -1,4 +1,5 @@
 import pickle
+from importlib.resources import files
 from pathlib import Path
 
 import pymbar.utils
@@ -7,6 +8,8 @@ import pytest
 from feflow.protocols import NonEquilibriumCyclingProtocol
 from gufe.protocols.protocoldag import ProtocolDAGResult, execute_DAG
 from gufe.protocols.protocolunit import ProtocolUnitResult
+
+from feflow.tests.conftest import solvent_comp
 
 
 def partial_charges_config():
@@ -444,7 +447,6 @@ class TestNonEquilibriumCycling:
             pass
 
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
-    # TODO: Potentially setup (not run) a protein-ligand system
 
     @pytest.mark.parametrize("method, backend", partial_charges_config())
     def test_partial_charge_assignation(
@@ -547,6 +549,66 @@ class TestNonEquilibriumCycling:
 
 
 class TestSetupUnit:
+    @pytest.fixture(scope="class")
+    def tyk2_protein_comp(self):
+        from gufe import ProteinComponent
+        input_pdb = str(files("feflow.tests.data.protein_ligand").joinpath("tyk2_protein.pdb"))
+        protein_comp = ProteinComponent.from_pdb_file(input_pdb)
+        return protein_comp
+
+    @pytest.fixture(scope="class")
+    def tyk2_lig_ejm_31_comp(self):
+        from gufe import SmallMoleculeComponent
+        input_sdf = str(files("feflow.tests.data.protein_ligand").joinpath("tyk2_lig_ejm_31.sdf"))
+        small_mol_comp = SmallMoleculeComponent.from_sdf_file(input_sdf)
+        return small_mol_comp
+
+    @pytest.fixture(scope="class")
+    def tyk2_lig_ejm_55_comp(self):
+        from gufe import SmallMoleculeComponent
+        input_sdf = str(files("feflow.tests.data.protein_ligand").joinpath("tyk2_lig_ejm_55.sdf"))
+        small_mol_comp = SmallMoleculeComponent.from_sdf_file(input_sdf)
+        return small_mol_comp
+
+    @pytest.fixture(scope="class")
+    def tyk2_lig_ejm_31_to_lig_ejm_55_mapping(self, tyk2_lig_ejm_31_comp, tyk2_lig_ejm_55_comp):
+        from kartograf import KartografAtomMapper
+        atom_mapper = KartografAtomMapper()
+        mapping = next(atom_mapper.suggest_mappings(tyk2_lig_ejm_31_comp, tyk2_lig_ejm_55_comp))
+        return mapping
+
+    @pytest.fixture(scope="class")
+    def tyk2_ejm_31_to_ejm_55_systems_only_ligands(self, tyk2_lig_ejm_31_to_lig_ejm_55_mapping, solvent_comp):
+        """
+        This fixture returns a dictionary with both state A and state B for the tyk2
+        lig_ejm_31 to lig_ejm_55 transformation, as chemical systems. The systems are solvated.
+        """
+        from gufe import ChemicalSystem
+        state_a = {"ligand": tyk2_lig_ejm_31_to_lig_ejm_55_mapping.componentA,
+                   "solvent": solvent_comp}
+        state_b = {"ligand": tyk2_lig_ejm_31_to_lig_ejm_55_mapping.componentB,
+                   "solvent": solvent_comp}
+        system_a = ChemicalSystem(state_a)
+        system_b = ChemicalSystem(state_b)
+        return {"state_a": system_a, "state_b": system_b}
+
+    @pytest.fixture(scope="class")
+    def tyk2_ejm_31_to_ejm_55_systems(self, tyk2_protein_comp, tyk2_lig_ejm_31_to_lig_ejm_55_mapping, solvent_comp):
+        """
+        This fixture returns a dictionary with both state A and state B for the tyk2
+        lig_ejm_31 to lig_ejm_55 transformation, as chemical systems. The systems are solvated.
+        """
+        from gufe import ChemicalSystem
+        state_a = {"protein": tyk2_protein_comp,
+                   "ligand": tyk2_lig_ejm_31_to_lig_ejm_55_mapping.componentA,
+                   "solvent": solvent_comp}
+        state_b = {"protein": tyk2_protein_comp,
+                   "ligand": tyk2_lig_ejm_31_to_lig_ejm_55_mapping.componentB,
+                   "solvent": solvent_comp}
+        system_a = ChemicalSystem(state_a)
+        system_b = ChemicalSystem(state_b)
+        return {"state_a": system_a, "state_b": system_b}
+
     def test_setup_user_charges(
         self, benzene_modifications, mapping_benzene_toluene, tmpdir
     ):
@@ -626,3 +688,78 @@ class TestSetupUnit:
 
         # Finally check that the charges are as expected
         _check_htf_charges(htf, benzene_orig_charges, toluene_orig_charges)
+
+    def test_solvent_phase_tyk2_setup(self, tyk2_ejm_31_to_ejm_55_systems_only_ligands, tyk2_lig_ejm_31_to_lig_ejm_55_mapping, tmpdir):
+        """
+        Test setup of a solvent leg/phase for a protein-ligand simulation with TYK2 system and
+        a specific transformation that has "challenging" atom mapping.
+        """
+        from feflow.protocols.nonequilibrium_cycling import SetupUnit
+        from gufe import Context
+
+        state_a = tyk2_ejm_31_to_ejm_55_systems_only_ligands["state_a"]
+        state_b = tyk2_ejm_31_to_ejm_55_systems_only_ligands["state_b"]
+        mapping = tyk2_lig_ejm_31_to_lig_ejm_55_mapping
+
+        settings = NonEquilibriumCyclingProtocol.default_settings()
+        # Using openeye partial charges seems to behave more stably than default ambertools
+        settings.partial_charge_settings.off_toolkit_backend = "openeye"
+        protocol = NonEquilibriumCyclingProtocol(settings=settings)
+
+        setup = SetupUnit(
+            state_a=state_a,
+            state_b=state_b,
+            mapping=mapping,
+            protocol=protocol,
+            name="setup_user_charges",
+        )
+
+        # Run unit and extract results
+        scratch_path = Path(tmpdir / "scratch")
+        shared_path = Path(tmpdir / "shared")
+        scratch_path.mkdir()
+        shared_path.mkdir()
+        context = Context(scratch=scratch_path, shared=shared_path)
+
+        # TODO: raising error here and the following assertion seem redundant
+        setup_result = setup.execute(context=context, **setup.inputs, raise_error=True)
+
+        assert setup_result.ok(), "Setup unit did not run successfully."
+
+    @pytest.mark.gpu_ci
+    def test_protein_ligand_tyk2_setup(self, tyk2_ejm_31_to_ejm_55_systems, tyk2_lig_ejm_31_to_lig_ejm_55_mapping, tmpdir):
+        """
+        Test setup of a production-like protein-ligand simulation with TYK2 system and
+        a specific transformation that has "challenging" atom mapping.
+        """
+        from feflow.protocols.nonequilibrium_cycling import SetupUnit
+        from gufe import Context
+
+        state_a = tyk2_ejm_31_to_ejm_55_systems["state_a"]
+        state_b = tyk2_ejm_31_to_ejm_55_systems["state_b"]
+        mapping = tyk2_lig_ejm_31_to_lig_ejm_55_mapping
+
+        settings = NonEquilibriumCyclingProtocol.default_settings()
+        # Using openeye partial charges seems to behave more stably than default ambertools
+        settings.partial_charge_settings.off_toolkit_backend = "openeye"
+        protocol = NonEquilibriumCyclingProtocol(settings=settings)
+
+        setup = SetupUnit(
+            state_a=state_a,
+            state_b=state_b,
+            mapping=mapping,
+            protocol=protocol,
+            name="setup_user_charges",
+        )
+
+        # Run unit and extract results
+        scratch_path = Path(tmpdir / "scratch")
+        shared_path = Path(tmpdir / "shared")
+        scratch_path.mkdir()
+        shared_path.mkdir()
+        context = Context(scratch=scratch_path, shared=shared_path)
+
+        # TODO: raising error here and the following assertion seem redundant
+        setup_result = setup.execute(context=context, **setup.inputs, raise_error=True)
+
+        assert setup_result.ok(), "Setup unit did not run successfully."
