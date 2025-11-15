@@ -34,7 +34,7 @@ from ..utils.data import serialize, deserialize
 from ..utils.exceptions import ProtocolSupportError
 from ..utils.misc import (
     generate_omm_top_from_component,
-    get_chain_residues_from_atoms,
+    get_chain_residues_from_resids,
     get_positions_from_component,
 )
 from ..utils.vendored import get_omm_modeller
@@ -151,8 +151,10 @@ class SetupUnit(ProtocolUnit):
         protein_comps_a = state_a.get_components_of_type(ProteinComponent)
         small_mols_a = state_a.get_components_of_type(SmallMoleculeComponent)
 
-        # Get alchemical components
-        alchemical_comps = get_alchemical_components(state_a, state_b)
+        # Get alchemical components -- Expect only one alchemical component per state
+        alchem_comps_dict = get_alchemical_components(state_a, state_b)
+        state_a_alchem_comp = alchem_comps_dict["stateA"][0]
+        state_b_alchem_comp = alchem_comps_dict["stateB"][0]
 
         # TODO: Do we need to change something in the settings? Does the Protein mutation protocol require specific settings?
         # Get all the relevant settings
@@ -193,7 +195,7 @@ class SetupUnit(ProtocolUnit):
         )
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
-        state_a_modeller, _ = get_omm_modeller(
+        state_a_modeller, component_resids = get_omm_modeller(
             protein_comps=protein_comps_a,
             solvent_comps=solvent_comp_a,
             small_mols=small_mols_a,
@@ -221,14 +223,14 @@ class SetupUnit(ProtocolUnit):
         # a. Generate topology reusing state A topology as possible
         # Note: We are only dealing with single alchemical components
         state_b_alchem_top = generate_omm_top_from_component(
-            alchemical_comps["stateB"][0]
+            state_b_alchem_comp
         )
-        state_b_alchem_pos = get_positions_from_component(alchemical_comps["stateB"][0])
+        state_b_alchem_pos = get_positions_from_component(state_b_alchem_comp)
         # Get all the residues indices from alchemical chain
         # NOTE: We assume single residue/point/component mutation here
-        state_a_alchem_resids = get_chain_residues_from_atoms(
+        state_a_alchem_resids = get_chain_residues_from_resids(
             topology=state_a_topology,
-            atom_indices=list(mapping.componentA_to_componentB),
+            residue_indices=component_resids[state_a_alchem_comp],
         )
 
         (

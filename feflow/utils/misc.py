@@ -182,7 +182,7 @@ def get_residue_index_from_atom_index(topology, atom_index):
     # If the loop completes without finding the atom, raise the ValueError
     raise ValueError(f"Atom index {atom_index} not found in topology.")
 
-
+# TODO: Not used now anywhere. Should we remove?
 def get_chain_residues_from_atoms(topology: openmm.app.Topology, atom_indices: int):
     """
     Extract residue indices from all chains containing specified atoms.
@@ -231,3 +231,29 @@ def get_chain_residues_from_atoms(topology: openmm.app.Topology, atom_indices: i
         )
 
     return residue_indices
+
+
+def get_chain_residues_from_resids(topology: openmm.app.Topology, residue_indices: list[int]):
+    """
+    Return all residues belonging to the same chains as a given set of residue indices.
+
+    The function first identifies which chains the given residues belong to,
+    then filters all residues in the topology to return only those from the
+    same chains.
+
+    Parameters
+    ----------
+    topology : openmm.app.Topology
+        The topology containing the residues to inspect.
+    residue_indices : sequence of int
+        Indices of residues whose chains should be used to select other residues.
+
+    Returns
+    -------
+    list of openmm.app.topology.Residue
+        All residues from the topology that belong to any of the chains
+        containing the specified residue indices. Order is preserved.
+    """
+    residues_list = list(topology.residues())  # All residues
+    chains = {residues_list[i].chain for i in residue_indices}
+    return np.array([res.index for res in residues_list if res.chain in chains])
