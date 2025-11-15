@@ -222,9 +222,7 @@ class SetupUnit(ProtocolUnit):
         # 2. Get stateB system
         # a. Generate topology reusing state A topology as possible
         # Note: We are only dealing with single alchemical components
-        state_b_alchem_top = generate_omm_top_from_component(
-            state_b_alchem_comp
-        )
+        state_b_alchem_top = generate_omm_top_from_component(state_b_alchem_comp)
         state_b_alchem_pos = get_positions_from_component(state_b_alchem_comp)
         # Get all the residues indices from alchemical chain
         # NOTE: We assume single residue/point/component mutation here
