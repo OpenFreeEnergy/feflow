@@ -139,6 +139,9 @@ def short_settings():
 
     settings = NonEquilibriumCyclingProtocol.default_settings()
 
+    # Make sure to use CPU platform for tests
+    settings.engine_settings.compute_platform = "CPU"
+
     settings.thermo_settings.temperature = 300 * unit.kelvin
     settings.integrator_settings.equilibrium_steps = 250
     settings.integrator_settings.nonequilibrium_steps = 250

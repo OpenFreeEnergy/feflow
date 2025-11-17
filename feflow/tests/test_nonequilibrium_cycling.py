@@ -694,6 +694,8 @@ class TestSetupUnit:
         state_b = ChemicalSystem({"ligand": small_comp_b})
 
         settings = NonEquilibriumCyclingProtocol.default_settings()
+        # Make sure to use CPU platform for tests
+        settings.engine_settings.compute_platform = "CPU"
         protocol = NonEquilibriumCyclingProtocol(settings=settings)
 
         setup = SetupUnit(
@@ -735,6 +737,8 @@ class TestSetupUnit:
         mapping = tyk2_lig_ejm_31_to_lig_ejm_55_mapping
 
         settings = NonEquilibriumCyclingProtocol.default_settings()
+        # make sure to use CPU platform for tests
+        settings.engine_settings.compute_platform = "CPU"
         # Using openeye partial charges seems to behave more stably than default ambertools
         settings.partial_charge_settings.off_toolkit_backend = "openeye"
         protocol = NonEquilibriumCyclingProtocol(settings=settings)
@@ -778,6 +782,8 @@ class TestSetupUnit:
         mapping = tyk2_lig_ejm_31_to_lig_ejm_55_mapping
 
         settings = NonEquilibriumCyclingProtocol.default_settings()
+        # make sure to use CPU platform for tests
+        settings.engine_settings.compute_platform = "CPU"
         # Using openeye partial charges seems to behave more stably than default ambertools
         settings.partial_charge_settings.off_toolkit_backend = "openeye"
         protocol = NonEquilibriumCyclingProtocol(settings=settings)
