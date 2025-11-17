@@ -448,7 +448,7 @@ class TestNonEquilibriumCycling:
 
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
 
-    @pytest.mark.parametrize("method, backend", partial_charges_config())
+    @pytest.mark.parametrize("method, backend", sorted(partial_charges_config()))
     def test_partial_charge_assignation(
         self,
         short_settings,
