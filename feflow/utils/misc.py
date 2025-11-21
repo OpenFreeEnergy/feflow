@@ -70,7 +70,7 @@ def register_ff_parameters_template(system_generator, charge_settings, openff_mo
         system_generator.create_system(mol.to_topology().to_openmm(), molecules=[mol])
 
 
-# TODO: Maybe this needs to be in another module with a more telling name. Also, overkill?
+# TODO: To be revisited when gufe components have a topology consensus
 def generate_omm_top_from_component(
     comp: gufe.SmallMoleculeComponent | gufe.ProteinComponent,
 ):
@@ -100,14 +100,17 @@ def generate_omm_top_from_component(
         If the component does not support the necessary conversion methods.
     """
 
-    try:
+    if isinstance(comp, gufe.ProteinComponent):
         topology = comp.to_openmm_topology()
-    except AttributeError:
+    elif isinstance(comp, gufe.SmallMoleculeComponent):
         topology = comp.to_openff().to_topology().to_openmm()
+    else:
+        raise ValueError(f"Expected {gufe.SmallMoleculeComponent} or {gufe.ProteinComponent}. Received {type(comp)}.")
 
     return topology
 
 
+# TODO: Maybe gufe components should have a way to get positions?
 def get_positions_from_component(
     comp: gufe.SmallMoleculeComponent | gufe.ProteinComponent,
 ):
