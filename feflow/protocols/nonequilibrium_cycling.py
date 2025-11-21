@@ -1,12 +1,12 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
-from typing import Optional, Any
-from collections.abc import Iterable
-
 import datetime
 import logging
 import pickle
 import time
+import warnings
+from typing import Optional, Any
+from collections.abc import Iterable
 
 from gufe import SolventComponent, ProteinComponent
 from gufe.settings import Settings
@@ -190,6 +190,8 @@ class SetupUnit(ProtocolUnit):
 
         # Generate and register FF parameters in the system generator template
         all_openff_mols = [comp.to_openff() for comp in all_small_mols]
+        logger.info("Registering partial charges and FF parameters in template for posterior use in generating openmm systems.")
+        warnings.warn("Partial charges in the template could differ from what the small molecule components actually store. This potentially undesired behavior is to be improved in the future.")
         register_ff_parameters_template(
             system_generator, charge_settings, all_openff_mols
         )
