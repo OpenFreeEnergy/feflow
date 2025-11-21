@@ -6,11 +6,20 @@ would be shared between different integrators, and subclasses of it
 for the specific integrator settings.
 """
 
+from typing import Annotated, TypeAlias
+
 from pydantic.v1 import validator
 
 from openff.units import unit
-from openff.models.types import FloatQuantity
 from gufe.settings import SettingsBaseModel
+from gufe.settings.typing import GufeQuantity, specify_quantity_units
+
+FemtosecondQuantity: TypeAlias = Annotated[
+    GufeQuantity, specify_quantity_units("femtoseconds")
+]
+TimestepQuantity: TypeAlias = Annotated[
+    GufeQuantity, specify_quantity_units("timestep")
+]
 
 
 class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
@@ -19,7 +28,7 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     class Config:
         arbitrary_types_allowed = True
 
-    timestep: FloatQuantity["femtosecond"] = 4 * unit.femtoseconds
+    timestep: FemtosecondQuantity = 4 * unit.femtoseconds
     """Size of the simulation timestep. Default 4 fs."""
     splitting: str = "V R H O R V"
     """Operator splitting"""
@@ -27,9 +36,7 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """Number of steps for the equilibrium parts of the cycle. Default 12500"""
     nonequilibrium_steps: int = 12500
     """Number of steps for the non-equilibrium parts of the cycle. Default 12500"""
-    barostat_frequency: FloatQuantity["timestep"] = (
-        25 * unit.timestep
-    )  # todo: IntQuantity
+    barostat_frequency: TimestepQuantity = 25 * unit.timestep
     """
     Frequency at which volume scaling changes should be attempted.
     Note: The barostat frequency is ignored for gas-phase simulations.

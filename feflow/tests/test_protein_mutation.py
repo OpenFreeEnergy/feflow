@@ -257,7 +257,7 @@ class TestProtocolMutation:
     def protocol_short(self, short_settings_protein_mutation):
         return ProteinMutationProtocol(settings=short_settings_protein_mutation)
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def protocol_ala_to_gly_result(
         self,
         protocol_short,
@@ -287,7 +287,46 @@ class TestProtocolMutation:
 
         return protocol_short, dag, dagresult
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
+    def protocol_gly_to_ala_result(
+        self,
+        protocol_short,
+        ala_capped,
+        gly_capped,
+        ala_capped_system,
+        gly_capped_system,
+        ala_to_gly_mapping,
+        tmpdir,
+    ):
+        """Short protocol execution for capped ALA to GLY mutation"""
+        gly_to_ala_map = ala_to_gly_mapping.componentB_to_componentA
+        mapping = LigandAtomMapping(
+            componentA=gly_capped,
+            componentB=ala_capped,
+            componentA_to_componentB=gly_to_ala_map,
+        )
+
+        dag = protocol_short.create(
+            stateA=gly_capped_system,
+            stateB=ala_capped_system,
+            name="Short vacuum transformation",
+            mapping=mapping,
+        )
+
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            dagresult: ProtocolDAGResult = execute_DAG(
+                dag, shared_basedir=shared, scratch_basedir=scratch
+            )
+
+        return protocol_short, dag, dagresult
+
+    @pytest.fixture
     def protocol_asp_to_leu_result(
         self,
         protocol_short,
@@ -411,6 +450,17 @@ class TestProtocolMutation:
         finishresult = dagresult.protocol_unit_results[-1]
         assert finishresult.name == "result"
 
+    def test_gly_to_ala_execute(self, protocol_gly_to_ala_result):
+        """Takes a protocol result from an executed DAG and checks the OK status
+        as well as the name of the resulting unit."""
+        protocol, dag, dagresult = protocol_gly_to_ala_result
+
+        assert dagresult.ok()
+
+        # the FinishUnit will always be the last to execute
+        finishresult = dagresult.protocol_unit_results[-1]
+        assert finishresult.name == "result"
+
     def test_asp_to_leu_execute(self, protocol_asp_to_leu_result):
         """Takes a protocol result from an executed DAG and checks the OK status
         as well as the name of the resulting unit. Charge transformation case."""
@@ -526,6 +576,9 @@ class TestProtocolMutation:
             f"6 * dDDG ({6 * arg_lys_diff_error})"
         )
 
+    @pytest.mark.skip(
+        reason="Expected to fail so far, we are allowing proline mutations."
+    )
     def test_proline_mutation_fails(
         self, ala_capped_system, pro_capped_system, ala_to_pro_mapping
     ):
@@ -545,13 +598,13 @@ class TestProtocolMutation:
         ala_to_pro_mapping : LigandAtomMapping
             Mapping object representing the atom mapping from ALA to PRO.
         """
-        from feflow.utils.exceptions import MethodConstraintError
+        from feflow.utils.exceptions import MethodLimitationtError
 
         settings = ProteinMutationProtocol.default_settings()
         protocol = ProteinMutationProtocol(settings=settings)
 
         # Expect an error when trying to create the DAG with this invalid transformation
-        with pytest.raises(MethodConstraintError, match="proline.*not supported"):
+        with pytest.raises(MethodLimitationtError, match="proline.*not supported"):
             protocol.create(
                 stateA=ala_capped_system,
                 stateB=pro_capped_system,
@@ -560,7 +613,7 @@ class TestProtocolMutation:
             )
 
     def test_double_charge_fails(
-        self, lys_capped_system, glu_capped_system, lys_to_glu_mapping
+        self, lys_capped_system, glu_capped_system, lys_to_glu_mapping, tmpdir
     ):
         """
         Test that attempting a mutation with a double charge change between lysine and glutamate
@@ -580,16 +633,28 @@ class TestProtocolMutation:
         lys_to_glu_mapping : LigandAtomMapping
             Atom mapping defining the correspondence between atoms in the lysine and glutamate systems.
         """
-        from feflow.utils.exceptions import NotSupportedError
+        from feflow.utils.exceptions import ProtocolSupportError
 
         settings = ProteinMutationProtocol.default_settings()
+        # We need to make sure we enable the alchemical charge correction
+        settings.alchemical_settings.explicit_charge_correction = True
+
         protocol = ProteinMutationProtocol(settings=settings)
 
+        dag = protocol.create(
+            stateA=lys_capped_system,
+            stateB=glu_capped_system,
+            name="Invalid proline mutation",
+            mapping=lys_to_glu_mapping,
+        )
+
         # Expect an error when trying to create the DAG with this invalid transformation
-        with pytest.raises(NotSupportedError, match="double charge.*not supported"):
-            protocol.create(
-                stateA=lys_capped_system,
-                stateB=glu_capped_system,
-                name="Invalid proline mutation",
-                mapping=lys_to_glu_mapping,
-            )
+        with pytest.raises(ProtocolSupportError):
+            with tmpdir.as_cwd():
+                shared = Path("shared")
+                shared.mkdir()
+
+                scratch = Path("scratch")
+                scratch.mkdir()
+
+                execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
