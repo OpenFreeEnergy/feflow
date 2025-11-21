@@ -105,7 +105,9 @@ def generate_omm_top_from_component(
     elif isinstance(comp, gufe.SmallMoleculeComponent):
         topology = comp.to_openff().to_topology().to_openmm()
     else:
-        raise ValueError(f"Expected {gufe.SmallMoleculeComponent} or {gufe.ProteinComponent}. Received {type(comp)}.")
+        raise ValueError(
+            f"Expected {gufe.SmallMoleculeComponent} or {gufe.ProteinComponent}. Received {type(comp)}."
+        )
 
     return topology
 

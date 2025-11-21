@@ -190,8 +190,12 @@ class SetupUnit(ProtocolUnit):
 
         # Generate and register FF parameters in the system generator template
         all_openff_mols = [comp.to_openff() for comp in all_small_mols]
-        logger.info("Registering partial charges and FF parameters in template for posterior use in generating openmm systems.")
-        warnings.warn("Partial charges in the template could differ from what the small molecule components actually store. This potentially undesired behavior is to be improved in the future.")
+        logger.info(
+            "Registering partial charges and FF parameters in template for posterior use in generating openmm systems."
+        )
+        warnings.warn(
+            "Partial charges in the template could differ from what the small molecule components actually store. This potentially undesired behavior is to be improved in the future."
+        )
         register_ff_parameters_template(
             system_generator, charge_settings, all_openff_mols
         )
