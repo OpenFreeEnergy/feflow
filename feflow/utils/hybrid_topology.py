@@ -2170,7 +2170,9 @@ class HybridTopologyFactory:
                 index1_new = hybrid_to_new_map[index1_hybrid]
                 index2_new = hybrid_to_new_map[index2_hybrid]
                 # Get the exception parameters:
-                new_exception_parms = self._new_system_exceptions[(index1_new, index2_new)]
+                new_exception_parms = self._new_system_exceptions[
+                    (index1_new, index2_new)
+                ]
 
                 # If there's no new exception, then we should just set the
                 # exception parameters to be the nonbonded parameters
