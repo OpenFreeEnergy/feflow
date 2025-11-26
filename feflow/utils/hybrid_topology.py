@@ -2094,35 +2094,6 @@ class HybridTopologyFactory:
             # If it's not handled by an exception in the original system, we
             # just add the regular parameters as an exception
 
-    @staticmethod
-    def _find_exception(force, index1, index2):
-        """
-        Find the exception that corresponds to the given indices in the given
-        system
-
-        Parameters
-        ----------
-        force : openmm.NonbondedForce object
-            System containing the exceptions
-        index1 : int
-            The index of the first atom (order is unimportant)
-        index2 : int
-            The index of the second atom (order is unimportant)
-
-        Returns
-        -------
-        exception_parameters : list
-            List of exception parameters
-        """
-        index_set = {index1, index2}
-
-        # Loop through the exceptions and try to find one matching the criteria
-        for exception_idx in range(force.getNumExceptions()):
-            exception_parameters = force.getExceptionParameters(exception_idx)
-            if index_set == set(exception_parameters[:2]):
-                return exception_parameters
-        return []
-
     def _handle_original_exceptions(self):
         """
         This method ensures that exceptions present in the original systems are
