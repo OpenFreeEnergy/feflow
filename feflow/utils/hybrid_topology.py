@@ -2094,35 +2094,6 @@ class HybridTopologyFactory:
             # If it's not handled by an exception in the original system, we
             # just add the regular parameters as an exception
 
-    @staticmethod
-    def _find_exception(force, index1, index2):
-        """
-        Find the exception that corresponds to the given indices in the given
-        system
-
-        Parameters
-        ----------
-        force : openmm.NonbondedForce object
-            System containing the exceptions
-        index1 : int
-            The index of the first atom (order is unimportant)
-        index2 : int
-            The index of the second atom (order is unimportant)
-
-        Returns
-        -------
-        exception_parameters : list
-            List of exception parameters
-        """
-        index_set = {index1, index2}
-
-        # Loop through the exceptions and try to find one matching the criteria
-        for exception_idx in range(force.getNumExceptions()):
-            exception_parameters = force.getExceptionParameters(exception_idx)
-            if index_set == set(exception_parameters[:2]):
-                return exception_parameters
-        return []
-
     def _handle_original_exceptions(self):
         """
         This method ensures that exceptions present in the original systems are
@@ -2199,9 +2170,9 @@ class HybridTopologyFactory:
                 index1_new = hybrid_to_new_map[index1_hybrid]
                 index2_new = hybrid_to_new_map[index2_hybrid]
                 # Get the exception parameters:
-                new_exception_parms = self._find_exception(
-                    new_system_nonbonded_force, index1_new, index2_new
-                )
+                new_exception_parms = self._new_system_exceptions[
+                    (index1_new, index2_new)
+                ]
 
                 # If there's no new exception, then we should just set the
                 # exception parameters to be the nonbonded parameters
@@ -2222,8 +2193,6 @@ class HybridTopologyFactory:
                     epsilon_new = unit.sqrt(epsilon1_new * epsilon2_new)
                 else:
                     [
-                        index1_new,
-                        index2_new,
                         chargeProd_new,
                         sigma_new,
                         epsilon_new,
@@ -2318,9 +2287,7 @@ class HybridTopologyFactory:
 
                 # See if it's also in the old nonbonded force. if it is, then we don't need to add it.
                 # But if it's not, we need to interpolate
-                if not self._find_exception(
-                    old_system_nonbonded_force, index1_old, index2_old
-                ):
+                if not self._old_system_exceptions[(index1_old, index2_old)]:
                     [
                         charge1_old,
                         sigma1_old,
@@ -2698,14 +2665,17 @@ class HybridTopologyFactory:
         # In the first instance, create a list of necessary atoms from
         # both old & new Topologies
         atom_list = []
+        # iterate once over the topologies for speed
+        old_topology_atoms = list(self._old_topology.atoms())
+        new_topology_atoms = list(self._new_topology.atoms())
 
         for pidx in range(self.hybrid_system.getNumParticles()):
             if pidx in self._hybrid_to_old_map:
                 idx = self._hybrid_to_old_map[pidx]
-                atom_list.append(list(self._old_topology.atoms())[idx])
+                atom_list.append(old_topology_atoms[idx])
             else:
                 idx = self._hybrid_to_new_map[pidx]
-                atom_list.append(list(self._new_topology.atoms())[idx])
+                atom_list.append(new_topology_atoms[idx])
 
         # Now we loop over the atoms and add them in alongside chains & resids
 
