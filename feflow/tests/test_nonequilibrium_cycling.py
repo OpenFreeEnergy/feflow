@@ -303,7 +303,6 @@ class TestNonEquilibriumCycling:
                 mapping=mapping_benzonitrile_styrene,
             )
 
-    @pytest.mark.gpu_ci
     @pytest.mark.parametrize(
         "protocol",
         [
