@@ -31,7 +31,6 @@ jobs:
         python-version:
           - "3.11"
           - "3.12"
-          - "3.13"
         include:
           - os: "macos"
             python-version: "3.11"
