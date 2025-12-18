@@ -118,7 +118,9 @@ class SetupUnit(ProtocolUnit):
 
         # Get receptor components from systems if found (None otherwise)
         solvent_comps = state_a.get_components_of_type(SolventComponent)
-        solvent_comp_a = next(iter(solvent_comps), None)  # there must be at most one solvent comp
+        solvent_comp_a = next(
+            iter(solvent_comps), None
+        )  # there must be at most one solvent comp
         protein_comps_a = state_a.get_components_of_type(ProteinComponent)
         small_mols_a = state_a.get_components_of_type(SmallMoleculeComponent)
 
