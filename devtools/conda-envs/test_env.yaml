@@ -4,9 +4,9 @@ channels:
   - openeye
 dependencies:
     # Base depends
-  - gufe ~=1.7.1
+  - gufe ~=1.8.1
   - numpy
-  - openfe ~=1.7.0   # TODO: Remove once we don't depend on openfe
+  - openfe ~=1.8.0   # TODO: Remove once we don't depend on openfe
   - openff-units
   - openmm
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
