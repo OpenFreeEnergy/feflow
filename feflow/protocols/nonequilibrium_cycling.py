@@ -48,6 +48,7 @@ class SetupUnit(ProtocolUnit):
     Initial unit of the protocol. Sets up a Nonequilibrium cycling simulation given the chemical
     systems, mapping and settings.
     """
+
     @staticmethod
     def _assign_openff_partial_charges(
         charge_settings: OpenFFPartialChargeSettings,
@@ -1057,4 +1058,6 @@ class NonEquilibriumCyclingProtocol(Protocol):
         ), f"State B has {state_b_solv_comps} components. Only 0 or 1 allowed."
         # Make sure solvent components use the same parameters/configuration
         for solv_comp_a, solv_comp_b in zip(state_a_solv_comps, state_b_solv_comps):
-            assert solv_comp_a == solv_comp_b, "Solvent parameters differ between solvent components."
+            assert (
+                solv_comp_a == solv_comp_b
+            ), "Solvent parameters differ between solvent components."
