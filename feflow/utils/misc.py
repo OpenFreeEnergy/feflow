@@ -154,40 +154,6 @@ def get_positions_from_component(
     return ensure_quantity(positions, "openmm")
 
 
-# TODO: This is probably something that should go in openmmtools/openmm
-def get_residue_index_from_atom_index(topology, atom_index):
-    """
-    Retrieve the residue index for a given atom index in an OpenMM topology.
-
-    This function iterates through the residues and their atoms in the topology
-    to locate the residue that contains the specified atom index.
-
-    Parameters
-    ----------
-    topology : openmm.app.Topology
-        The OpenMM topology object containing residues and atoms.
-    atom_index : int
-        The index of the atom whose residue ID is to be found.
-
-    Returns
-    -------
-    int
-        The index of the residue that contains the specified atom.
-
-    Raises
-    ------
-    ValueError
-        If the atom index is not found in the topology.
-    """
-    for residue in topology.residues():
-        for atom in residue.atoms():
-            if atom.index == atom_index:
-                return residue.index
-
-    # If the loop completes without finding the atom, raise the ValueError
-    raise ValueError(f"Atom index {atom_index} not found in topology.")
-
-
 def get_chain_residues_from_resids(
     topology: openmm.app.Topology, residue_indices: list[int]
 ):
