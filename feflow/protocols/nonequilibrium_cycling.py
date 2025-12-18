@@ -48,31 +48,6 @@ class SetupUnit(ProtocolUnit):
     Initial unit of the protocol. Sets up a Nonequilibrium cycling simulation given the chemical
     systems, mapping and settings.
     """
-
-    @staticmethod
-    def _check_states_compatibility(state_a, state_b):
-        """
-        Checks that both states have the same solvent parameters and receptor.
-
-        Parameters
-        ----------
-        state_a : gufe.state.State
-            Origin state for the alchemical transformation.
-        state_b :
-            Destination state for the alchemical transformation.
-        """
-        # If any of them has a solvent, check the parameters are the same
-        if any(["solvent" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("solvent") == state_b.get(
-                "solvent"
-            ), "Solvent parameters differ between solvent components."
-        # check protein component is the same in both states if protein component is found
-        # TODO: Need to change this for all the NON-alchemical components
-        # if any(["protein" in state.components for state in (state_a, state_b)]):
-        #     assert state_a.get("protein") == state_b.get(
-        #         "protein"
-        #     ), "Receptors in states are not compatible."
-
     @staticmethod
     def _assign_openff_partial_charges(
         charge_settings: OpenFFPartialChargeSettings,
@@ -140,14 +115,9 @@ class SetupUnit(ProtocolUnit):
         from feflow.utils.charge import get_alchemical_charge_difference
         from feflow.utils.misc import register_ff_parameters_template
 
-        # Check compatibility between states (same receptor and solvent)
-        self._check_states_compatibility(state_a, state_b)
-
         # Get receptor components from systems if found (None otherwise)
         solvent_comps = state_a.get_components_of_type(SolventComponent)
-        solvent_comp_a = (
-            solvent_comps.pop() if solvent_comps else None
-        )  # there must be at most one solvent comp
+        solvent_comp_a = solvent_comps[0]  # there must be at most one solvent comp
         protein_comps_a = state_a.get_components_of_type(ProteinComponent)
         small_mols_a = state_a.get_components_of_type(SmallMoleculeComponent)
 
@@ -1076,11 +1046,15 @@ class NonEquilibriumCyclingProtocol(Protocol):
         )
 
         # We only support up to one solvent component in each system (0 for vacuum simulations)
-        state_a_solv_comps = len(stateA.get_components_of_type(SolventComponent))
-        state_b_solv_comps = len(stateB.get_components_of_type(SolventComponent))
+
+        state_a_solv_comps = stateA.get_components_of_type(SolventComponent)
+        state_b_solv_comps = stateB.get_components_of_type(SolventComponent)
         assert (
-            state_a_solv_comps <= 1
-        ), f"State A has {state_a_solv_comps} components. Only 0 or 1 allowed."
+            len(state_a_solv_comps) <= 1
+        ), f"State A has {len(state_a_solv_comps)} components. Only 0 or 1 allowed."
         assert (
-            state_b_solv_comps <= 1
+            len(state_b_solv_comps) <= 1
         ), f"State B has {state_b_solv_comps} components. Only 0 or 1 allowed."
+        # Make sure solvent components use the same parameters/configuration
+        for solv_comp_a, solv_comp_b in zip(state_a_solv_comps, state_b_solv_comps):
+            assert solv_comp_a == solv_comp_b, "Solvent parameters differ between solvent components."
