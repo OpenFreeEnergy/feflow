@@ -9,7 +9,6 @@ import pytest
 from gufe import ProteinComponent, ChemicalSystem, ProtocolDAGResult, LigandAtomMapping
 from gufe.protocols.protocoldag import execute_DAG
 from gufe.tokenization import JSON_HANDLER
-from feflow.protocols import ProteinMutationProtocol
 
 
 # Fixtures
