@@ -941,7 +941,8 @@ class NonEquilibriumCyclingProtocol(Protocol):
         if isinstance(mapping, list):
             if len(mapping) != 1:
                 raise ValueError(
-                    "Exactly one mapping must be provided. Multiple mappings are not supported.")
+                    "Exactly one mapping must be provided. Multiple mappings are not supported."
+                )
             mapping = mapping[0]
         self.validate(stateA=stateA, stateB=stateB, mapping=mapping, extends=extends)
 
