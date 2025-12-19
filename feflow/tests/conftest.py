@@ -81,6 +81,8 @@ def benzonitrile(benzene_modifications):
 @pytest.fixture(scope="session")
 def styrene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["styrene"])
+
+
 def tyk2_protein():
     filepath = files("feflow.tests.data").joinpath("tyk2_protein.pdb")
     return gufe.ProteinComponent.from_pdb_file(str(filepath))
@@ -142,6 +144,7 @@ def toluene_double_solvent_system(
             "solvent2": solvent_comp_higher_concentration,
         }
     )
+
 
 def tyk2_lig_ejm_46_complex(tyk2_protein, tyk2_ligand_ejm_46, solvent_comp):
     return gufe.ChemicalSystem(
