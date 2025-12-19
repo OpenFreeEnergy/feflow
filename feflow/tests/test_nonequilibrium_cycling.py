@@ -595,6 +595,8 @@ class TestNonEquilibriumCycling:
                 stateB=toluene_double_solvent_system,
                 name="Broken double solvent transformation",
                 mapping=mapping_benzene_toluene,
+            )
+
     def test_error_with_multiple_mappings(
         self,
         protocol_short,
