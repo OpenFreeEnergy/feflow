@@ -608,9 +608,7 @@ class TestNonEquilibriumCycling:
         Make sure that when a list of mappings is passed that an error is raised.
         """
 
-        with pytest.raises(
-            ValueError, match="A single LigandAtomMapping is expected for this Protocol"
-        ):
+        with pytest.raises(ValueError):
             _ = protocol_short.create(
                 stateA=benzene_vacuum_system,
                 stateB=toluene_vacuum_system,

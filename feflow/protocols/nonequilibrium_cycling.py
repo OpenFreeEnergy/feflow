@@ -930,12 +930,19 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self,
         stateA: ChemicalSystem,
         stateB: ChemicalSystem,
-        mapping: Optional[ComponentMapping | dict[str, ComponentMapping]] = None,
+        mapping: Optional[ComponentMapping | list[ComponentMapping]],
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
         # Validate inputs
+        # We only support one mapping, error out if multiple mappings are received
+        #  TODO: Maybe think about putting this in the _validate method?
+        if isinstance(mapping, list):
+            if len(mapping) != 1:
+                raise ValueError(
+                    "Exactly one mapping must be provided. Multiple mappings are not supported.")
+            mapping = mapping[0]
         self.validate(stateA=stateA, stateB=stateB, mapping=mapping, extends=extends)
 
         num_cycles = self.settings.num_cycles
