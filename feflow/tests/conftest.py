@@ -141,6 +141,8 @@ def toluene_double_solvent_system(
             "solvent1": solvent_comp,
             "solvent2": solvent_comp_higher_concentration,
         }
+    )
+
 def tyk2_lig_ejm_46_complex(tyk2_protein, tyk2_ligand_ejm_46, solvent_comp):
     return gufe.ChemicalSystem(
         {"protein": tyk2_protein, "ligand": tyk2_ligand_ejm_46, "solvent": solvent_comp}
