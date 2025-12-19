@@ -2698,14 +2698,17 @@ class HybridTopologyFactory:
         # In the first instance, create a list of necessary atoms from
         # both old & new Topologies
         atom_list = []
+        # iterate once over the topologies for speed
+        old_topology_atoms = list(self._old_topology.atoms())
+        new_topology_atoms = list(self._new_topology.atoms())
 
         for pidx in range(self.hybrid_system.getNumParticles()):
             if pidx in self._hybrid_to_old_map:
                 idx = self._hybrid_to_old_map[pidx]
-                atom_list.append(list(self._old_topology.atoms())[idx])
+                atom_list.append(old_topology_atoms[idx])
             else:
                 idx = self._hybrid_to_new_map[pidx]
-                atom_list.append(list(self._new_topology.atoms())[idx])
+                atom_list.append(new_topology_atoms[idx])
 
         # Now we loop over the atoms and add them in alongside chains & resids
 
@@ -2728,14 +2731,15 @@ class HybridTopologyFactory:
             hybrid_atom = hybrid_top.addAtom(at.name, at.element, hybrid_residue, at.id)
 
         # Next we deal with bonds
+        hybrid_top_atom_list = list(hybrid_top.atoms())
         # First we add in all the old topology bonds
         for bond in self._old_topology.bonds():
             at1 = self.old_to_hybrid_atom_map[bond.atom1.index]
             at2 = self.old_to_hybrid_atom_map[bond.atom2.index]
 
             hybrid_top.addBond(
-                list(hybrid_top.atoms())[at1],
-                list(hybrid_top.atoms())[at2],
+                hybrid_top_atom_list[at1],
+                hybrid_top_atom_list[at2],
                 bond.type,
                 bond.order,
             )
@@ -2749,8 +2753,8 @@ class HybridTopologyFactory:
                 at2 in self._atom_classes["unique_new_atoms"]
             ):
                 hybrid_top.addBond(
-                    list(hybrid_top.atoms())[at1],
-                    list(hybrid_top.atoms())[at2],
+                    hybrid_top_atom_list[at1],
+                    hybrid_top_atom_list[at2],
                     bond.type,
                     bond.order,
                 )

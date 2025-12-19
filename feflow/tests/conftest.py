@@ -81,6 +81,21 @@ def benzonitrile(benzene_modifications):
 @pytest.fixture(scope="session")
 def styrene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["styrene"])
+def tyk2_protein():
+    filepath = files("feflow.tests.data").joinpath("tyk2_protein.pdb")
+    return gufe.ProteinComponent.from_pdb_file(str(filepath))
+
+
+@pytest.fixture(scope="session")
+def tyk2_ligand_ejm_54():
+    filepath = files("feflow.tests.data").joinpath("tyk2_lig_ejm_54.sdf")
+    return gufe.SmallMoleculeComponent.from_sdf_file(str(filepath))
+
+
+@pytest.fixture(scope="session")
+def tyk2_ligand_ejm_46():
+    filepath = files("feflow.tests.data").joinpath("tyk2_lig_ejm_46.sdf")
+    return gufe.SmallMoleculeComponent.from_sdf_file(str(filepath))
 
 
 # Systems fixtures
@@ -126,6 +141,16 @@ def toluene_double_solvent_system(
             "solvent1": solvent_comp,
             "solvent2": solvent_comp_higher_concentration,
         }
+def tyk2_lig_ejm_46_complex(tyk2_protein, tyk2_ligand_ejm_46, solvent_comp):
+    return gufe.ChemicalSystem(
+        {"protein": tyk2_protein, "ligand": tyk2_ligand_ejm_46, "solvent": solvent_comp}
+    )
+
+
+@pytest.fixture
+def tyk2_lig_ejm_54_complex(tyk2_protein, tyk2_ligand_ejm_54, solvent_comp):
+    return gufe.ChemicalSystem(
+        {"protein": tyk2_protein, "ligand": tyk2_ligand_ejm_54, "solvent": solvent_comp}
     )
 
 
@@ -147,6 +172,7 @@ def short_settings():
     settings.integrator_settings.nonequilibrium_steps = 250
     settings.work_save_frequency = 50
     settings.traj_save_frequency = 250
+    settings.num_cycles = 1
 
     return settings
 
@@ -166,6 +192,7 @@ def short_settings_multiple_cycles():
 
     settings = NonEquilibriumCyclingProtocol.default_settings()
 
+    settings.engine_settings.compute_platform = "CPU"  # CPU platform for tests
     settings.thermo_settings.temperature = 300 * unit.kelvin
     settings.integrator_settings.equilibrium_steps = 1000
     settings.integrator_settings.nonequilibrium_steps = 1000
@@ -232,8 +259,8 @@ def mapping_toluene_toluene(toluene):
         i: i for i in range(len(toluene.to_rdkit().GetAtoms()))
     }
     mapping_obj = LigandAtomMapping(
-        componentA=toluene,
-        componentB=toluene,
+        componentA=toluene.copy_with_replacements(name="toluene_a"),
+        componentB=toluene.copy_with_replacements(name="toluene_b"),
         componentA_to_componentB=mapping_toluene_to_toluene,
     )
     return mapping_obj
@@ -287,3 +314,20 @@ def broken_mapping(benzene, toluene):
         componentA_to_componentB=broken_mapping,
     )
     return broken_mapping_obj
+
+
+@pytest.fixture
+def mapping_tyk2_54_to_46(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46):
+    """
+    Mapping object from ligand ejm_54 to ejm_46 for the Tyk2 dataset.
+
+    It generates the mapping on runtime using the Kartograf mapper.
+    """
+    from kartograf import KartografAtomMapper
+
+    atom_mapper = KartografAtomMapper()
+    mapping_obj = next(
+        atom_mapper.suggest_mappings(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46)
+    )
+
+    return mapping_obj

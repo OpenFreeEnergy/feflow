@@ -1,5 +1,5 @@
 $PROJECT = $GITHUB_REPO = 'feflow'
-$GITHUB_ORG = 'choderalab'
+$GITHUB_ORG = 'OpenFreeEnergy'
 
 $ACTIVITIES = ['changelog']
 

@@ -6,8 +6,12 @@ import pymbar.utils
 import pytest
 
 from feflow.protocols import NonEquilibriumCyclingProtocol
+from feflow.settings import NonEquilibriumCyclingSettings
 from gufe.protocols.protocoldag import ProtocolDAGResult, execute_DAG
 from gufe.protocols.protocolunit import ProtocolUnitResult
+from gufe.tokenization import JSON_HANDLER
+
+import json
 
 from feflow.tests.conftest import solvent_comp
 
@@ -377,7 +381,13 @@ class TestNonEquilibriumCycling:
         ],
     )
     def test_create_execute_gather_toluene_to_toluene(
-        self, protocol, toluene_vacuum_system, mapping_toluene_toluene, tmpdir, request
+        self,
+        protocol,
+        toluene_vacuum_system,
+        mapping_toluene_toluene,
+        tmpdir,
+        request,
+        toluene,
     ):
         """
         Perform 20 independent simulations of the NEQ cycling protocol for the toluene to toluene
@@ -398,10 +408,16 @@ class TestNonEquilibriumCycling:
         import numpy as np
 
         protocol = request.getfixturevalue(protocol)
-
+        # rename the components
+        toluene_state_a = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_a")}
+        )
+        toluene_state_b = toluene_vacuum_system.copy_with_replacements(
+            components={"ligand": toluene.copy_with_replacements(name="toluene_b")}
+        )
         dag = protocol.create(
-            stateA=toluene_vacuum_system,
-            stateB=toluene_vacuum_system,
+            stateA=toluene_state_a,
+            stateB=toluene_state_b,
             name="Toluene vacuum transformation",
             mapping=mapping_toluene_toluene,
         )
@@ -446,6 +462,41 @@ class TestNonEquilibriumCycling:
             pass
 
     # TODO: We could also generate a plot with the forward and reverse works and visually check the results.
+
+    @pytest.mark.slow
+    def test_tyk2_complex(
+        self,
+        protocol_short,
+        tyk2_lig_ejm_54_complex,
+        tyk2_lig_ejm_46_complex,
+        mapping_tyk2_54_to_46,
+        tmpdir,
+    ):
+        """
+        Run the protocol with single transformation between ligands ejm_54 and ejm_46
+        from the tyk2 dataset.
+        """
+        dag = protocol_short.create(
+            stateA=tyk2_lig_ejm_54_complex,
+            stateB=tyk2_lig_ejm_46_complex,
+            name="Short protein-ligand complex transformation",
+            mapping=mapping_tyk2_54_to_46,
+        )
+
+        with tmpdir.as_cwd():
+            shared = Path("shared")
+            shared.mkdir()
+            scratch = Path("scratch")
+            scratch.mkdir()
+
+            dagresult = execute_DAG(
+                dag,
+                shared_basedir=shared,
+                scratch_basedir=scratch,
+            )
+
+        # Check that the dag was executed correctly
+        assert dagresult.ok(), f"DAG was not executed correctly."
 
     @pytest.mark.parametrize("method, backend", sorted(partial_charges_config()))
     def test_partial_charge_assignation(
@@ -544,6 +595,25 @@ class TestNonEquilibriumCycling:
                 stateB=toluene_double_solvent_system,
                 name="Broken double solvent transformation",
                 mapping=mapping_benzene_toluene,
+    def test_error_with_multiple_mappings(
+        self,
+        protocol_short,
+        benzene_vacuum_system,
+        toluene_vacuum_system,
+        mapping_benzene_toluene,
+    ):
+        """
+        Make sure that when a list of mappings is passed that an error is raised.
+        """
+
+        with pytest.raises(
+            ValueError, match="A single LigandAtomMapping is expected for this Protocol"
+        ):
+            _ = protocol_short.create(
+                stateA=benzene_vacuum_system,
+                stateB=toluene_vacuum_system,
+                name="Test protocol",
+                mapping=[mapping_benzene_toluene, mapping_benzene_toluene],
             )
 
 
@@ -806,3 +876,15 @@ class TestSetupUnit:
         setup_result = setup.execute(context=context, **setup.inputs, raise_error=True)
 
         assert setup_result.ok(), "Setup unit did not run successfully."
+
+def test_settings_round_trip():
+    """
+    Make sure we can round trip the settings class to and from json,
+    related to <https://github.com/OpenFreeEnergy/feflow/issues/87>.
+    """
+    neq_settings = NonEquilibriumCyclingProtocol.default_settings()
+    neq_json = json.dumps(neq_settings.model_dump(), cls=JSON_HANDLER.encoder)
+    neq_settings_2 = NonEquilibriumCyclingSettings.model_validate(
+        json.loads(neq_json, cls=JSON_HANDLER.decoder)
+    )
+    assert neq_settings == neq_settings_2

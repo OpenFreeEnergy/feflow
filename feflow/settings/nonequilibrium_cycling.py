@@ -9,11 +9,12 @@ from feflow.settings import (
     OpenFFPartialChargeSettings,
 )
 
-from gufe.settings import Settings
+from gufe.settings import Settings, OpenMMSystemGeneratorFFSettings
 from pydantic.v1 import root_validator
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
+    ThermoSettings,
 )
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
@@ -58,7 +59,7 @@ class NonEquilibriumCyclingSettings(Settings):
     forcefield_cache: Optional[str] = (
         "db.json"  # TODO: Remove once it has been integrated with openfe settings
     )
-
+    forcefield_settings: OpenMMSystemGeneratorFFSettings
     # Solvation settings
     solvation_settings: OpenMMSolvationSettings
     partial_charge_settings: OpenFFPartialChargeSettings
@@ -72,6 +73,9 @@ class NonEquilibriumCyclingSettings(Settings):
 
     # integrator settings
     integrator_settings: PeriodicNonequilibriumIntegratorSettings
+
+    # Thermodynamic settings
+    thermo_settings: ThermoSettings
 
     # platform and serialization
     engine_settings: OpenMMEngineSettings  # This defines platform

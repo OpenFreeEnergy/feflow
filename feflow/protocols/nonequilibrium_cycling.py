@@ -480,6 +480,9 @@ class CycleUnit(ProtocolUnit):
         context = openmm.Context(system, integrator, platform)
         context.setState(state)
 
+        # Minimize
+        openmm.LocalEnergyMinimizer.minimize(context)
+
         # Equilibrate
         thermodynamic_settings = settings.thermo_settings
         temperature = to_openmm(thermodynamic_settings.temperature)
@@ -891,6 +894,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
     _settings_cls = NonEquilibriumCyclingSettings
     _simulation_unit = CycleUnit
+    _settings_cls = NonEquilibriumCyclingSettings
     result_cls = NonEquilibriumCyclingProtocolResult
 
     def __init__(self, settings: Settings):
