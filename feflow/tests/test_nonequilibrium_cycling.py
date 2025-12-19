@@ -879,6 +879,7 @@ class TestSetupUnit:
 
         assert setup_result.ok(), "Setup unit did not run successfully."
 
+
 def test_settings_round_trip():
     """
     Make sure we can round trip the settings class to and from json,
