@@ -1,14 +1,14 @@
 # Adapted from perses: https://github.com/choderalab/perses/blob/protocol-neqcyc/perses/protocols/nonequilibrium_cycling.py
 
-from typing import Optional, Any, Union
-from collections.abc import Iterable
-from itertools import chain
-
 import datetime
 import logging
 import pickle
 import time
+import warnings
+from typing import Optional, Any
+from collections.abc import Iterable
 
+from gufe import SolventComponent, ProteinComponent
 from gufe.settings import Settings
 from gufe.chemicalsystem import ChemicalSystem
 from gufe.mapping import ComponentMapping
@@ -23,11 +23,7 @@ from feflow.settings.small_molecules import OpenFFPartialChargeSettings
 
 # TODO: Remove/change when things get migrated to openmmtools or feflow
 from openfe.protocols.openmm_utils import system_creation
-
-try:  # Support openfe < 1.3.0
-    from openfe.protocols.openmm_rfe._rfe_utils.compute import get_openmm_platform
-except ModuleNotFoundError:
-    from openfe.protocols.openmm_utils.omm_compute import get_openmm_platform
+from openfe.protocols.openmm_utils.omm_compute import get_openmm_platform
 
 from openff.toolkit import Molecule as OFFMolecule
 from openff.units import unit
@@ -35,6 +31,13 @@ from openff.units.openmm import to_openmm, from_openmm
 
 from ..settings import NonEquilibriumCyclingSettings
 from ..utils.data import serialize, deserialize
+from ..utils.exceptions import ProtocolSupportError
+from ..utils.misc import (
+    generate_omm_top_from_component,
+    get_chain_residues_from_resids,
+    get_positions_from_component,
+)
+from ..utils.vendored import get_omm_modeller
 
 # Specific instance of logger for this module
 logger = logging.getLogger(__name__)
@@ -45,75 +48,6 @@ class SetupUnit(ProtocolUnit):
     Initial unit of the protocol. Sets up a Nonequilibrium cycling simulation given the chemical
     systems, mapping and settings.
     """
-
-    @staticmethod
-    def _check_states_compatibility(state_a, state_b):
-        """
-        Checks that both states have the same solvent parameters and receptor.
-
-        Parameters
-        ----------
-        state_a : gufe.state.State
-            Origin state for the alchemical transformation.
-        state_b :
-            Destination state for the alchemical transformation.
-        """
-        # If any of them has a solvent, check the parameters are the same
-        if any(["solvent" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("solvent") == state_b.get(
-                "solvent"
-            ), "Solvent parameters differ between solvent components."
-        # check protein component is the same in both states if protein component is found
-        if any(["protein" in state.components for state in (state_a, state_b)]):
-            assert state_a.get("protein") == state_b.get(
-                "protein"
-            ), "Receptors in states are not compatible."
-
-    @staticmethod
-    def _detect_phase(state_a, state_b):
-        """
-        Detect phase according to the components in the input chemical state.
-
-        Complex state is assumed if both states have ligands and protein components.
-
-        Solvent state is assumed
-
-        Vacuum state is assumed if only either a ligand or a protein is present
-        in each of the states.
-
-        Parameters
-        ----------
-        state_a : gufe.state.State
-            Source state for the alchemical transformation.
-        state_b : gufe.state.State
-            Destination state for the alchemical transformation.
-
-        Returns
-        -------
-        phase : str
-            Phase name. "vacuum", "solvent" or "complex".
-        component_keys : list[str]
-            List of component keys to extract from states.
-        """
-        states = (state_a, state_b)
-        # where to store the data to be returned
-
-        # Order of phases is important! We have to check complex first and solvent second.
-        key_options = {
-            "complex": ["ligand", "protein", "solvent"],
-            "solvent": ["ligand", "solvent"],
-            "vacuum": ["ligand"],
-        }
-        for phase, keys in key_options.items():
-            if all([key in state for state in states for key in keys]):
-                detected_phase = phase
-                break
-        else:
-            raise ValueError(
-                "Could not detect phase from system states. Make sure the component in both systems match."
-            )
-
-        return detected_phase
 
     @staticmethod
     def _assign_openff_partial_charges(
@@ -168,10 +102,6 @@ class SetupUnit(ProtocolUnit):
             Dictionary with paths to work arrays, both forward and reverse, and
             trajectory coordinates for systems A and B. As well as path for the
             pickled HTF object, mostly for debugging purposes.
-
-        Notes
-        -----
-        * Here we assume the mapping is only between ``SmallMoleculeComponent``s.
         """
         # needed imports
         import openmm
@@ -179,25 +109,27 @@ class SetupUnit(ProtocolUnit):
         from openmmtools.integrators import PeriodicNonequilibriumIntegrator
         from gufe.components import SmallMoleculeComponent
         from openfe.protocols.openmm_rfe import _rfe_utils
-        from openfe.protocols.openmm_utils.system_validation import get_components
+        from openfe.protocols.openmm_utils.system_validation import (
+            get_alchemical_components,
+        )
         from feflow.utils.hybrid_topology import HybridTopologyFactory
         from feflow.utils.charge import get_alchemical_charge_difference
-
-        # Check compatibility between states (same receptor and solvent)
-        self._check_states_compatibility(state_a, state_b)
-
-        phase = self._detect_phase(
-            state_a, state_b
-        )  # infer phase from systems and components
+        from feflow.utils.misc import register_ff_parameters_template
 
         # Get receptor components from systems if found (None otherwise)
-        solvent_comp, receptor_comp, small_mols_a = get_components(state_a)
+        solvent_comps = state_a.get_components_of_type(SolventComponent)
+        solvent_comp_a = next(
+            iter(solvent_comps), None
+        )  # there must be at most one solvent comp
+        protein_comps_a = state_a.get_components_of_type(ProteinComponent)
+        small_mols_a = state_a.get_components_of_type(SmallMoleculeComponent)
 
-        # Get ligand/small-mol components
-        ligand_mapping = mapping
-        ligand_a = ligand_mapping.componentA
-        ligand_b = ligand_mapping.componentB
+        # Get alchemical components -- Expect only one alchemical component per state
+        alchem_comps_dict = get_alchemical_components(state_a, state_b)
+        state_a_alchem_comp = alchem_comps_dict["stateA"][0]
+        state_b_alchem_comp = alchem_comps_dict["stateB"][0]
 
+        # TODO: Do we need to change something in the settings? Does the Protein mutation protocol require specific settings?
         # Get all the relevant settings
         settings: NonEquilibriumCyclingSettings = protocol.settings
         # Get settings for system generator
@@ -219,49 +151,33 @@ class SetupUnit(ProtocolUnit):
             thermo_settings=thermodynamic_settings,
             integrator_settings=integrator_settings,
             cache=ffcache,
-            has_solvent=solvent_comp is not None,
+            has_solvent=bool(solvent_comp_a),
         )
 
         # Parameterizing small molecules
         self.logger.info("Parameterizing molecules")
-        # The following creates a dictionary with all the small molecules in the states, with the structure:
-        #    Dict[SmallMoleculeComponent, openff.toolkit.Molecule]
-        # Alchemical small mols
-        alchemical_small_mols_a = {ligand_a: ligand_a.to_openff()}
-        alchemical_small_mols_b = {ligand_b: ligand_b.to_openff()}
-        all_alchemical_mols = alchemical_small_mols_a | alchemical_small_mols_b
-        # non-alchemical common small mols
-        common_small_mols = {}
-        for comp in state_a.components.values():
-            # TODO: Refactor if/when gufe provides the functionality https://github.com/OpenFreeEnergy/gufe/issues/251
-            # NOTE: This relies on gufe key for "equality", important to keep in mind
-            if (
-                isinstance(comp, SmallMoleculeComponent)
-                and comp not in all_alchemical_mols
-            ):
-                common_small_mols[comp] = comp.to_openff()
+        # Get small molecules from states
+        state_a_small_mols = state_a.get_components_of_type(SmallMoleculeComponent)
+        state_b_small_mols = state_b.get_components_of_type(SmallMoleculeComponent)
+        all_small_mols = set(state_a_small_mols) | set(state_b_small_mols)
 
-        # Assign partial charges to all small mols
-        all_openff_mols = list(
-            chain(all_alchemical_mols.values(), common_small_mols.values())
+        # Generate and register FF parameters in the system generator template
+        all_openff_mols = [comp.to_openff() for comp in all_small_mols]
+        logger.info(
+            "Registering partial charges and FF parameters in template for posterior use in generating openmm systems."
         )
-        self._assign_openff_partial_charges(
-            charge_settings=charge_settings, off_small_mols=all_openff_mols
+        warnings.warn(
+            "Partial charges in the template could differ from what the small molecule components actually store. This potentially undesired behavior is to be improved in the future."
         )
-
-        # Force the creation of parameters
-        # This is necessary because we need to have the FF templates
-        # registered ahead of solvating the system.
-        for off_mol in all_openff_mols:
-            system_generator.create_system(
-                off_mol.to_topology().to_openmm(), molecules=[off_mol]
-            )
+        register_ff_parameters_template(
+            system_generator, charge_settings, all_openff_mols
+        )
 
         # c. get OpenMM Modeller + a dictionary of resids for each component
-        state_a_modeller, comp_resids = system_creation.get_omm_modeller(
-            protein_comp=receptor_comp,
-            solvent_comp=solvent_comp,
-            small_mols=alchemical_small_mols_a | common_small_mols,
+        state_a_modeller, component_resids = get_omm_modeller(
+            protein_comps=protein_comps_a,
+            solvent_comps=solvent_comp_a,
+            small_mols=small_mols_a,
             omm_forcefield=system_generator.forcefield,
             solvent_settings=solvation_settings,
         )
@@ -272,37 +188,49 @@ class SetupUnit(ProtocolUnit):
         state_a_positions = to_openmm(from_openmm(state_a_modeller.getPositions()))
 
         # e. create the stateA System
+        # Note: If there are no small mols ommffs requires a None
         state_a_system = system_generator.create_system(
             state_a_modeller.topology,
-            molecules=list(
-                chain(alchemical_small_mols_a.values(), common_small_mols.values())
+            molecules=(
+                [mol.to_openff() for mol in state_a_small_mols]
+                if state_a_small_mols
+                else None
             ),
         )
 
         # 2. Get stateB system
-        # a. get the topology
+        # a. Generate topology reusing state A topology as possible
+        # Note: We are only dealing with single alchemical components
+        state_b_alchem_top = generate_omm_top_from_component(state_b_alchem_comp)
+        state_b_alchem_pos = get_positions_from_component(state_b_alchem_comp)
+        # Get all the residues indices from alchemical chain
+        # NOTE: We assume single residue/point/component mutation here
+        state_a_alchem_resids = get_chain_residues_from_resids(
+            topology=state_a_topology,
+            residue_indices=component_resids[state_a_alchem_comp],
+        )
+
         (
             state_b_topology,
             state_b_alchem_resids,
         ) = _rfe_utils.topologyhelpers.combined_topology(
             state_a_topology,
-            ligand_b.to_openff().to_topology().to_openmm(),
-            exclude_resids=comp_resids[ligand_a],
+            state_b_alchem_top,
+            exclude_resids=state_a_alchem_resids,
         )
 
         state_b_system = system_generator.create_system(
             state_b_topology,
-            molecules=list(
-                chain(alchemical_small_mols_b.values(), common_small_mols.values())
-            ),
+            molecules=[mol.to_openff() for mol in state_b_small_mols],
         )
 
-        #  c. Define correspondence mappings between the two systems
+        # TODO: This doesn't have to be a ligand mapping. i.e. for protein mutation.
+        # c. Define correspondence mappings between the two systems
         ligand_mappings = _rfe_utils.topologyhelpers.get_system_mappings(
             mapping.componentA_to_componentB,
             state_a_system,
             state_a_topology,
-            comp_resids[ligand_a],
+            state_a_alchem_resids,
             state_b_system,
             state_b_topology,
             state_b_alchem_resids,
@@ -313,12 +241,15 @@ class SetupUnit(ProtocolUnit):
         # Handle charge corrections/transformations
         # Get the change difference between the end states
         # and check if the charge correction used is appropriate
-        charge_difference = get_alchemical_charge_difference(
-            mapping,
-            forcefield_settings.nonbonded_method,
-            alchemical_settings.explicit_charge_correction,
-            solvent_comp,
-        )
+        try:  # Catch unsupported charges differences and raise protocol error
+            charge_difference = get_alchemical_charge_difference(
+                mapping,
+                forcefield_settings.nonbonded_method,
+                alchemical_settings.explicit_charge_correction,
+                solvent_comp_a,  # Solvent comp in a is expected to be the same as in b
+            )
+        except ValueError as e:
+            raise ProtocolSupportError(str(e))
 
         if alchemical_settings.explicit_charge_correction:
             alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(
@@ -333,18 +264,16 @@ class SetupUnit(ProtocolUnit):
                 state_b_system,
                 ligand_mappings,
                 charge_difference,
-                solvent_comp,
+                solvent_comp_a,
             )
 
-        #  d. Finally get the positions
+        # d. Finally get the positions
         state_b_positions = _rfe_utils.topologyhelpers.set_and_check_new_positions(
             ligand_mappings,
             state_a_topology,
             state_b_topology,
             old_positions=ensure_quantity(state_a_positions, "openmm"),
-            insert_positions=ensure_quantity(
-                ligand_b.to_openff().conformers[0], "openmm"
-            ),
+            insert_positions=state_b_alchem_pos,
         )
 
         # TODO: handle the literals directly in the HTF object (issue #42)
@@ -353,6 +282,8 @@ class SetupUnit(ProtocolUnit):
             softcore_LJ_v2 = True
         elif alchemical_settings.softcore_LJ.lower() == "beutler":
             softcore_LJ_v2 = False
+        # TODO: We need to test HTF for protein mutation cases, probably.
+        #  What are ways to quickly check an HTF is correct?
         # Now we can create the HTF from the previous objects
         hybrid_factory = HybridTopologyFactory(
             state_a_system,
@@ -370,6 +301,10 @@ class SetupUnit(ProtocolUnit):
             interpolate_old_and_new_14s=alchemical_settings.turn_off_core_unique_exceptions,
         )
         ####### END OF SETUP #########
+        # Serialize HTF, system, state and integrator
+        htf_outfile = ctx.shared / "hybrid_topology_factory.pickle"
+        with open(htf_outfile, "wb") as htf_file:
+            pickle.dump(hybrid_factory, htf_file)
 
         system = hybrid_factory.hybrid_system
         positions = hybrid_factory.hybrid_positions
@@ -393,6 +328,20 @@ class SetupUnit(ProtocolUnit):
         context.setPositions(positions)
 
         try:
+            # Minimize
+            openmm.LocalEnergyMinimizer.minimize(context)
+            # Optionally store minimized topology -- Mostly for debugging purposes
+            if settings.store_minimized_pdb:
+                from openmm.app import PDBFile
+
+                omm_top_ = hybrid_factory.omm_hybrid_topology
+                omm_state_ = context.getState(getPositions=True)
+                omm_pos_ = omm_state_.getPositions()
+                with open(
+                    ctx.shared / "minimized_hybrid_topology.pdb", "w"
+                ) as out_file:
+                    PDBFile.writeFile(omm_top_, omm_pos_, out_file)
+
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
             # need to set velocities to temperature so serialized state features velocities,
             # which is important for usability by the Folding@Home openmm-core
@@ -408,14 +357,10 @@ class SetupUnit(ProtocolUnit):
             system_ = context.getSystem()
             integrator_ = context.getIntegrator()
 
-            htf_outfile = ctx.shared / "hybrid_topology_factory.pickle"
             system_outfile = ctx.shared / "system.xml.bz2"
             state_outfile = ctx.shared / "state.xml.bz2"
             integrator_outfile = ctx.shared / "integrator.xml.bz2"
 
-            # Serialize HTF, system, state and integrator
-            with open(htf_outfile, "wb") as htf_file:
-                pickle.dump(hybrid_factory, htf_file)
             serialize(system_, system_outfile)
             serialize(state_, state_outfile)
             serialize(integrator_, integrator_outfile)
@@ -428,7 +373,6 @@ class SetupUnit(ProtocolUnit):
             "system": system_outfile,
             "state": state_outfile,
             "integrator": integrator_outfile,
-            "phase": phase,
             "initial_atom_indices": hybrid_factory.initial_atom_indices,
             "final_atom_indices": hybrid_factory.final_atom_indices,
             "topology_path": htf_outfile,
@@ -723,9 +667,8 @@ class CycleUnit(ProtocolUnit):
             )
 
             # Serialize works
-            phase = setup.outputs["phase"]
-            forward_work_path = ctx.shared / f"forward_{phase}_{self.name}.npy"
-            reverse_work_path = ctx.shared / f"reverse_{phase}_{self.name}.npy"
+            forward_work_path = ctx.shared / f"forward_{self.name}.npy"
+            reverse_work_path = ctx.shared / f"reverse_{self.name}.npy"
             with open(forward_work_path, "wb") as out_file:
                 np.save(out_file, forward_works)
             with open(reverse_work_path, "wb") as out_file:
@@ -742,22 +685,14 @@ class CycleUnit(ProtocolUnit):
 
             # TODO: Do we need to save the trajectories?
             # Serialize trajectories
-            forward_eq_old_path = ctx.shared / f"forward_eq_old_{phase}_{self.name}.npy"
-            forward_eq_new_path = ctx.shared / f"forward_eq_new_{phase}_{self.name}.npy"
-            forward_neq_old_path = (
-                ctx.shared / f"forward_neq_old_{phase}_{self.name}.npy"
-            )
-            forward_neq_new_path = (
-                ctx.shared / f"forward_neq_new_{phase}_{self.name}.npy"
-            )
-            reverse_eq_new_path = ctx.shared / f"reverse_eq_new_{phase}_{self.name}.npy"
-            reverse_eq_old_path = ctx.shared / f"reverse_eq_old_{phase}_{self.name}.npy"
-            reverse_neq_old_path = (
-                ctx.shared / f"reverse_neq_old_{phase}_{self.name}.npy"
-            )
-            reverse_neq_new_path = (
-                ctx.shared / f"reverse_neq_new_{phase}_{self.name}.npy"
-            )
+            forward_eq_old_path = ctx.shared / f"forward_eq_old_{self.name}.npy"
+            forward_eq_new_path = ctx.shared / f"forward_eq_new_{self.name}.npy"
+            forward_neq_old_path = ctx.shared / f"forward_neq_old_{self.name}.npy"
+            forward_neq_new_path = ctx.shared / f"forward_neq_new_{self.name}.npy"
+            reverse_eq_new_path = ctx.shared / f"reverse_eq_new_{self.name}.npy"
+            reverse_eq_old_path = ctx.shared / f"reverse_eq_old_{self.name}.npy"
+            reverse_neq_old_path = ctx.shared / f"reverse_neq_old_{self.name}.npy"
+            reverse_neq_new_path = ctx.shared / f"reverse_neq_new_{self.name}.npy"
 
             with open(forward_eq_old_path, "wb") as out_file:
                 np.save(out_file, np.array(forward_eq_initial))
@@ -868,9 +803,8 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
 
         forward_work: npt.NDArray[float] = np.array(forward_work)
         reverse_work: npt.NDArray[float] = np.array(reverse_work)
-        fe_bar = pymbar.bar(forward_work, reverse_work)
-        free_energy = fe_bar["Delta_f"]
-        error = fe_bar["dDelta_f"]
+        bar_data = pymbar.bar(forward_work, reverse_work)
+        free_energy = bar_data["Delta_f"]
 
         return (
             free_energy * unit.k * self.data["temperature"] * unit.avogadro_constant
@@ -944,10 +878,8 @@ class NonEquilibriumCyclingProtocolResult(ProtocolResult):
             indices = np.random.choice(
                 np.arange(traj_size), size=[traj_size], replace=True
             )
-            fe_bar = pymbar.bar(forward[indices], reverse[indices])
-            dg = fe_bar["Delta_f"]
-            ddg = fe_bar["dDelta_f"]
-            all_dgs[i] = dg
+            pymbar_data = pymbar.bar(forward[indices], reverse[indices])
+            all_dgs[i] = pymbar_data["Delta_f"]
 
         return all_dgs
 
@@ -960,6 +892,7 @@ class NonEquilibriumCyclingProtocol(Protocol):
     of the same type of components as components in stateB.
     """
 
+    _settings_cls = NonEquilibriumCyclingSettings
     _simulation_unit = CycleUnit
     _settings_cls = NonEquilibriumCyclingSettings
     result_cls = NonEquilibriumCyclingProtocolResult
@@ -997,26 +930,22 @@ class NonEquilibriumCyclingProtocol(Protocol):
         self,
         stateA: ChemicalSystem,
         stateB: ChemicalSystem,
-        mapping: Optional[Union[ComponentMapping, list[ComponentMapping]]] = None,
+        mapping: Optional[ComponentMapping | list[ComponentMapping]],
         extends: Optional[ProtocolDAGResult] = None,
     ) -> list[ProtocolUnit]:
-        from openfe.protocols.openmm_rfe.equil_rfe_methods import (
-            _validate_alchemical_components,
-        )
-        from openfe.protocols.openmm_utils import system_validation
-
-        if extends:
-            raise NotImplementedError("Can't extend simulations yet")
-
-        # Do manual validation until it is part of the protocol
-        # Get alchemical components & validate them + mapping
-        alchem_comps = system_validation.get_alchemical_components(stateA, stateB)
-        # raise an error if we have more than one mapping
-        _validate_alchemical_components(alchem_comps, mapping)
-        mapping = mapping[0] if isinstance(mapping, list) else mapping  # type: ignore
-
         # inputs to `ProtocolUnit.__init__` should either be `Gufe` objects
         # or JSON-serializable objects
+        # Validate inputs
+        # We only support one mapping, error out if multiple mappings are received
+        #  TODO: Maybe think about putting this in the _validate method?
+        if isinstance(mapping, list):
+            if len(mapping) != 1:
+                raise ValueError(
+                    "Exactly one mapping must be provided. Multiple mappings are not supported."
+                )
+            mapping = mapping[0]
+        self.validate(stateA=stateA, stateB=stateB, mapping=mapping, extends=extends)
+
         num_cycles = self.settings.num_cycles
 
         setup = SetupUnit(
@@ -1028,13 +957,13 @@ class NonEquilibriumCyclingProtocol(Protocol):
         )
 
         simulations = [
-            self._simulation_unit(protocol=self, setup=setup, name=f"{replicate}")
+            self._simulation_unit(protocol=self, setup=setup, name=f"cycle_{replicate}")
             for replicate in range(num_cycles)
         ]
 
         end = ResultUnit(name="result", simulations=simulations)
 
-        return [*simulations, end]
+        return [setup, *simulations, end]
 
     def _gather(
         self, protocol_dag_results: Iterable[ProtocolDAGResult]
@@ -1057,3 +986,92 @@ class NonEquilibriumCyclingProtocol(Protocol):
 
         # This can be populated however we want
         return outputs
+
+    @staticmethod
+    def _check_mappings_consistency(mapping, chemical_system_a, chemical_system_b):
+        """
+        Method to check that the mappings objects are consistent to be used in the protocol.
+        To be used when validating the protocol creation.
+
+        Note: This is though to be a protocol-specific function for now.
+        """
+        # Check components in mapping are part of the chemical systems
+        mapping_comp_a = mapping.componentA
+        mapping_comp_b = mapping.componentB
+        chem_sys_a_keys = [
+            component.key for _, component in chemical_system_a.components.items()
+        ]
+        chem_sys_b_keys = [
+            component.key for _, component in chemical_system_b.components.items()
+        ]
+        # TODO: We could probably raise a custom Exception here, instead of an AssertionError
+        assert (
+            mapping_comp_a.key in chem_sys_a_keys
+        ), "Component A in mapping not found in chemical system A."
+        assert (
+            mapping_comp_b.key in chem_sys_b_keys
+        ), "Component B in mapping not found in chemical system B."
+
+    def _validate(
+        self,
+        *,
+        stateA: ChemicalSystem,
+        stateB: ChemicalSystem,
+        mapping: ComponentMapping | list[ComponentMapping] | None,
+        extends: ProtocolDAGResult | None = None,
+    ):
+        """
+        Validate and handle input parameters for the protocol setup.
+
+        This block ensures that the required `mapping` argument is provided, prevents
+        unsupported extensions of existing simulations, verifies that the specified
+        mappings between the initial (`stateA`) and final (`stateB`) chemical systems
+        are consistent, and that each chemical system contains at most one solvent
+        component.
+
+        Raises
+        ------
+        ValueError
+            If the `mapping` argument is not provided.
+        NotImplementedError
+            If `extends=True`, since extending simulations is not yet supported.
+        RuntimeError
+            If the mapping is found to be inconsistent with the provided chemical systems.
+        AssertionError
+            If the provided mapping is inconsistent with the chemical systems,
+            or if either ``stateA`` or ``stateB`` contains more than one solvent
+            component.
+
+        Notes
+        -----
+        Vacuum simulations (i.e., systems with zero solvent components) are
+        allowed. The solvent restriction is enforced symmetrically on both
+        ``stateA`` and ``stateB`` to ensure compatibility with supported protocol
+        types.
+        """
+        # Handle parameters
+        if mapping is None:
+            raise ValueError("`mapping` is required for this Protocol")
+        if extends:
+            raise NotImplementedError("Can't extend simulations yet")
+
+        # check mapping compatibility
+        self._check_mappings_consistency(
+            mapping=mapping, chemical_system_a=stateA, chemical_system_b=stateB
+        )
+
+        # We only support up to one solvent component in each system (0 for vacuum simulations)
+
+        state_a_solv_comps = stateA.get_components_of_type(SolventComponent)
+        state_b_solv_comps = stateB.get_components_of_type(SolventComponent)
+        assert (
+            len(state_a_solv_comps) <= 1
+        ), f"State A has {len(state_a_solv_comps)} components. Only 0 or 1 allowed."
+        assert (
+            len(state_b_solv_comps) <= 1
+        ), f"State B has {state_b_solv_comps} components. Only 0 or 1 allowed."
+        # Make sure solvent components use the same parameters/configuration
+        for solv_comp_a, solv_comp_b in zip(state_a_solv_comps, state_b_solv_comps):
+            assert (
+                solv_comp_a == solv_comp_b
+            ), "Solvent parameters differ between solvent components."

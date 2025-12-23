@@ -2,6 +2,7 @@
 import gufe
 import pytest
 from importlib.resources import files, as_file
+from openff.units import unit
 from rdkit import Chem
 from gufe.mapping import LigandAtomMapping
 
@@ -56,6 +57,13 @@ def solvent_comp():
 
 
 @pytest.fixture(scope="session")
+def solvent_comp_higher_concentration():
+    yield gufe.SolventComponent(
+        positive_ion="Na", negative_ion="Cl", ion_concentration=0.2 * unit.molar
+    )
+
+
+@pytest.fixture(scope="session")
 def benzene(benzene_modifications):
     return gufe.SmallMoleculeComponent(benzene_modifications["benzene"])
 
@@ -66,6 +74,15 @@ def toluene(benzene_modifications):
 
 
 @pytest.fixture(scope="session")
+def benzonitrile(benzene_modifications):
+    return gufe.SmallMoleculeComponent(benzene_modifications["benzonitrile"])
+
+
+@pytest.fixture(scope="session")
+def styrene(benzene_modifications):
+    return gufe.SmallMoleculeComponent(benzene_modifications["styrene"])
+
+
 def tyk2_protein():
     filepath = files("feflow.tests.data").joinpath("tyk2_protein.pdb")
     return gufe.ProteinComponent.from_pdb_file(str(filepath))
@@ -107,6 +124,28 @@ def toluene_solvent_system(toluene, solvent_comp):
 
 
 @pytest.fixture
+def benzonitrile_solvent_system(benzonitrile, solvent_comp):
+    return gufe.ChemicalSystem({"ligand": benzonitrile, "solvent": solvent_comp})
+
+
+@pytest.fixture
+def styrene_solvent_system(styrene, solvent_comp):
+    return gufe.ChemicalSystem({"ligand": styrene, "solvent": solvent_comp})
+
+
+@pytest.fixture
+def toluene_double_solvent_system(
+    toluene, solvent_comp, solvent_comp_higher_concentration
+):
+    return gufe.ChemicalSystem(
+        {
+            "ligand": toluene,
+            "solvent1": solvent_comp,
+            "solvent2": solvent_comp_higher_concentration,
+        }
+    )
+
+
 def tyk2_lig_ejm_46_complex(tyk2_protein, tyk2_ligand_ejm_46, solvent_comp):
     return gufe.ChemicalSystem(
         {"protein": tyk2_protein, "ligand": tyk2_ligand_ejm_46, "solvent": solvent_comp}
@@ -130,7 +169,9 @@ def short_settings():
 
     settings = NonEquilibriumCyclingProtocol.default_settings()
 
-    settings.engine_settings.compute_platform = "CPU"  # CPU platform for tests
+    # Make sure to use CPU platform for tests
+    settings.engine_settings.compute_platform = "CPU"
+
     settings.thermo_settings.temperature = 300 * unit.kelvin
     settings.integrator_settings.equilibrium_steps = 250
     settings.integrator_settings.nonequilibrium_steps = 250
@@ -226,6 +267,31 @@ def mapping_toluene_toluene(toluene):
         componentA=toluene.copy_with_replacements(name="toluene_a"),
         componentB=toluene.copy_with_replacements(name="toluene_b"),
         componentA_to_componentB=mapping_toluene_to_toluene,
+    )
+    return mapping_obj
+
+
+@pytest.fixture
+def mapping_benzonitrile_styrene(benzonitrile, styrene):
+    """Mapping from benzonitrile to styrene"""
+    mapping_benzonitrile_to_styrene = {
+        8: 11,
+        9: 12,
+        10: 13,
+        11: 14,
+        12: 15,
+        1: 4,
+        2: 5,
+        3: 6,
+        4: 7,
+        5: 8,
+        6: 9,
+        7: 10,
+    }
+    mapping_obj = LigandAtomMapping(
+        componentA=benzonitrile,
+        componentB=styrene,
+        componentA_to_componentB=mapping_benzonitrile_to_styrene,
     )
     return mapping_obj
 

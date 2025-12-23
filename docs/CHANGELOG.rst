@@ -4,6 +4,14 @@ feflow Change Log
 
 .. current developments
 
+v0.2.0
+====================
+Most changes come from supporting protein mutations in the Nonequilibrium cycling protocol.
+
+- Single point protein mutation support for the Nonequilibrium Cycling protocol, in its ``SetupUnit`` (`PR #106 <https://github.com/OpenFreeEnergy/feflow/pull/106>`_)
+- Hybrid Topology Factory optimizations adopted from `openfe codebase <https://github.com/OpenFreeEnergy/openfe/>`_ (`PR #128 <https://github.com/OpenFreeEnergy/feflow/pull/128>`_).
+- Dropping use of deprecated openff quantity models for type hinting, in favor of ``GufeQuantity`` from ``gufe`` (`PR #130 <https://github.com/OpenFreeEnergy/feflow/pull/130>`_).
+
 v0.1.4
 ====================
 - Dropping use of deprecated ``openff-models``. Using vendored ``gufe`` implementation instead (`PR #123 <https://github.com/OpenFreeEnergy/feflow/pull/123>`_)
