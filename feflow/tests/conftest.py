@@ -6,9 +6,6 @@ from openff.units import unit
 from rdkit import Chem
 from gufe.mapping import LigandAtomMapping
 
-# required plugins/fixtures
-pytest_plugins = ["feflow.tests.fixtures.tyk2_fixtures"]
-
 
 def pytest_addoption(parser):
     """

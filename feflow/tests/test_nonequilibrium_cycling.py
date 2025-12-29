@@ -1,5 +1,4 @@
 import pickle
-from importlib.resources import files
 from pathlib import Path
 
 import pymbar.utils
@@ -13,7 +12,8 @@ from gufe.tokenization import JSON_HANDLER
 
 import json
 
-from feflow.tests.conftest import solvent_comp
+# required plugins/fixtures
+pytest_plugins = ["feflow.tests.fixtures.tyk2_fixtures"]
 
 
 def partial_charges_config():
