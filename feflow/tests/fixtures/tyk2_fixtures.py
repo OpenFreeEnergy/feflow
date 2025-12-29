@@ -7,6 +7,7 @@ from importlib.resources import files
 import gufe
 import pytest
 
+
 @pytest.fixture(scope="session")
 def tyk2_protein():
     filepath = files("feflow.tests.data.protein_ligand").joinpath("tyk2_protein.pdb")
@@ -27,13 +28,17 @@ def tyk2_ligand_ejm_46():
 
 @pytest.fixture(scope="session")
 def tyk2_lig_ejm_31():
-    input_sdf = files("feflow.tests.data.protein_ligand").joinpath("tyk2_lig_ejm_31.sdf")
+    input_sdf = files("feflow.tests.data.protein_ligand").joinpath(
+        "tyk2_lig_ejm_31.sdf"
+    )
     return gufe.SmallMoleculeComponent.from_sdf_file(str(input_sdf))
 
 
 @pytest.fixture(scope="session")
 def tyk2_lig_ejm_55():
-    input_sdf = files("feflow.tests.data.protein_ligand").joinpath("tyk2_lig_ejm_55.sdf")
+    input_sdf = files("feflow.tests.data.protein_ligand").joinpath(
+        "tyk2_lig_ejm_55.sdf"
+    )
     return gufe.SmallMoleculeComponent.from_sdf_file(str(input_sdf))
 
 
@@ -69,15 +74,11 @@ def mapping_tyk2_54_to_46(tyk2_ligand_ejm_54, tyk2_ligand_ejm_46):
 
 
 @pytest.fixture(scope="session")
-def tyk2_lig_ejm_31_to_lig_ejm_55_mapping(
-    tyk2_lig_ejm_31, tyk2_lig_ejm_55
-):
+def tyk2_lig_ejm_31_to_lig_ejm_55_mapping(tyk2_lig_ejm_31, tyk2_lig_ejm_55):
     from kartograf import KartografAtomMapper
 
     atom_mapper = KartografAtomMapper()
-    mapping = next(
-        atom_mapper.suggest_mappings(tyk2_lig_ejm_31, tyk2_lig_ejm_55)
-    )
+    mapping = next(atom_mapper.suggest_mappings(tyk2_lig_ejm_31, tyk2_lig_ejm_55))
     return mapping
 
 
