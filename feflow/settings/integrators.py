@@ -8,11 +8,10 @@ for the specific integrator settings.
 
 from typing import Annotated, TypeAlias
 
-from pydantic.v1 import validator
-
 from openff.units import unit
 from gufe.settings import SettingsBaseModel
 from gufe.settings.typing import GufeQuantity, specify_quantity_units
+from pydantic import field_validator, ConfigDict
 
 FemtosecondQuantity: TypeAlias = Annotated[
     GufeQuantity, specify_quantity_units("femtoseconds")
@@ -22,15 +21,45 @@ TimestepQuantity: TypeAlias = Annotated[
 ]
 
 
-class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
-    """Settings for the PeriodicNonequilibriumIntegrator"""
+class BaseNonequilibriumIntegrator(SettingsBaseModel):
+    """Base class for nonequilibrium integrator settings"""
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     timestep: FemtosecondQuantity = 4 * unit.femtoseconds
     """Size of the simulation timestep. Default 4 fs."""
     splitting: str = "V R H O R V"
+
+    # TODO: This validator is used in other settings, better create a new Type
+    @field_validator("timestep")
+    @classmethod
+    def must_be_positive(cls, v):
+        if v <= 0:
+            errmsg = f"timestep must be positive, received {v}."
+            raise ValueError(errmsg)
+        return v
+
+    # TODO: This validator is used in other settings, better create a new Type
+    @field_validator("timestep")
+    @classmethod
+    def is_time(cls, v):
+        # these are time units, not simulation steps
+        if not v.is_compatible_with(unit.picosecond):
+            raise ValueError("timestep must be in time units " "(i.e. picoseconds)")
+        return v
+
+
+class AlchemicalNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
+    """Settings for the AlchemicalNonequilibriumIntegrator used for switching"""
+
+    ...
+
+
+class PeriodicNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
+    """Settings for the PeriodicNonequilibriumIntegrator"""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     """Operator splitting"""
     equilibrium_steps: int = 12500
     """Number of steps for the equilibrium parts of the cycle. Default 12500"""
@@ -48,23 +77,8 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """
 
     # TODO: This validator is used in other settings, better create a new Type
-    @validator("timestep")
-    def must_be_positive(cls, v):
-        if v <= 0:
-            errmsg = f"timestep must be positive, received {v}."
-            raise ValueError(errmsg)
-        return v
-
-    # TODO: This validator is used in other settings, better create a new Type
-    @validator("timestep")
-    def is_time(cls, v):
-        # these are time units, not simulation steps
-        if not v.is_compatible_with(unit.picosecond):
-            raise ValueError("timestep must be in time units " "(i.e. picoseconds)")
-        return v
-
-    # TODO: This validator is used in other settings, better create a new Type
-    @validator("equilibrium_steps", "nonequilibrium_steps")
+    @field_validator("equilibrium_steps", "nonequilibrium_steps")
+    @classmethod
     def must_be_positive_or_zero(cls, v):
         if v < 0:
             errmsg = (
