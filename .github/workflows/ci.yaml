@@ -23,14 +23,12 @@ defaults:
 jobs:
   tests:
     runs-on: ${{ matrix.os }}-latest
-    name: "💻-${{matrix.os }} 🐍-${{ matrix.python-version }} - pydantic ${{matrix.pydantic}}"
+    name: "💻-${{matrix.os }} 🐍-${{ matrix.python-version }}"
     strategy:
       fail-fast: false
       matrix:
         os: ["ubuntu"]
-        pydantic: ["1", "2"]
         python-version:
-          - "3.10"
           - "3.11"
           - "3.12"
         include:
@@ -53,7 +51,6 @@ jobs:
           cache-downloads: true
           create-args: >-
             python=${{ matrix.python-version }}
-            pydantic=${{ matrix.pydantic }}
           init-shell: bash
 
       - name: "Install"
@@ -82,7 +79,14 @@ jobs:
           # Set the OFE_SLOW_TESTS to True if running a Cron job
           OFE_SLOW_TESTS: ${{ fromJSON('{"false":"false","true":"true"}')[github.event_name != 'pull_request'] }}
         run: |
-              pytest -n auto -v --cov=feflow --cov-report=xml --durations=10
+          if [ "$RUNNER_OS" == "macOS" ]; then
+            echo "Running test in serial for macOS (known limitations)..."
+            pytest -n 0 -v --cov=feflow --cov-report=xml --durations=10
+          else
+            echo "Running tests in parallel with xdist..."
+            pytest -n logical -v --cov=feflow --cov-report=xml --durations=10
+          fi
+
 
       - name: codecov
         if: ${{ github.repository == 'OpenFreeEnergy/feflow'

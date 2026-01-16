@@ -14,6 +14,7 @@ from pydantic.v1 import root_validator
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
+    ThermoSettings,
 )
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
@@ -65,13 +66,16 @@ class NonEquilibriumCyclingSettings(Settings):
     """Settings for assigning partial charges to small molecules."""
 
     # Lambda settings
-    lambda_functions = DEFAULT_ALCHEMICAL_FUNCTIONS
+    lambda_functions: dict[str, str] = DEFAULT_ALCHEMICAL_FUNCTIONS
 
     # alchemical settings
     alchemical_settings: AlchemicalSettings = AlchemicalSettings(softcore_LJ="gapsys")
 
     # integrator settings
     integrator_settings: PeriodicNonequilibriumIntegratorSettings
+
+    # Thermodynamic settings
+    thermo_settings: ThermoSettings
 
     # platform and serialization
     engine_settings: OpenMMEngineSettings  # This defines platform
@@ -81,6 +85,10 @@ class NonEquilibriumCyclingSettings(Settings):
     atom_selection_expression: str = "not water"  # TODO: no longer used
 
     num_cycles: int = 100  # Number of cycles to run
+
+    # Debugging settings
+    store_minimized_pdb: bool = True
+    """Setting for storing pdb right after minimization (right before neq cycle)"""
 
     @root_validator
     def save_frequencies_consistency(cls, values):
