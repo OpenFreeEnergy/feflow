@@ -1,5 +1,10 @@
 name: Self-Hosted Runner
 on:
+  pull_request:
+    branches:
+  push:
+    branches:
+      - main
   workflow_dispatch:
   schedule:
     - cron: '0 0 * * 0'  # Run weekly at 00:00 on Sundays
@@ -53,7 +58,7 @@ jobs:
         run: "nvidia-smi"
 
       - name: "Setup Micromamba"
-        uses: mamba-org/setup-micromamba@v1
+        uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/test_env.yaml
 
