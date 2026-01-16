@@ -23,6 +23,7 @@ TimestepQuantity: TypeAlias = Annotated[
 
 class BaseNonequilibriumIntegrator(SettingsBaseModel):
     """Base class for nonequilibrium integrator settings"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     timestep: FemtosecondQuantity = 4 * unit.femtoseconds
@@ -50,11 +51,13 @@ class BaseNonequilibriumIntegrator(SettingsBaseModel):
 
 class AlchemicalNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
     """Settings for the AlchemicalNonequilibriumIntegrator used for switching"""
+
     ...
 
 
 class PeriodicNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
     """Settings for the PeriodicNonequilibriumIntegrator"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     """Operator splitting"""
