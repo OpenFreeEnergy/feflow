@@ -21,28 +21,13 @@ TimestepQuantity: TypeAlias = Annotated[
 ]
 
 
-class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
-    """Settings for the PeriodicNonequilibriumIntegrator"""
+class BaseNonequilibriumIntegrator(SettingsBaseModel):
+    """Base class for nonequilibrium integrator settings"""
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     timestep: FemtosecondQuantity = 4 * unit.femtoseconds
     """Size of the simulation timestep. Default 4 fs."""
     splitting: str = "V R H O R V"
-    """Operator splitting"""
-    equilibrium_steps: int = 12500
-    """Number of steps for the equilibrium parts of the cycle. Default 12500"""
-    nonequilibrium_steps: int = 12500
-    """Number of steps for the non-equilibrium parts of the cycle. Default 12500"""
-    barostat_frequency: TimestepQuantity = 25 * unit.timestep
-    """
-    Frequency at which volume scaling changes should be attempted.
-    Note: The barostat frequency is ignored for gas-phase simulations.
-    Default 25 * unit.timestep.
-    """
-    remove_com: bool = False
-    """
-    Whether or not to remove the center of mass motion. Default False.
-    """
 
     # TODO: This validator is used in other settings, better create a new Type
     @field_validator("timestep")
@@ -61,6 +46,32 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
         if not v.is_compatible_with(unit.picosecond):
             raise ValueError("timestep must be in time units " "(i.e. picoseconds)")
         return v
+
+
+class AlchemicalNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
+    """Settings for the AlchemicalNonequilibriumIntegrator used for switching"""
+    ...
+
+
+class PeriodicNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
+    """Settings for the PeriodicNonequilibriumIntegrator"""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    """Operator splitting"""
+    equilibrium_steps: int = 12500
+    """Number of steps for the equilibrium parts of the cycle. Default 12500"""
+    nonequilibrium_steps: int = 12500
+    """Number of steps for the non-equilibrium parts of the cycle. Default 12500"""
+    barostat_frequency: TimestepQuantity = 25 * unit.timestep
+    """
+    Frequency at which volume scaling changes should be attempted.
+    Note: The barostat frequency is ignored for gas-phase simulations.
+    Default 25 * unit.timestep.
+    """
+    remove_com: bool = False
+    """
+    Whether or not to remove the center of mass motion. Default False.
+    """
 
     # TODO: This validator is used in other settings, better create a new Type
     @field_validator("equilibrium_steps", "nonequilibrium_steps")
