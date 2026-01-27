@@ -5,10 +5,15 @@ FE Flow
 [![codecov](https://codecov.io/gh/OpenFreeEnergy/feflow/branch/main/graph/badge.svg)](https://codecov.io/gh/OpenFreeEnergy/feflow/branch/main)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.13134624.svg)](https://doi.org/10.5281/zenodo.13134624)
 
+Recipes, utilities, and protocols for molecular free energy calculations using the openmmtools/perses and Open Free Energy (OpenFE) toolkits.
 
+Currently it hosts utilities and code for Nonequilibrium cycling protocol, with support for protein mutations, that use and integrate with the OpenFE ecosystem.
 
-
-Recipes, utilities, and protocols for molecular free energy calculations using the openmmtools/perses and Open Free Energy toolkits
+## How to install
+`feflow` is available through `conda-forge` packages. We recommend creating an environment with it as follows
+```bash
+mamba create --name feflow-env feflow
+```
 
 ### Copyright
 
