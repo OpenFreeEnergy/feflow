@@ -52,6 +52,7 @@ class NonEquilibriumCyclingSettings(Settings):
     alchemical : AlchemicalSettings
         The alchemical settings to use.
     """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     forcefield_cache: Optional[str] = (
