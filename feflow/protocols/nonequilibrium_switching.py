@@ -1,4 +1,5 @@
 import mdtraj
+from gufe import Protocol, ProtocolUnit, ProtocolResult
 
 
 class BaseSwitchingUnit(ProtocolUnit):
@@ -167,3 +168,11 @@ class BaseSwitchingUnit(ProtocolUnit):
             )
 
             # TODO: We should return the work in one direction
+
+
+class NonEquilibriumSwitchingProtocol(Protocol):
+    ...
+
+
+class NonEquilibriumSwitchingProtocolResult(ProtocolResult):
+    ...
