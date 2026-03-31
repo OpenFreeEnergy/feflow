@@ -17,6 +17,7 @@ from openfe.protocols.openmm_utils.omm_settings import (
     ThermoSettings,
 )
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
+from pydantic import ConfigDict
 
 
 # Default settings for the lambda functions
@@ -51,10 +52,7 @@ class NonEquilibriumCyclingSettings(Settings):
     alchemical : AlchemicalSettings
         The alchemical settings to use.
     """
-
-    # TODO: Add type hints
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     forcefield_cache: Optional[str] = (
         "db.json"  # TODO: Remove once it has been integrated with openfe settings
