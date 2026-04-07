@@ -19,6 +19,9 @@ FemtosecondQuantity: TypeAlias = Annotated[
 TimestepQuantity: TypeAlias = Annotated[
     GufeQuantity, specify_quantity_units("timestep")
 ]
+InversePicosecondQuantity: TypeAlias = Annotated[
+    GufeQuantity, specify_quantity_units("1/picoseconds")
+]
 
 
 class BaseNonequilibriumIntegrator(SettingsBaseModel):
@@ -50,9 +53,33 @@ class BaseNonequilibriumIntegrator(SettingsBaseModel):
 
 
 class AlchemicalNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
-    """Settings for the AlchemicalNonequilibriumIntegrator used for switching"""
+    """Settings for the AlchemicalNonequilibriumLangevinIntegrator used for one-way NEQ switching"""
 
-    ...
+    timestep: FemtosecondQuantity = 4 * unit.femtoseconds
+    """Size of the simulation timestep. Default 4 fs."""
+    splitting: str = "V R H O R V"
+    """Operator splitting for the Langevin integrator."""
+    collision_rate: InversePicosecondQuantity = 1.0 / unit.picoseconds
+    """Langevin collision rate (friction coefficient). Default 1/ps."""
+    nonequilibrium_steps: int = 2500
+    """Number of steps for the non-equilibrium switching (lambda 0->1 or 1->0). Default 2500 (10 ps at 4 fs)."""
+    equilibrium_steps: int = 1000
+    """Number of equilibration steps at the endpoint before each switch. Default 1000."""
+
+    @field_validator("nonequilibrium_steps", "equilibrium_steps")
+    @classmethod
+    def must_be_positive_or_zero(cls, v):
+        if v < 0:
+            errmsg = f"nonequilibrium_steps and equilibrium_steps must be zero or positive, got {v}."
+            raise ValueError(errmsg)
+        return v
+
+    @field_validator("collision_rate")
+    @classmethod
+    def collision_rate_must_be_positive(cls, v):
+        if v <= 0:
+            raise ValueError(f"collision_rate must be positive, received {v}.")
+        return v
 
 
 class PeriodicNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
