@@ -10,4 +10,6 @@ from .nonequilibrium_cycling import (
 from .nonequilibrium_switching import (
     NonEquilibriumSwitchingProtocol,
     NonEquilibriumSwitchingProtocolResult,
+    ForwardSwitchingUnit,
+    ReverseSwitchingUnit,
 )
