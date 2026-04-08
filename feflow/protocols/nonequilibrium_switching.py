@@ -60,12 +60,11 @@ def _load_snapshot(snapshot_settings: SnapshotSettings, index: int):
     box_vectors_nm : np.ndarray, shape (3, 3) or None
         Triclinic box vectors in nanometres, or None for vacuum systems.
     """
-    import numpy as np
     import MDAnalysis as mda
 
     u = mda.Universe(snapshot_settings.topology_file, snapshot_settings.trajectory_file)
     frame_idx = index * snapshot_settings.stride
-    u.trajectory[frame_idx]
+    u.trajectory[frame_idx]  # We need to place ourselves in the specified frame
 
     positions_nm = u.atoms.positions * 0.1  # Angstrom -> nm
 
@@ -269,7 +268,6 @@ class _BaseSwitchingUnit(ProtocolUnit):
 
     @staticmethod
     def extract_positions(context, initial_atom_indices, final_atom_indices):
-        import numpy as np
 
         positions = context.getState(getPositions=True).getPositions(asNumpy=True)
         return (
