@@ -63,9 +63,7 @@ def _load_snapshot(snapshot_settings: SnapshotSettings, index: int):
     import numpy as np
     import MDAnalysis as mda
 
-    u = mda.Universe(
-        snapshot_settings.topology_file, snapshot_settings.trajectory_file
-    )
+    u = mda.Universe(snapshot_settings.topology_file, snapshot_settings.trajectory_file)
     frame_idx = index * snapshot_settings.stride
     u.trajectory[frame_idx]
 
@@ -74,6 +72,7 @@ def _load_snapshot(snapshot_settings: SnapshotSettings, index: int):
     ts = u.trajectory.ts
     if ts.dimensions is not None:
         from MDAnalysis.lib.mdamath import triclinic_vectors
+
         box_vectors_nm = triclinic_vectors(ts.dimensions) * 0.1  # Angstrom -> nm
     else:
         box_vectors_nm = None
@@ -367,10 +366,7 @@ class NonEquilibriumSwitchingProtocolResult(ProtocolResult):
         reverse: npt.NDArray = np.array([w[-1] for w in self.data["reverse_work"]])
         all_dgs = self._do_bootstrap(forward, reverse, n_bootstraps)
         return (
-            np.std(all_dgs)
-            * unit.k
-            * self.data["temperature"]
-            * unit.avogadro_constant
+            np.std(all_dgs) * unit.k * self.data["temperature"] * unit.avogadro_constant
         ).to("kcal/mol")
 
     def get_rate_of_convergence(self): ...
@@ -379,9 +375,9 @@ class NonEquilibriumSwitchingProtocolResult(ProtocolResult):
         import numpy as np
         import pymbar
 
-        assert len(forward) == len(reverse), (
-            "Forward and reverse work arrays must have the same length."
-        )
+        assert len(forward) == len(
+            reverse
+        ), "Forward and reverse work arrays must have the same length."
         n = len(forward)
         all_dgs = np.zeros(n_bootstraps)
         for i in range(n_bootstraps):
@@ -490,12 +486,12 @@ class NonEquilibriumSwitchingProtocol(Protocol):
         mapping_comp_b = mapping.componentB
         chem_sys_a_keys = [c.key for _, c in chemical_system_a.components.items()]
         chem_sys_b_keys = [c.key for _, c in chemical_system_b.components.items()]
-        assert mapping_comp_a.key in chem_sys_a_keys, (
-            "Component A in mapping not found in chemical system A."
-        )
-        assert mapping_comp_b.key in chem_sys_b_keys, (
-            "Component B in mapping not found in chemical system B."
-        )
+        assert (
+            mapping_comp_a.key in chem_sys_a_keys
+        ), "Component A in mapping not found in chemical system A."
+        assert (
+            mapping_comp_b.key in chem_sys_b_keys
+        ), "Component B in mapping not found in chemical system B."
 
     def _validate(
         self,
@@ -518,12 +514,12 @@ class NonEquilibriumSwitchingProtocol(Protocol):
 
         state_a_solv = stateA.get_components_of_type(SolventComponent)
         state_b_solv = stateB.get_components_of_type(SolventComponent)
-        assert len(state_a_solv) <= 1, (
-            f"State A has {len(state_a_solv)} solvent components. Only 0 or 1 allowed."
-        )
-        assert len(state_b_solv) <= 1, (
-            f"State B has {len(state_b_solv)} solvent components. Only 0 or 1 allowed."
-        )
+        assert (
+            len(state_a_solv) <= 1
+        ), f"State A has {len(state_a_solv)} solvent components. Only 0 or 1 allowed."
+        assert (
+            len(state_b_solv) <= 1
+        ), f"State B has {len(state_b_solv)} solvent components. Only 0 or 1 allowed."
 
     def _gather(
         self, protocol_dag_results: Iterable[ProtocolDAGResult]

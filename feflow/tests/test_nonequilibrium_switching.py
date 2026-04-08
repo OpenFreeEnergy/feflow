@@ -188,9 +188,9 @@ class TestNonEquilibriumSwitching:
                 results.append(dagresult)
 
         for dag_result in results:
-            assert len(dag_result.protocol_unit_failures) == 0, (
-                "Unit failure in protocol dag result."
-            )
+            assert (
+                len(dag_result.protocol_unit_failures) == 0
+            ), "Unit failure in protocol dag result."
 
         protocolresult = protocol.gather(results)
         fe_estimate = protocolresult.get_estimate()

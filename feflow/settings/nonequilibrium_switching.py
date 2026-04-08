@@ -169,7 +169,9 @@ class NonEquilibriumSwitchingSettings(Settings):
         if integrator_settings is None:
             return values
 
-        has_snapshots = values.get("lambda0_snapshots") or values.get("lambda1_snapshots")
+        has_snapshots = values.get("lambda0_snapshots") or values.get(
+            "lambda1_snapshots"
+        )
         if has_snapshots and integrator_settings.equilibrium_steps != 0:
             raise ValueError(
                 "When lambda0_snapshots or lambda1_snapshots are provided the "
@@ -198,8 +200,12 @@ class NonEquilibriumSwitchingSettings(Settings):
         try:
             import MDAnalysis as mda
 
-            n0 = len(mda.Universe(snap0.topology_file, snap0.trajectory_file).trajectory)
-            n1 = len(mda.Universe(snap1.topology_file, snap1.trajectory_file).trajectory)
+            n0 = len(
+                mda.Universe(snap0.topology_file, snap0.trajectory_file).trajectory
+            )
+            n1 = len(
+                mda.Universe(snap1.topology_file, snap1.trajectory_file).trajectory
+            )
         except Exception as exc:
             raise ValueError(
                 f"Could not read snapshot trajectories to validate frame counts: {exc}"
