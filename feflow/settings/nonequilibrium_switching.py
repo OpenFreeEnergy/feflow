@@ -127,6 +127,10 @@ class NonEquilibriumSwitchingSettings(Settings):
     runs. Each switch produces one work value used in the BAR free energy estimate.
     """
 
+    # Debugging settings
+    store_minimized_pdb: bool = True
+    """Setting for storing pdb right after minimization (right before neq cycle)"""
+
     @root_validator
     def set_and_validate_save_frequencies(cls, values):
         """
