@@ -32,6 +32,10 @@ class BaseNonequilibriumIntegrator(SettingsBaseModel):
     timestep: FemtosecondQuantity = 4 * unit.femtoseconds
     """Size of the simulation timestep. Default 4 fs."""
     splitting: str = "V R H O R V"
+    remove_com: bool = False
+    """
+    Whether or not to remove the center of mass motion. Default False.
+    """
 
     # TODO: This validator is used in other settings, better create a new Type
     @field_validator("timestep")
@@ -97,10 +101,6 @@ class PeriodicNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
     Frequency at which volume scaling changes should be attempted.
     Note: The barostat frequency is ignored for gas-phase simulations.
     Default 25 * unit.timestep.
-    """
-    remove_com: bool = False
-    """
-    Whether or not to remove the center of mass motion. Default False.
     """
 
     # TODO: This validator is used in other settings, better create a new Type
