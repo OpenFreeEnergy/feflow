@@ -239,17 +239,8 @@ class SetupUnit(ProtocolUnit):
         )
 
         # Handle charge corrections/transformations
-        # Get the change difference between the end states
-        # and check if the charge correction used is appropriate
-        try:  # Catch unsupported charges differences and raise protocol error
-            charge_difference = get_alchemical_charge_difference(
-                mapping,
-                forcefield_settings.nonbonded_method,
-                alchemical_settings.explicit_charge_correction,
-                solvent_comp_a,  # Solvent comp in a is expected to be the same as in b
-            )
-        except ValueError as e:
-            raise ProtocolSupportError(str(e))
+        # Get the formal change difference between the end states
+        charge_difference = mapping.get_alchemical_charge_difference()
 
         if alchemical_settings.explicit_charge_correction:
             alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(
