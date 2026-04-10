@@ -113,7 +113,6 @@ class SetupUnit(ProtocolUnit):
             get_alchemical_components,
         )
         from feflow.utils.hybrid_topology import HybridTopologyFactory
-        from feflow.utils.charge import get_alchemical_charge_difference
         from feflow.utils.misc import register_ff_parameters_template
 
         # Get receptor components from systems if found (None otherwise)
