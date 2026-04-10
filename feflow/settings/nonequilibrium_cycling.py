@@ -89,14 +89,13 @@ class NonEquilibriumCyclingSettings(Settings):
     store_minimized_pdb: bool = True
     """Setting for storing pdb right after minimization (right before neq cycle)"""
 
-    @model_validator(mode="before")
-    @classmethod
-    def save_frequencies_consistency(cls, values):
+    @model_validator(mode="after")
+    def save_frequencies_consistency(self):
         """Checks trajectory save frequency is a multiple of work save frequency, for convenience"""
-        if values.get("traj_save_frequency") % values.get("work_save_frequency") != 0:
+        if self.traj_save_frequency % self.work_save_frequency != 0:
             raise ValueError(
                 "Work save frequency must be a divisor of trajectory save frequency. "
                 "Please specify consistent values for trajectory and work save settings"
             )
         # TODO: Add check for eq and neq steps and save frequencies
-        return values
+        return self
