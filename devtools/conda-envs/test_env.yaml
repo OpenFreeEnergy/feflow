@@ -12,7 +12,7 @@ dependencies:
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
   - openmmtools >=0.23.0
   - pymbar ~=4.0
-  - pydantic >=1.10.17, <3
+  - pydantic >=2
   - python
     # Testing (optional deps)
   - espaloma_charge ==0.0.8  # To use Espaloma FF in tests

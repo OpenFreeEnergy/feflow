@@ -10,7 +10,7 @@ from feflow.settings import (
 )
 
 from gufe.settings import Settings, OpenMMSystemGeneratorFFSettings
-from pydantic.v1 import root_validator
+from pydantic import ConfigDict, model_validator
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
@@ -53,8 +53,7 @@ class NonEquilibriumCyclingSettings(Settings):
     """
 
     # TODO: Add type hints
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     forcefield_cache: Optional[str] = (
         "db.json"  # TODO: Remove once it has been integrated with openfe settings
@@ -90,13 +89,13 @@ class NonEquilibriumCyclingSettings(Settings):
     store_minimized_pdb: bool = True
     """Setting for storing pdb right after minimization (right before neq cycle)"""
 
-    @root_validator
-    def save_frequencies_consistency(cls, values):
+    @model_validator(mode="after")
+    def save_frequencies_consistency(self):
         """Checks trajectory save frequency is a multiple of work save frequency, for convenience"""
-        if values.get("traj_save_frequency") % values.get("work_save_frequency") != 0:
+        if self.traj_save_frequency % self.work_save_frequency != 0:
             raise ValueError(
                 "Work save frequency must be a divisor of trajectory save frequency. "
                 "Please specify consistent values for trajectory and work save settings"
             )
         # TODO: Add check for eq and neq steps and save frequencies
-        return values
+        return self
