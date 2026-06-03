@@ -24,7 +24,7 @@ from openff.units.openmm import to_openmm
 from ..settings import NonEquilibriumSwitchingSettings
 from ..settings.nonequilibrium_switching import SnapshotSettings
 from ..settings.small_molecules import OpenFFPartialChargeSettings
-from ..utils.data import deserialize
+from ..utils.data import deserialize, serialize
 from .nonequilibrium_cycling import SetupUnit  # reuse hybrid topology setup
 
 logger = logging.getLogger(__name__)
@@ -80,11 +80,191 @@ def _load_snapshot(snapshot_settings: SnapshotSettings, index: int):
     return positions_nm, box_vectors_nm
 
 
+class _BaseEquilibrationUnit(ProtocolUnit):
+    """
+    Produces ``num_switches`` equilibrated starting snapshots for one lambda
+    endpoint.  Subclasses set ``_snapshot_settings_key`` and ``_endpoint``.
+
+    Two modes:
+    - **Internal equilibration**: runs a single continuous Langevin trajectory
+      for ``equilibrium_steps`` total steps, saving ``num_switches`` snapshots
+      at uniform intervals (every ``equilibrium_steps // num_switches`` steps).
+      Raises if ``equilibrium_steps < num_switches``.
+    - **XTC trajectory**: loads ``num_switches`` frames from a pre-equilibrated
+      trajectory via MDAnalysis (frame ``i * stride``).  Raises if the
+      trajectory does not contain enough frames.
+
+    Outputs
+    -------
+    snap_states : list[pathlib.Path]
+        Serialized OpenMM State XML files, one per switch replicate.
+    timing_info : dict
+    log : pathlib.Path
+    """
+
+    _snapshot_settings_key: str = ""  # "lambda0_snapshots" or "lambda1_snapshots"
+    _endpoint: str = ""  # "lambda0" or "lambda1"
+
+    def _execute(self, ctx, *, protocol, setup, **inputs):
+        import openmm
+        import openmm.unit as openmm_unit
+
+        settings: NonEquilibriumSwitchingSettings = protocol.settings
+        int_settings = settings.integrator_settings
+
+        temperature = to_openmm(settings.thermo_settings.temperature)
+        timestep = to_openmm(int_settings.timestep)
+        collision_rate = to_openmm(int_settings.collision_rate)
+        eq_steps = int_settings.equilibrium_steps
+        num_switches = settings.num_switches
+
+        file_logger = logging.getLogger(f"neq-eq-{self._endpoint}")
+        log_path = ctx.shared / f"feflow-eq-{self._endpoint}-{self.name}.log"
+        file_handler = logging.FileHandler(log_path, mode="w")
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(
+            logging.Formatter(
+                fmt="%(asctime)s %(levelname)-8s %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+        )
+        file_logger.addHandler(file_handler)
+
+        system = deserialize(setup.outputs["system"])
+        initial_state = deserialize(setup.outputs["state"])
+        platform = get_openmm_platform(settings.engine_settings.compute_platform)
+        timing_info = {}
+
+        snapshot_settings: Optional[SnapshotSettings] = getattr(
+            settings, self._snapshot_settings_key
+        )
+
+        snap_states = []
+
+        if snapshot_settings is not None:
+            # Load num_switches frames from a pre-equilibrated XTC trajectory
+            import MDAnalysis as mda
+
+            u = mda.Universe(
+                snapshot_settings.topology_file, snapshot_settings.trajectory_file
+            )
+            available = len(u.trajectory) // snapshot_settings.stride
+            if available < num_switches:
+                raise ValueError(
+                    f"{self._endpoint} trajectory has only {len(u.trajectory)} frames "
+                    f"(stride={snapshot_settings.stride} → {available} usable), "
+                    f"but num_switches={num_switches}."
+                )
+
+            file_logger.info(
+                f"{self.name}: loading {num_switches} snapshots from "
+                f"{snapshot_settings.trajectory_file} (stride={snapshot_settings.stride})"
+            )
+            integrator = openmm.LangevinMiddleIntegrator(
+                temperature, collision_rate, timestep
+            )
+            ctx_snap = openmm.Context(system, integrator, platform)
+            ctx_snap.setState(initial_state)
+
+            t0 = time.perf_counter()
+            for i in range(num_switches):
+                positions_nm, box_nm = _load_snapshot(snapshot_settings, i)
+                ctx_snap.setPositions(positions_nm * openmm_unit.nanometers)
+                if box_nm is not None:
+                    ctx_snap.setPeriodicBoxVectors(*box_nm * openmm_unit.nanometers)
+                ctx_snap.setVelocitiesToTemperature(temperature)
+                snap_states.append(
+                    ctx_snap.getState(
+                        getPositions=True,
+                        getVelocities=True,
+                        getEnergy=True,
+                        getForces=True,
+                        enforcePeriodicBox=True,
+                    )
+                )
+            del ctx_snap, integrator
+            timing_info["snapshot_load_time_in_s"] = datetime.timedelta(
+                seconds=time.perf_counter() - t0
+            ).total_seconds()
+            file_logger.info(
+                f"{self.name}: loaded {num_switches} snapshots "
+                f"({timing_info['snapshot_load_time_in_s']:.1f} s)"
+            )
+
+        else:
+            # Internal equilibration: single continuous trajectory of eq_steps
+            # total steps; snapshots taken at uniform intervals.
+            if eq_steps < num_switches:
+                raise ValueError(
+                    f"equilibrium_steps ({eq_steps}) must be >= num_switches "
+                    f"({num_switches}) to produce uniformly-spaced snapshots."
+                )
+
+            save_interval = eq_steps // num_switches
+            file_logger.info(
+                f"{self.name}: running {eq_steps} equilibration steps, "
+                f"saving {num_switches} snapshots every {save_interval} steps"
+            )
+            eq_integrator = openmm.LangevinMiddleIntegrator(
+                temperature, collision_rate, timestep
+            )
+            eq_ctx = openmm.Context(system, eq_integrator, platform)
+            eq_ctx.setState(initial_state)
+            eq_ctx.setVelocitiesToTemperature(temperature)
+
+            t0 = time.perf_counter()
+            for i in range(num_switches):
+                # We run eq simulations and save snapshots where each switch should start
+                eq_integrator.step(save_interval)
+                snap_states.append(
+                    eq_ctx.getState(
+                        getPositions=True,
+                        getVelocities=True,
+                        getEnergy=True,
+                        getForces=True,
+                        enforcePeriodicBox=True,
+                    )
+                )
+            del eq_ctx, eq_integrator
+            timing_info["eq_time_in_s"] = datetime.timedelta(
+                seconds=time.perf_counter() - t0
+            ).total_seconds()
+            file_logger.info(
+                f"{self.name}: equilibration done ({timing_info['eq_time_in_s']:.1f} s)"
+            )
+
+        # Serialize each snapshot to its own XML file
+        snap_paths = []
+        for i, state in enumerate(snap_states):
+            path = ctx.shared / f"{self._endpoint}_snapshot_state_{self.name}_{i}.xml"
+            serialize(state, path)
+            snap_paths.append(path)
+
+        return {
+            "snap_states": snap_paths,
+            "timing_info": timing_info,
+            "log": log_path,
+        }
+
+
+class Lambda0EquilibrationUnit(_BaseEquilibrationUnit):
+    """Equilibration / snapshot loading at lambda=0 (starting point for forward switches)."""
+
+    _snapshot_settings_key = "lambda0_snapshots"
+    _endpoint = "lambda0"
+
+
+class Lambda1EquilibrationUnit(_BaseEquilibrationUnit):
+    """Equilibration / snapshot loading at lambda=1 (starting point for reverse switches)."""
+
+    _snapshot_settings_key = "lambda1_snapshots"
+    _endpoint = "lambda1"
+
+
 class _BaseSwitchingUnit(ProtocolUnit):
     """
     Shared machinery for ForwardSwitchingUnit and ReverseSwitchingUnit.
-    Subclasses provide ``_direction``, ``_snapshot_settings_key``, and
-    ``_lambda_functions``.
+    Subclasses provide ``_direction`` and ``_get_lambda_functions``.
     """
 
     @staticmethod
@@ -99,31 +279,28 @@ class _BaseSwitchingUnit(ProtocolUnit):
 
     # --- to be overridden by subclasses ---
     _direction: str = ""  # "forward" or "reverse"
-    _snapshot_settings_key: str = ""  # "lambda0_snapshots" or "lambda1_snapshots"
 
     def _get_lambda_functions(self, settings: NonEquilibriumSwitchingSettings) -> dict:
         raise NotImplementedError
 
     # --------------------------------------------------------------
 
-    def _execute(self, ctx, *, protocol, setup, index, **inputs):
+    def _execute(self, ctx, *, protocol, setup, equilibration, index, **inputs):
         """
-        Execute one NEQ switch:
-
-        1. Obtain starting snapshot (from trajectory or internal equilibration).
-        2. Run the NEQ switch, collecting work and trajectory frames.
+        Execute one NEQ switch starting from the pre-equilibrated snapshot
+        produced by an upstream EquilibrationUnit.
 
         Parameters
         ----------
         ctx : gufe.protocols.protocolunit.Context
         protocol : NonEquilibriumSwitchingProtocol
-        setup : SetupUnit result with hybrid system and initial state.
+        setup : SetupUnit result with hybrid system and atom indices.
+        equilibration : EquilibrationUnit result with the starting snapshot.
         index : int
-            Replicate index; used for frame selection and RNG seeding.
+            Replicate index; used for output file naming.
         """
         import numpy as np
         import openmm
-        import openmm.unit as openmm_unit
         from openmmtools.integrators import AlchemicalNonequilibriumLangevinIntegrator
 
         # Logging
@@ -146,85 +323,22 @@ class _BaseSwitchingUnit(ProtocolUnit):
         timestep = to_openmm(int_settings.timestep)
         collision_rate = to_openmm(int_settings.collision_rate)
         neq_steps = int_settings.nonequilibrium_steps
-        eq_steps = int_settings.equilibrium_steps
         work_save_freq = settings.work_save_frequency
         traj_save_freq = settings.traj_save_frequency
         coarse_steps = neq_steps // work_save_freq
         traj_coarse_freq = traj_save_freq // work_save_freq
 
         system = deserialize(setup.outputs["system"])
-        initial_state = deserialize(setup.outputs["state"])
         initial_atom_indices = setup.outputs["initial_atom_indices"]
         final_atom_indices = setup.outputs["final_atom_indices"]
+
+        snap_state = deserialize(equilibration.outputs["snap_states"][index])
 
         platform = get_openmm_platform(settings.engine_settings.compute_platform)
         timing_info = {}
 
         # ------------------------------------------------------------------
-        # Step 1: obtain the starting snapshot
-        # ------------------------------------------------------------------
-        snapshot_settings: Optional[SnapshotSettings] = getattr(
-            settings, self._snapshot_settings_key
-        )
-
-        if snapshot_settings is not None:
-            file_logger.info(
-                f"{self.name}: loading snapshot {index} from "
-                f"{snapshot_settings.trajectory_file} (frame {index * snapshot_settings.stride})"
-            )
-            positions_nm, box_nm = _load_snapshot(snapshot_settings, index)
-
-            start_integrator = openmm.LangevinMiddleIntegrator(
-                temperature, collision_rate, timestep
-            )
-            start_ctx = openmm.Context(system, start_integrator, platform)
-            start_ctx.setState(initial_state)
-            start_ctx.setPositions(positions_nm * openmm_unit.nanometers)
-            if box_nm is not None:
-                start_ctx.setPeriodicBoxVectors(*box_nm * openmm_unit.nanometers)
-            start_ctx.setVelocitiesToTemperature(temperature)
-            snap_state = start_ctx.getState(
-                getPositions=True,
-                getVelocities=True,
-                getEnergy=True,
-                getForces=True,
-                enforcePeriodicBox=True,
-            )
-            del start_ctx, start_integrator
-
-        else:
-            file_logger.info(
-                f"{self.name}: equilibrating for {eq_steps} steps "
-                f"(replicate {index})"
-            )
-            eq_integrator = openmm.LangevinMiddleIntegrator(
-                temperature, collision_rate, timestep
-            )
-            eq_ctx = openmm.Context(system, eq_integrator, platform)
-            eq_ctx.setState(initial_state)
-            # Use index as seed so replicates decorrelate from each other
-            eq_ctx.setVelocitiesToTemperature(temperature, index)
-
-            t0 = time.perf_counter()
-            eq_integrator.step(eq_steps)
-            timing_info["eq_time_in_s"] = datetime.timedelta(
-                seconds=time.perf_counter() - t0
-            ).total_seconds()
-
-            snap_state = eq_ctx.getState(
-                getPositions=True,
-                getVelocities=True,
-                getEnergy=True,
-                getForces=True,
-                enforcePeriodicBox=True,
-            )
-            del eq_ctx, eq_integrator
-            file_logger.info(
-                f"{self.name}: equilibration done ({timing_info['eq_time_in_s']:.1f} s)"
-            )
-
-        # ------------------------------------------------------------------
-        # Step 2: NEQ switch
+        # NEQ switch
         # ------------------------------------------------------------------
         lambda_functions = self._get_lambda_functions(settings)
 
@@ -296,7 +410,6 @@ class ForwardSwitchingUnit(_BaseSwitchingUnit):
     """Runs one forward NEQ switch (lambda 0->1)."""
 
     _direction = "forward"
-    _snapshot_settings_key = "lambda0_snapshots"
 
     def _get_lambda_functions(self, settings):
         return settings.lambda_functions
@@ -306,7 +419,6 @@ class ReverseSwitchingUnit(_BaseSwitchingUnit):
     """Runs one reverse NEQ switch (lambda 1->0)."""
 
     _direction = "reverse"
-    _snapshot_settings_key = "lambda1_snapshots"
 
     def _get_lambda_functions(self, settings):
         return _reversed_lambda_functions(settings.lambda_functions)
@@ -457,17 +569,34 @@ class NonEquilibriumSwitchingProtocol(Protocol):
             name="setup",
         )
 
-        # Forward and reverse units both depend only on setup — they can run
-        # in parallel with each other and across replicates.
+        # One equilibration unit per lambda endpoint; each produces num_switches
+        # snapshots and depends only on setup.
+        lambda0_eq = Lambda0EquilibrationUnit(
+            protocol=self, setup=setup, name="eq_lambda0"
+        )
+        lambda1_eq = Lambda1EquilibrationUnit(
+            protocol=self, setup=setup, name="eq_lambda1"
+        )
+
+        # Switching units depend on setup (system/indices) and the appropriate
+        # equilibration unit (starting snapshot by index).
         forward_switches = [
             ForwardSwitchingUnit(
-                protocol=self, setup=setup, index=i, name=f"forward_{i}"
+                protocol=self,
+                setup=setup,
+                equilibration=lambda0_eq,
+                index=i,
+                name=f"forward_{i}",
             )
             for i in range(num_switches)
         ]
         reverse_switches = [
             ReverseSwitchingUnit(
-                protocol=self, setup=setup, index=i, name=f"reverse_{i}"
+                protocol=self,
+                setup=setup,
+                equilibration=lambda1_eq,
+                index=i,
+                name=f"reverse_{i}",
             )
             for i in range(num_switches)
         ]
@@ -478,7 +607,7 @@ class NonEquilibriumSwitchingProtocol(Protocol):
             reverse_switches=reverse_switches,
         )
 
-        return [setup, *forward_switches, *reverse_switches, end]
+        return [setup, lambda0_eq, lambda1_eq, *forward_switches, *reverse_switches, end]
 
     @staticmethod
     def _check_mappings_consistency(mapping, chemical_system_a, chemical_system_b):
