@@ -35,6 +35,12 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """Number of steps for the equilibrium parts of the cycle. Default 12500"""
     nonequilibrium_steps: int = 12500
     """Number of steps for the non-equilibrium parts of the cycle. Default 12500"""
+    barostat_frequency: TimestepQuantity = 25 * unit.timestep
+    """
+    Frequency at which volume scaling changes should be attempted.
+    Note: The barostat frequency is ignored for gas-phase simulations.
+    Default 25 * unit.timestep.
+    """
     remove_com: bool = False
     """
     Whether or not to remove the center of mass motion. Default False.
