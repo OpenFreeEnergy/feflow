@@ -6,7 +6,7 @@ would be shared between different integrators, and subclasses of it
 for the specific integrator settings.
 """
 
-from typing import Annotated, TypeAlias
+from typing import Annotated, TypeAlias, Literal
 
 from pydantic import ConfigDict, field_validator
 
@@ -35,6 +35,13 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """Number of steps for the equilibrium parts of the cycle. Default 12500"""
     nonequilibrium_steps: int = 12500
     """Number of steps for the non-equilibrium parts of the cycle. Default 12500"""
+    barostat: Literal["MonteCarloBarostat", "MonteCarloMembraneBarostat"] = "MonteCarloBarostat"
+    """
+    The barostat to be used in the simulations. Default MonteCarloBarostat.
+    Notes
+    -----
+    If the system contains a membrane, use the `MonteCarloMembraneBarostat`.
+    """
     barostat_frequency: TimestepQuantity = 25 * unit.timestep
     """
     Frequency at which volume scaling changes should be attempted.
