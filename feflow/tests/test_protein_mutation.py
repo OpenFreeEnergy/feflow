@@ -636,6 +636,8 @@ class TestProtocolMutation:
         from feflow.utils.exceptions import ProtocolSupportError
 
         settings = NonEquilibriumCyclingProtocol.default_settings()
+        # Change engine platform for tests
+        settings.engine_settings.compute_platform = "CPU"
         # We need to make sure we enable the alchemical charge correction
         settings.alchemical_settings.explicit_charge_correction = True
 
