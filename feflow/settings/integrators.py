@@ -35,9 +35,7 @@ class PeriodicNonequilibriumIntegratorSettings(SettingsBaseModel):
     """Number of steps for the equilibrium parts of the cycle. Default 12500"""
     nonequilibrium_steps: int = 12500
     """Number of steps for the non-equilibrium parts of the cycle. Default 12500"""
-    barostat: Literal["MonteCarloBarostat"] = (
-        "MonteCarloBarostat"
-    )
+    barostat: Literal["MonteCarloBarostat"] = "MonteCarloBarostat"
     """
     The barostat to be used in the simulations. Default MonteCarloBarostat.
     Notes

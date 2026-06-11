@@ -250,7 +250,6 @@ class SetupUnit(ProtocolUnit):
         except ValueError as e:
             raise ProtocolSupportError(str(e))
 
-
         if alchemical_settings.explicit_charge_correction:
             alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(
                 state_a_topology,

@@ -3,6 +3,7 @@ Module involving all the necessary auxiliary utilities and functions for manipul
 Such as assigning both formal and partial charges, or transforming solvent into ions
 or vice versa for charge-changing alchemical transformations.
 """
+
 import logging
 import warnings
 from gufe import LigandAtomMapping, SolventComponent
@@ -19,10 +20,10 @@ logger = logging.getLogger(__name__)
 # TODO: Re-evaluate if we want a more global utility function for this in the openfe "ecosystem"
 # Vendored from openfe protocol method in https://github.com/OpenFreeEnergy/openfe/blob/75cb2e85a46514633ecfe33353dfa5e9dc22e729/src/openfe/protocols/openmm_rfe/hybridtop_protocols.py#L373
 def validate_charge_difference(
-        mapping: LigandAtomMapping,
-        nonbonded_method: str,
-        explicit_charge_correction: bool,
-        solvent_component: SolventComponent | None,
+    mapping: LigandAtomMapping,
+    nonbonded_method: str,
+    explicit_charge_correction: bool,
+    solvent_component: SolventComponent | None,
 ) -> int:
     """
     Validates the net charge difference between the two states.
@@ -83,7 +84,9 @@ def validate_charge_difference(
     # We implicitly check earlier that we have to have pme for a solvated
     # system, so we only need to check the nonbonded method here
     if nonbonded_method.lower() != "pme":
-        errmsg = "Explicit charge correction when not using PME is not currently supported."
+        errmsg = (
+            "Explicit charge correction when not using PME is not currently supported."
+        )
         raise ValueError(errmsg)
 
     if abs(difference) > 1:
@@ -95,7 +98,9 @@ def validate_charge_difference(
         )
         raise ValueError(errmsg)
 
-    ion = {-1: solvent_component.positive_ion, 1: solvent_component.negative_ion}[difference]
+    ion = {-1: solvent_component.positive_ion, 1: solvent_component.negative_ion}[
+        difference
+    ]
 
     wmsg = (
         f"A charge difference of {difference} is observed "
