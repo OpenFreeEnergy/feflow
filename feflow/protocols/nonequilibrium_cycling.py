@@ -30,6 +30,7 @@ from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
 from ..settings import NonEquilibriumCyclingSettings
+from ..utils.charge import validate_charge_difference
 from ..utils.data import serialize, deserialize
 from ..utils.exceptions import ProtocolSupportError
 from ..utils.misc import (
@@ -239,7 +240,16 @@ class SetupUnit(ProtocolUnit):
 
         # Handle charge corrections/transformations
         # Get the formal change difference between the end states
-        charge_difference = mapping.get_alchemical_charge_difference()
+        try:
+            charge_difference = validate_charge_difference(
+                mapping,
+                forcefield_settings.nonbonded_method,
+                alchemical_settings.explicit_charge_correction,
+                solvent_comp_a,  # Solvent comp in a is expected to be the same as in b
+            )
+        except ValueError as e:
+            raise ProtocolSupportError(str(e))
+
 
         if alchemical_settings.explicit_charge_correction:
             alchem_water_resids = _rfe_utils.topologyhelpers.get_alchemical_waters(
