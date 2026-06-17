@@ -85,6 +85,10 @@ class NonEquilibriumCyclingSettings(Settings):
 
     num_cycles: int = 100  # Number of cycles to run
 
+    setup_minimize: bool = (
+        True  # If True, minimize the system in the SetupUnit; we don't want to do this on platforms like Folding@Home
+    )
+
     # Debugging settings
     store_minimized_pdb: bool = True
     """Setting for storing pdb right after minimization (right before neq cycle)"""
@@ -98,4 +102,15 @@ class NonEquilibriumCyclingSettings(Settings):
                 "Please specify consistent values for trajectory and work save settings"
             )
         # TODO: Add check for eq and neq steps and save frequencies
+        return self
+
+    @model_validator(mode="after")
+    def store_minimized_pdb_requires_setup_minimize(self):
+        """Storing the minimized PDB requires minimization to be enabled."""
+        if self.store_minimized_pdb and not self.setup_minimize:
+            raise ValueError(
+                "`store_minimized_pdb` requires `setup_minimize` to be True, "
+                "since there is no minimized structure to store when minimization "
+                "is disabled."
+            )
         return self
