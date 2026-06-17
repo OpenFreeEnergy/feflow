@@ -85,7 +85,9 @@ class NonEquilibriumCyclingSettings(Settings):
 
     num_cycles: int = 100  # Number of cycles to run
 
-    setup_minimize: bool = True # If True, minimize the system in the SetupUnit; we don't want to do this on platforms like Folding@Home
+    setup_minimize: bool = (
+        True  # If True, minimize the system in the SetupUnit; we don't want to do this on platforms like Folding@Home
+    )
 
     # Debugging settings
     store_minimized_pdb: bool = True
