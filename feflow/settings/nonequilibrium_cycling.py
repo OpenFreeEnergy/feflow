@@ -103,3 +103,14 @@ class NonEquilibriumCyclingSettings(Settings):
             )
         # TODO: Add check for eq and neq steps and save frequencies
         return self
+
+    @model_validator(mode="after")
+    def store_minimized_pdb_requires_setup_minimize(self):
+        """Storing the minimized PDB requires minimization to be enabled."""
+        if self.store_minimized_pdb and not self.setup_minimize:
+            raise ValueError(
+                "`store_minimized_pdb` requires `setup_minimize` to be True, "
+                "since there is no minimized structure to store when minimization "
+                "is disabled."
+            )
+        return self
