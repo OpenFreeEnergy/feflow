@@ -329,18 +329,19 @@ class SetupUnit(ProtocolUnit):
 
         try:
             # Minimize
-            openmm.LocalEnergyMinimizer.minimize(context)
-            # Optionally store minimized topology -- Mostly for debugging purposes
-            if settings.store_minimized_pdb:
-                from openmm.app import PDBFile
+            if settings.setup_minimize:
+                openmm.LocalEnergyMinimizer.minimize(context)
+                # Optionally store minimized topology -- Mostly for debugging purposes
+                if settings.store_minimized_pdb:
+                    from openmm.app import PDBFile
 
-                omm_top_ = hybrid_factory.omm_hybrid_topology
-                omm_state_ = context.getState(getPositions=True)
-                omm_pos_ = omm_state_.getPositions()
-                with open(
-                    ctx.shared / "minimized_hybrid_topology.pdb", "w"
-                ) as out_file:
-                    PDBFile.writeFile(omm_top_, omm_pos_, out_file)
+                    omm_top_ = hybrid_factory.omm_hybrid_topology
+                    omm_state_ = context.getState(getPositions=True)
+                    omm_pos_ = omm_state_.getPositions()
+                    with open(
+                        ctx.shared / "minimized_hybrid_topology.pdb", "w"
+                    ) as out_file:
+                        PDBFile.writeFile(omm_top_, omm_pos_, out_file)
 
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
             # need to set velocities to temperature so serialized state features velocities,
