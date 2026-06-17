@@ -617,12 +617,12 @@ class TestProtocolMutation:
     ):
         """
         Test that attempting a mutation with a double charge change between lysine and glutamate
-        systems raises a `NotSupportedError`.
+        systems raises a `ProtocolSupportError`.
 
         This test verifies that the `NonEquilibriumCyclingProtocol` correctly raises an error when trying to
-        create a directed acyclic graph (DAG) for an invalid mutation involving a double charge change.
-        The test expects the `NotSupportedError` to be raised with a message indicating that
-        double-charge transformations are not supported.
+        execute the setup of an invalid mutation involving a double charge change. The charge
+        validation happens in the `SetupUnit`, so we only execute that unit directly instead of
+        running the full DAG (which would also run the, much more expensive, simulation units).
 
         Parameters
         ----------
@@ -633,9 +633,12 @@ class TestProtocolMutation:
         lys_to_glu_mapping : LigandAtomMapping
             Atom mapping defining the correspondence between atoms in the lysine and glutamate systems.
         """
+        from gufe.protocols.protocolunit import Context
         from feflow.utils.exceptions import ProtocolSupportError
 
         settings = NonEquilibriumCyclingProtocol.default_settings()
+        # Change engine platform for tests
+        settings.engine_settings.compute_platform = "CPU"
         # We need to make sure we enable the alchemical charge correction
         settings.alchemical_settings.explicit_charge_correction = True
 
@@ -644,11 +647,14 @@ class TestProtocolMutation:
         dag = protocol.create(
             stateA=lys_capped_system,
             stateB=glu_capped_system,
-            name="Invalid proline mutation",
+            name="Invalid double charge mutation",
             mapping=lys_to_glu_mapping,
         )
 
-        # Expect an error when trying to create the DAG with this invalid transformation
+        # Charge validation happens in the setup unit -- run only that unit
+        setup_unit = dag.protocol_units[0]
+
+        # Expect an error when trying to execute the setup for this invalid transformation
         with pytest.raises(ProtocolSupportError):
             with tmpdir.as_cwd():
                 shared = Path("shared")
@@ -657,4 +663,7 @@ class TestProtocolMutation:
                 scratch = Path("scratch")
                 scratch.mkdir()
 
-                execute_DAG(dag, shared_basedir=shared, scratch_basedir=scratch)
+                context = Context(shared=shared, scratch=scratch)
+                setup_unit.execute(
+                    context=context, raise_error=True, **setup_unit.inputs
+                )

@@ -30,6 +30,7 @@ from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
 from ..settings import NonEquilibriumCyclingSettings
+from ..utils.charge import validate_charge_difference
 from ..utils.data import serialize, deserialize
 from ..utils.exceptions import ProtocolSupportError
 from ..utils.misc import (
@@ -113,7 +114,6 @@ class SetupUnit(ProtocolUnit):
             get_alchemical_components,
         )
         from feflow.utils.hybrid_topology import HybridTopologyFactory
-        from feflow.utils.charge import get_alchemical_charge_difference
         from feflow.utils.misc import register_ff_parameters_template
 
         # Get receptor components from systems if found (None otherwise)
@@ -239,10 +239,9 @@ class SetupUnit(ProtocolUnit):
         )
 
         # Handle charge corrections/transformations
-        # Get the change difference between the end states
-        # and check if the charge correction used is appropriate
-        try:  # Catch unsupported charges differences and raise protocol error
-            charge_difference = get_alchemical_charge_difference(
+        # Get the formal change difference between the end states
+        try:
+            charge_difference = validate_charge_difference(
                 mapping,
                 forcefield_settings.nonbonded_method,
                 alchemical_settings.explicit_charge_correction,
