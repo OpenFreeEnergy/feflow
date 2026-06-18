@@ -4,6 +4,17 @@ feflow Change Log
 
 .. current developments
 
+v0.2.1
+====================
+This patch release of `FEFlow` brings some non-breaking changes that will help supporting modern
+infrastructure of our dependencies. Namely, full support for `pydantic` v2, and support for recent
+versions of the `openfe` and `gufe` infrastructure (versions 1.10.* or higher).
+
+- Migrate to native pydantic v2 API (`PR #138 <https://github.com/OpenFreeEnergy/feflow/pull/138>`_)
+- Use gufe charge utils. gufe/openfe 1.10+ support (`PR 139 <https://github.com/OpenFreeEnergy/feflow/pull/139>`_)
+- Added `setup_minimize` setting for `NonEquilibriumCyclingProtocol`. Optional setting to avoid minimizing during setup, convenient for some downstream use cases. (`PR #140 <https://github.com/OpenFreeEnergy/feflow/pull/140>`_).
+
+
 v0.2.0
 ====================
 Most changes come from supporting protein mutations in the Nonequilibrium cycling protocol.
