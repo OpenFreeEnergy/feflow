@@ -18,7 +18,6 @@ from openfe.protocols.openmm_utils.omm_settings import (
 )
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
 
-
 # Default settings for the lambda functions
 x = "lambda"
 DEFAULT_ALCHEMICAL_FUNCTIONS = {
