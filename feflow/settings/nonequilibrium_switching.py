@@ -10,14 +10,13 @@ from feflow.settings import (
 )
 
 from gufe.settings import Settings, OpenMMSystemGeneratorFFSettings, SettingsBaseModel
-from pydantic.v1 import root_validator
 from openfe.protocols.openmm_utils.omm_settings import (
     OpenMMSolvationSettings,
     OpenMMEngineSettings,
     ThermoSettings,
 )
 from openfe.protocols.openmm_rfe.equil_rfe_settings import AlchemicalSettings
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 
 
 # Default settings for the lambda functions
@@ -131,71 +130,64 @@ class NonEquilibriumSwitchingSettings(Settings):
     store_minimized_pdb: bool = True
     """Setting for storing pdb right after minimization (right before neq cycle)"""
 
-    @root_validator
-    def set_and_validate_save_frequencies(cls, values):
+    @model_validator(mode="after")
+    def set_and_validate_save_frequencies(self):
         """
         Derive save-frequency defaults from nonequilibrium_steps when not set,
         then check consistency.
         """
-        integrator_settings = values.get("integrator_settings")
         neq_steps = (
-            integrator_settings.nonequilibrium_steps if integrator_settings else 2500
+            self.integrator_settings.nonequilibrium_steps
+            if self.integrator_settings
+            else 2500
         )
 
-        work_freq = values.get("work_save_frequency")
-        traj_freq = values.get("traj_save_frequency")
+        if self.work_save_frequency is None:
+            self.work_save_frequency = max(1, neq_steps // 50)
+        if self.traj_save_frequency is None:
+            self.traj_save_frequency = self.work_save_frequency * 5
 
-        if work_freq is None:
-            work_freq = max(1, neq_steps // 50)
-            values["work_save_frequency"] = work_freq
-        if traj_freq is None:
-            values["traj_save_frequency"] = work_freq * 5
-            traj_freq = values["traj_save_frequency"]
-
-        if traj_freq % work_freq != 0:
+        if self.traj_save_frequency % self.work_save_frequency != 0:
             raise ValueError(
                 "traj_save_frequency must be a multiple of work_save_frequency. "
                 "Please specify consistent values."
             )
-        return values
+        return self
 
-    @root_validator
-    def snapshots_require_no_internal_equilibration(cls, values):
+    @model_validator(mode="after")
+    def snapshots_require_no_internal_equilibration(self):
         """
         When snapshot settings are provided equilibrium_steps must be 0 —
         the snapshots are already equilibrated.
         """
-        integrator_settings = values.get("integrator_settings")
-        if integrator_settings is None:
-            return values
+        if self.integrator_settings is None:
+            return self
 
-        has_snapshots = values.get("lambda0_snapshots") or values.get(
-            "lambda1_snapshots"
-        )
-        if has_snapshots and integrator_settings.equilibrium_steps != 0:
+        has_snapshots = self.lambda0_snapshots or self.lambda1_snapshots
+        if has_snapshots and self.integrator_settings.equilibrium_steps != 0:
             raise ValueError(
                 "When lambda0_snapshots or lambda1_snapshots are provided the "
                 "snapshots are assumed to be pre-equilibrated. "
                 "Set integrator_settings.equilibrium_steps = 0 to avoid "
                 "running redundant equilibration on top of them."
             )
-        return values
+        return self
 
-    @root_validator
-    def snapshot_trajectories_have_enough_frames(cls, values):
+    @model_validator(mode="after")
+    def snapshot_trajectories_have_enough_frames(self):
         """
         When both lambda0_snapshots and lambda1_snapshots are provided, check
         that each trajectory contains enough frames to cover all replicates
         (i.e. at least num_switches * stride frames), and that both
         trajectories expose the same number of usable snapshots.
         """
-        snap0: Optional[SnapshotSettings] = values.get("lambda0_snapshots")
-        snap1: Optional[SnapshotSettings] = values.get("lambda1_snapshots")
+        snap0 = self.lambda0_snapshots
+        snap1 = self.lambda1_snapshots
 
         if snap0 is None or snap1 is None:
-            return values
+            return self
 
-        num_switches: int = values.get("num_switches", 100)
+        num_switches = self.num_switches
 
         try:
             import MDAnalysis as mda
@@ -230,4 +222,4 @@ class NonEquilibriumSwitchingSettings(Settings):
                 f"usable snapshots ({usable0} vs {usable1}). "
                 "Provide trajectories of equal length or adjust the stride values."
             )
-        return values
+        return self
