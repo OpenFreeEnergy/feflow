@@ -353,6 +353,17 @@ class _BaseSwitchingUnit(ProtocolUnit):
         neq_ctx = openmm.Context(system, neq_integrator, platform)
         neq_ctx.setState(snap_state)
 
+        # Adding minimization in the base switching unit. Helped to avoid NaNs in cases.
+        t_min0 = time.perf_counter()
+        openmm.LocalEnergyMinimizer.minimize(neq_ctx)
+        timing_info["minimization_time_in_s"] = (
+            time.perf_counter() - t_min0
+        )
+        file_logger.info(
+            f"{self.name}: minimized starting snapshot "
+            f"({timing_info['minimization_time_in_s']:.1f} s)"
+        )
+
         works = [neq_integrator.get_protocol_work(dimensionless=True)]
         initial_traj, final_traj = [], []
 
