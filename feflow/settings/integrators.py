@@ -69,6 +69,12 @@ class AlchemicalNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
     """Number of steps for the non-equilibrium switching (lambda 0->1 or 1->0). Default 2500 (10 ps at 4 fs)."""
     equilibrium_steps: int = 1000
     """Number of equilibration steps at the endpoint before each switch. Default 1000."""
+    barostat_frequency: TimestepQuantity = 25 * unit.timestep
+    """
+    Frequency at which volume scaling changes should be attempted.
+    Note: The barostat frequency is ignored for gas-phase simulations.
+    Default 25 * unit.timestep.
+    """
 
     @field_validator("nonequilibrium_steps", "equilibrium_steps")
     @classmethod
