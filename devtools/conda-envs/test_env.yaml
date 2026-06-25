@@ -4,15 +4,15 @@ channels:
   - openeye
 dependencies:
     # Base depends
-  - gufe ~=1.7.1
+  - gufe >=1.9.0,<2
   - numpy
-  - openfe ~=1.8.0   # TODO: Remove once we don't depend on openfe
+  - openfe >=1.10.0,<2   # TODO: Remove once we don't depend on openfe
   - openff-units
   - openmm
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
   - openmmtools >=0.23.0
   - pymbar ~=4.0
-  - pydantic >=1.10.17, <3
+  - pydantic >=2
   - python
     # Testing (optional deps)
   - espaloma_charge ==0.0.8  # To use Espaloma FF in tests

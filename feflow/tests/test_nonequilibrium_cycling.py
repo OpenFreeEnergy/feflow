@@ -801,3 +801,21 @@ def test_settings_round_trip():
         json.loads(neq_json, cls=JSON_HANDLER.decoder)
     )
     assert neq_settings == neq_settings_2
+
+
+def test_store_minimized_pdb_requires_setup_minimize():
+    """
+    ``store_minimized_pdb`` requires ``setup_minimize`` to be True, since there
+    is no minimized structure to store when minimization is disabled.
+    """
+    settings = NonEquilibriumCyclingProtocol.default_settings()
+
+    # Disabling minimization while keeping ``store_minimized_pdb`` should raise
+    with pytest.raises(ValueError, match="store_minimized_pdb"):
+        settings.setup_minimize = False
+
+    # Disabling both is valid
+    settings.store_minimized_pdb = False
+    settings.setup_minimize = False
+    assert not settings.setup_minimize
+    assert not settings.store_minimized_pdb

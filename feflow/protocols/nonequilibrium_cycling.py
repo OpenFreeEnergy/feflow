@@ -30,6 +30,7 @@ from openff.units import unit
 from openff.units.openmm import to_openmm, from_openmm
 
 from ..settings import NonEquilibriumCyclingSettings
+from ..utils.charge import validate_charge_difference
 from ..utils.data import serialize, deserialize
 from ..utils.exceptions import ProtocolSupportError
 from ..utils.misc import (
@@ -113,7 +114,6 @@ class SetupUnit(ProtocolUnit):
             get_alchemical_components,
         )
         from feflow.utils.hybrid_topology import HybridTopologyFactory
-        from feflow.utils.charge import get_alchemical_charge_difference
         from feflow.utils.misc import register_ff_parameters_template
 
         # Get receptor components from systems if found (None otherwise)
@@ -239,10 +239,9 @@ class SetupUnit(ProtocolUnit):
         )
 
         # Handle charge corrections/transformations
-        # Get the change difference between the end states
-        # and check if the charge correction used is appropriate
-        try:  # Catch unsupported charges differences and raise protocol error
-            charge_difference = get_alchemical_charge_difference(
+        # Get the formal change difference between the end states
+        try:
+            charge_difference = validate_charge_difference(
                 mapping,
                 forcefield_settings.nonbonded_method,
                 alchemical_settings.explicit_charge_correction,
@@ -329,18 +328,19 @@ class SetupUnit(ProtocolUnit):
 
         try:
             # Minimize
-            openmm.LocalEnergyMinimizer.minimize(context)
-            # Optionally store minimized topology -- Mostly for debugging purposes
-            if settings.store_minimized_pdb:
-                from openmm.app import PDBFile
+            if settings.setup_minimize:
+                openmm.LocalEnergyMinimizer.minimize(context)
+                # Optionally store minimized topology -- Mostly for debugging purposes
+                if settings.store_minimized_pdb:
+                    from openmm.app import PDBFile
 
-                omm_top_ = hybrid_factory.omm_hybrid_topology
-                omm_state_ = context.getState(getPositions=True)
-                omm_pos_ = omm_state_.getPositions()
-                with open(
-                    ctx.shared / "minimized_hybrid_topology.pdb", "w"
-                ) as out_file:
-                    PDBFile.writeFile(omm_top_, omm_pos_, out_file)
+                    omm_top_ = hybrid_factory.omm_hybrid_topology
+                    omm_state_ = context.getState(getPositions=True)
+                    omm_pos_ = omm_state_.getPositions()
+                    with open(
+                        ctx.shared / "minimized_hybrid_topology.pdb", "w"
+                    ) as out_file:
+                        PDBFile.writeFile(omm_top_, omm_pos_, out_file)
 
             # SERIALIZE SYSTEM, STATE, INTEGRATOR
             # need to set velocities to temperature so serialized state features velocities,

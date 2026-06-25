@@ -6,7 +6,7 @@ would be shared between different integrators, and subclasses of it
 for the specific integrator settings.
 """
 
-from typing import Annotated, TypeAlias
+from typing import Annotated, TypeAlias, Literal
 
 from openff.units import unit
 from gufe.settings import SettingsBaseModel
