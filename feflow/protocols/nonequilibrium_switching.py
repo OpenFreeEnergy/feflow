@@ -354,9 +354,7 @@ class _BaseSwitchingUnit(ProtocolUnit):
         # Adding minimization in the base switching unit. Helped to avoid NaNs in cases.
         t_min0 = time.perf_counter()
         openmm.LocalEnergyMinimizer.minimize(neq_ctx)
-        timing_info["minimization_time_in_s"] = (
-            time.perf_counter() - t_min0
-        )
+        timing_info["minimization_time_in_s"] = time.perf_counter() - t_min0
         file_logger.info(
             f"{self.name}: minimized starting snapshot "
             f"({timing_info['minimization_time_in_s']:.1f} s)"
@@ -616,7 +614,14 @@ class NonEquilibriumSwitchingProtocol(Protocol):
             reverse_switches=reverse_switches,
         )
 
-        return [setup, lambda0_eq, lambda1_eq, *forward_switches, *reverse_switches, end]
+        return [
+            setup,
+            lambda0_eq,
+            lambda1_eq,
+            *forward_switches,
+            *reverse_switches,
+            end,
+        ]
 
     @staticmethod
     def _check_mappings_consistency(mapping, chemical_system_a, chemical_system_b):
