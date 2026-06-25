@@ -186,6 +186,39 @@ def short_settings_multiple_cycles_gpu(short_settings_multiple_cycles):
 
 
 @pytest.fixture
+def short_switching_settings():
+    from openff.units import unit
+    from feflow.protocols import NonEquilibriumSwitchingProtocol
+
+    settings = NonEquilibriumSwitchingProtocol.default_settings()
+    settings.engine_settings.compute_platform = "CPU"
+    settings.thermo_settings.temperature = 300 * unit.kelvin
+    settings.integrator_settings.equilibrium_steps = 50
+    settings.integrator_settings.nonequilibrium_steps = 100
+    # explicit save frequencies consistent with 100 neq steps
+    settings.work_save_frequency = 10
+    settings.traj_save_frequency = 50
+    settings.num_switches = 1
+    return settings
+
+
+@pytest.fixture
+def short_switching_settings_multiple_switches():
+    from openff.units import unit
+    from feflow.protocols import NonEquilibriumSwitchingProtocol
+
+    settings = NonEquilibriumSwitchingProtocol.default_settings()
+    settings.engine_settings.compute_platform = "CPU"
+    settings.thermo_settings.temperature = 300 * unit.kelvin
+    settings.integrator_settings.equilibrium_steps = 50
+    settings.integrator_settings.nonequilibrium_steps = 100
+    settings.work_save_frequency = 10
+    settings.traj_save_frequency = 50
+    settings.num_switches = 5
+    return settings
+
+
+@pytest.fixture
 def production_settings(short_settings):
     settings = short_settings.copy(deep=True)
 

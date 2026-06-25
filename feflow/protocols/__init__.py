@@ -7,3 +7,9 @@ from .nonequilibrium_cycling import (
     NonEquilibriumCyclingProtocol,
     NonEquilibriumCyclingProtocolResult,
 )
+from .nonequilibrium_switching import (
+    NonEquilibriumSwitchingProtocol,
+    NonEquilibriumSwitchingProtocolResult,
+    ForwardSwitchingUnit,
+    ReverseSwitchingUnit,
+)
