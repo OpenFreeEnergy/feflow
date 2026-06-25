@@ -75,6 +75,13 @@ class AlchemicalNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
     Note: The barostat frequency is ignored for gas-phase simulations.
     Default 25 * unit.timestep.
     """
+    barostat: Literal["MonteCarloBarostat"] = "MonteCarloBarostat"
+    """
+    The barostat to be used in the simulations. Default MonteCarloBarostat.
+    Notes
+    -----
+    If the system contains a membrane, use the `MonteCarloMembraneBarostat`, if supported.
+    """
 
     @field_validator("nonequilibrium_steps", "equilibrium_steps")
     @classmethod
@@ -102,6 +109,13 @@ class PeriodicNonequilibriumIntegratorSettings(BaseNonequilibriumIntegrator):
     """Number of steps for the equilibrium parts of the cycle. Default 12500"""
     nonequilibrium_steps: int = 12500
     """Number of steps for the non-equilibrium parts of the cycle. Default 12500"""
+    barostat: Literal["MonteCarloBarostat"] = "MonteCarloBarostat"
+    """
+    The barostat to be used in the simulations. Default MonteCarloBarostat.
+    Notes
+    -----
+    If the system contains a membrane, use the `MonteCarloMembraneBarostat`, if supported.
+    """
     barostat_frequency: TimestepQuantity = 25 * unit.timestep
     """
     Frequency at which volume scaling changes should be attempted.
