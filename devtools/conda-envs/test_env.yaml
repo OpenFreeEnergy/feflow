@@ -3,10 +3,47 @@ channels:
   - conda-forge
   - openeye
 dependencies:
-    # Base depends
-  - gufe >=1.9.0,<2
+  # copying openfe dependencies
+  - cinnabar >=0.6.0  # min pin for some API breaks and behavior changes in 0.6.0
+  - click >=8.2.0, <8.5.0  # until the deprecation warnings are addressed by https://github.com/OpenFreeEnergy/openfe/pull/2251
+  - dask>=2025  # temporary fix for https://github.com/openforcefield/openff-units/issues/140
+  - kartograf~=2.0
+  - dill  # temporary, needed by kartograf. remove when gufe v1.13 is released
+  - konnektor>=0.4.0
+  - exorcist
+  - lomap2>=3.2.1
+  - networkx
   - numpy
-  - openfe >=1.10.0,<2   # TODO: Remove once we don't depend on openfe
+  - openfe-analysis>=0.5.0
+  - openff-interchange-base >=0.5.4  # adds pydantic 2.13 support
+  - openff-nagl-base >=0.3.3
+  - openff-nagl-models>=0.1.2
+  - openff-toolkit-base >=0.16.2
+  - openff-units >=0.4.0  # adds pydantic 2.13 support
+  - openmm ~=8.4.0  # omit 8.3.0 and 8.3.1 due to https://github.com/openmm/openmm/pull/5069
+  - openmmforcefields >=0.15.1  # min needed for https://github.com/openmm/openmmforcefields/pull/414
+  - openmmtools >=0.26  # fix to support membrane barostat: https://github.com/choderalab/openmmtools/pull/798
+  - packaging
+  - pandas
+  - parmed >=4.3.1  # fix to support numpy >=2.3: https://github.com/ParmEd/ParmEd/pull/1387
+  - plugcli
+  - pint>=0.24.0
+  - pip
+  - pooch >= 1.9.0  # min needed for https://github.com/fatiando/pooch/issues/502
+  - py3dmol
+  - pydantic >=2.13.0
+  - pygraphviz
+  - pyyaml
+  - rdkit <2026.03  # https://github.com/OpenFreeEnergy/openfe/issues/2067
+  - rich
+  - tqdm
+  - typing-extensions
+  - zstandard
+  - pymbar>4.0
+  # Control blas/openmp threads
+  - threadpoolctl
+  # Base depends
+  - numpy
   - openff-units
   - openmm
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
