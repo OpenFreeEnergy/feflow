@@ -53,8 +53,8 @@ dependencies:
   - python
   - exorcist
     # Testing (optional deps)
-  - espaloma_charge ==0.0.8  # To use Espaloma FF in tests
-  - torchdata <0.10
+  # - espaloma_charge ==0.0.8  # To use Espaloma FF in tests -- dependency issues with py >3.12
+  # - torchdata <0.10  -- as above
   - openeye-toolkits
   - openff-nagl  # To use OpenFF's NAGL forcefield in tests
   - openmoltools  # TODO: Remove once we refactor tests
