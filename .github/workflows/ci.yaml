@@ -29,11 +29,12 @@ jobs:
       matrix:
         os: ["ubuntu"]
         python-version:
-          - "3.11"
           - "3.12"
+          - "3.13"
+          - "3.14"
         include:
           - os: "macos"
-            python-version: "3.11"
+            python-version: "3.12"
     env:
       OE_LICENSE: ${{ github.workspace }}/oe_license.txt
 
