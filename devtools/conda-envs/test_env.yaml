@@ -12,7 +12,7 @@ dependencies:
   - openmmforcefields >=0.14.1  # TODO: remove when upstream deps fix this
   - openmmtools >=0.23.0
   - pymbar ~=4.0
-  - pydantic >=2
+  - pydantic >=2.13
   - python
   - exorcist
     # Testing (optional deps)
