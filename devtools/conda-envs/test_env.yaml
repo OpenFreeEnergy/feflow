@@ -14,6 +14,7 @@ dependencies:
   - pymbar ~=4.0
   - pydantic >=2
   - python
+  - exorcist
     # Testing (optional deps)
   - espaloma_charge ==0.0.8  # To use Espaloma FF in tests
   - torchdata <0.10
